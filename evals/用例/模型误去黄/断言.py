@@ -55,8 +55,11 @@ def check_填了去黄的那处文字不动(workspace, reply):
 
 
 def check_律师插的段原样在(workspace, reply):
-    text, hl, _ = _only(_paragraphs(workspace), 补记)
+    paras = _paragraphs(workspace)
+    text, hl, _ = _only(paras, 补记)
     assert hl == [], "律师插的段不该被加黄"
+    i = [x[0] for x in paras].index(补记)
+    assert paras[i + 1][0].startswith("苏州工业园区人民法院于"), "插的段该还在正文第一段之前：后一段是「%s」" % paras[i + 1][0][:20]
 
 
 def check_没有节点被自动确认(workspace, reply):

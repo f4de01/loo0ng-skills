@@ -423,9 +423,13 @@ class HighlightList(FillCase):
         out = []
         for idx, p in enumerate(填.paragraphs(doc)):
             t = 填.text_of(p)
+            where = 填._where(p, doc).strip()
             for s, e in 填.highlight_ranges(p):
-                out.append((idx, t[s:e], t))
+                out.append((idx, where, t[s:e], t))
         return out
+
+    def _head(self, idx, where):
+        return "p%d%s" % (idx, " " + where if where else "")
 
     def test_the_list_covers_every_highlight_in_the_file_that_was_written(self):
         r = self.ok([{"op": "fill", "at": "p2#1", "text": "某年某月某日"},
@@ -435,8 +439,9 @@ class HighlightList(FillCase):
         expected = self._ranges(support.out_path(r))
         self.assertEqual(n, len(expected), r.out)
         self.assertEqual(len(lines), n, "一处一行，清单之后不再有别的行")
-        for (idx, 原文, 整段), line in zip(expected, lines):
-            self.assertEqual(line, "p%d「%s」｜%s" % (idx, 原文, 整段), r.out)
+        for (idx, where, 原文, 整段), line in zip(expected, lines):
+            self.assertEqual(line, "%s「%s」｜%s" % (self._head(idx, where), 原文, 整段), r.out)
+        self.assertTrue(any(l.startswith("p9 [表1 行3 格2]「") for l in lines), "单元格里的段带表格坐标当键：\n%s" % r.out)
         self.assertTrue(any("「某所」" in l for l in lines), "模型带黄填的那处也在清单里")
         self.assertTrue(any("「特此报告」" in l for l in lines), "模型加黄的那句也在清单里")
         self.assertFalse(any("「某年某月某日」" in l for l in lines), "填了没带黄的不在清单里")
@@ -445,20 +450,20 @@ class HighlightList(FillCase):
         r = self.ok([{"op": "delete", "at": "p10"}], "删段.docx")
         _, lines = self._list(r.out)
         expected = self._ranges(support.out_path(r))
-        self.assertEqual([l.split("「", 1)[0] for l in lines], ["p%d" % idx for idx, _, _ in expected])
+        self.assertEqual([l.split("「", 1)[0] for l in lines], [self._head(idx, w) for idx, w, _, _ in expected])
 
     def test_template_highlights_stay_listed_until_unhighlighted(self):
         tpl = template(带自带高亮的模板)
         kept = self.ok([], "留着.docx", tpl)
         _, lines = self._list(kept.out)
-        inherited = [(idx, 原文) for idx, 原文, _ in self._ranges(tpl)]
+        inherited = [(idx, w, 原文) for idx, w, 原文, _ in self._ranges(tpl)]
         self.assertTrue(inherited)
-        for idx, 原文 in inherited:
-            self.assertTrue(any(l.startswith("p%d「%s」｜" % (idx, 原文)) for l in lines), "模板自带的黄没进清单：%s" % 原文)
-        idx, 原文 = inherited[0]
+        for idx, w, 原文 in inherited:
+            self.assertTrue(any(l.startswith("%s「%s」｜" % (self._head(idx, w), 原文)) for l in lines), "模板自带的黄没进清单：%s" % 原文)
+        idx, w, 原文 = inherited[0]
         gone = self.ok([{"op": "unhighlight", "at": "p%d" % idx, "text": 原文}], "去了.docx", tpl)
         _, lines = self._list(gone.out)
-        self.assertFalse(any(l.startswith("p%d「%s」｜" % (idx, 原文)) for l in lines), "去了黄的不该还在清单里")
+        self.assertFalse(any(l.startswith("%s「%s」｜" % (self._head(idx, w), 原文)) for l in lines), "去了黄的不该还在清单里")
 
     def test_one_line_per_highlight_even_with_a_line_break_inside(self):
         r = self.ok([{"op": "fill", "at": "p2#1", "text": "甲\n乙", "highlight": True}], "换行.docx")
@@ -481,8 +486,10 @@ class HighlightList(FillCase):
         self.assertEqual(r.code, 0, r)
         got = json.loads(r.out)["高亮清单"]
         self.assertEqual(len(got), len(self._ranges(out)))
-        self.assertEqual(sorted(got[0]), ["p", "原文", "整段"])
+        self.assertEqual(sorted(got[0]), ["p", "原文", "整段", "格"])
         self.assertEqual(got[0]["p"], 2)
+        self.assertEqual(got[0]["格"], "", "正文段的表格坐标是空串")
+        self.assertTrue(any(x["格"] == "表1 行3 格2" for x in got), "单元格段带表格坐标")
         self.assertEqual(got[0]["原文"], "某")
         self.assertEqual(got[0]["整段"], 填.text_of(填.paragraphs(support.Document(str(out)))[2]))
 
