@@ -42,7 +42,7 @@ class IsolationTest(unittest.TestCase):
 
     def test_does_not_import_engine_or_siblings(self):
         mods = imported_modules(SCRIPT)
-        for f in ("graph", "archive", "statement", "md2docx", "gate", "loo0ng"):
+        for f in ("graph", "archive", "statement", "fill", "gate", "loo0ng"):
             self.assertNotIn(f, mods, "sketch.py import 了 %s" % f)
 
     def test_no_bom(self):
