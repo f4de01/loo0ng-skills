@@ -1,5 +1,21 @@
 # loo0ng-skills
 
+## 0.3.0
+
+### Minor Changes
+
+- [`330a96a`](https://github.com/f4de01/loo0ng-skills/commit/330a96aaa66188f12e2c846281de045e61606695) - 三处回归上游 mattpocock/skills 的做法，仓库迁到 `f4de01/loo0ng-skills`（ADR-0021）：
+
+  - **发布链**改为 changesets/action：push 到 main 自动开 "chore: version skills" PR，合并即打 tag。`release.py`、`pack-offline.py` 与干跑流程删除，Release 不再附离线兜底包。
+  - **不再发 Codex 原生插件**：`.codex-plugin/` 删除。Codex 用户改用 `npx skills@latest add f4de01/loo0ng-skills`；skill 在 Codex 里显示为裸名。
+  - **`agents/openai.yaml` 改为手写**：frontmatter 去掉 `metadata` 块，`gen-openai-yaml.py` 删除。skill 名、入口、正文都没有变。
+
+  **Breaking:** 安装源换了仓库。请卸掉从 `lawyer-workbench-v3` 装的那份，按 README 从新仓库重装。
+
+### Patch Changes
+
+- [`2cc2283`](https://github.com/f4de01/loo0ng-skills/commit/2cc2283574317d8b93553cdb06b283dde11a6cf9) - 仓库布局改成严格照上游 mattpocock/skills 分桶（无票，ADR-0009 的 2026-09-13 附注）：七件 skill 从 `skills/<name>/` 搬进 `skills/productivity/<name>/`，另建 engineering、misc、in-progress、deprecated 四个空桶各带 `README.md`，`skills/README.md` 删除；根 `README.md` 与桶 `README.md` 的条目把名字链接到 `SKILL.md`；每件新增一页 `docs/productivity/<name>.md`。`.claude-plugin/plugin.json` 的七条路径跟着改，`link-skills.ps1` 照上游跳过 `deprecated/` 与 `misc/`，`privacy-check.py` 守的领域图前缀改为新路径。skill 名、入口、装到律师机上的形状都没变。
+
 ## 0.2.0
 
 ### Minor Changes
