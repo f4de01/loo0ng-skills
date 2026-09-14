@@ -1,3 +1,3 @@
 interface:
   display_name: "to-docx"
-  short_description: "Markdown 最小集转 DOCX；版式门禁三档结论，不合格不落盘"
+  short_description: "打带编号的清单、按差量填模板；版式门禁三档结论，不合格不落盘"

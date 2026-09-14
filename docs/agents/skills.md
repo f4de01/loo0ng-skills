@@ -9,12 +9,12 @@ skills/<bucket>/<name>/       # 桶照上游五个：engineering、productivity�
 ├── SKILL.md              # frontmatter：name、description；编排 skill 与路由另加 disable-model-invocation: true
 ├── agents/openai.yaml    # Codex 侧外观：interface.display_name（= name）、interface.short_description（中文进这里）；编排 skill 与路由另加 policy.allow_implicit_invocation: false
 ├── references/           # 正文按需指向的长材料
-├── requirements.txt      # 只有 to-docx 有：转换器后端的精确钉（python-docx==1.2.0，ADR-0018）。随包到律师机，agent 自备环境时按它装；仓库根上放到不了那里
+├── requirements.txt      # 只有 to-docx 有：填模板脚本后端的精确钉（python-docx==1.2.0，ADR-0018）。随包到律师机，agent 自备环境时按它装；仓库根上放到不了那里
 ├── scripts/              # 标准库零依赖的 CLI；只有 to-docx 的转换器例外（python-docx，ADR-0006），它的门禁本体也零依赖、PyMuPDF 只是可选的渲染加信（ADR-0017）。互不 import；跨 skill 一律以子进程互调、默认按兄弟目录找：要写图的（domain 的雏形、setup-case 的起手与既有成品登记）调 graph 的引擎，起手取活图路径（setup-case 的 init --domain-name）调 domain 的 sketch.py home（#97）
 └── assets/               # 只有 domain 有：assets/<领域>/ 下领域图、模板/ 官方模板原件、指引手册/ 指引手册原文（ADR-0004）。这份是出厂种子，随包升级被换掉；律师那台机上的活图在 ~/.loo0ng/领域/<领域>/，由 sketch.py home 首次起手时拷出（ADR-0019）
 ```
 
-**2026-09-14 起七件全部住 `in-progress/`，逐件改造后再毕业回 `engineering/` 或 `productivity/`（ADR-0022）；本段其余写的是毕业后的归属。** 分桶照上游（ADR-0009 的 2026-09-13 附注）：`skills/` 下五个桶，每桶一份 `README.md` 逐件列出、名字链接到 `./<name>/SKILL.md`；promoted 桶（`engineering/`、`productivity/`）里的每件进 `.claude-plugin/plugin.json` 与根 `README.md`（名字链接到 `SKILL.md`），并有一页 `docs/<bucket>/<name>.md`（固定段：What it does、When to reach for it、Common questions、It's working if、Where it fits，页内链接一律绝对）；`misc/`、`in-progress/`、`deprecated/` 里的不进这三处。上游 `engineering/` 装的是主线（daily code work），`productivity/` 装的是离了主线也能单独用的工具；对应到这里，办案主线六件（`ask-loo0ng`、`setup-case`、`doit`、`graph`、`domain`、`filing`，都只在有 `图.json` 的工作区里工作）在 `engineering/`，`to-docx`（门禁可对任意 DOCX 跑、转换器默认写临时位置）在 `productivity/`；另外三桶目前只有 README。草稿放分支不放目录，要公开试用的才进 `in-progress/`（这一轮改的是全部七件、跨多次发布，分支装不下，所以七件都在那里）。分发清单只有一份：`.claude-plugin/plugin.json` 的 `skills` 数组逐件列路径（Claude Code 插件）；`.claude-plugin/marketplace.json` 让仓库自成单插件市场。不发 Codex 原生插件，Codex 及其他 harness 经 skills.sh 装编辑副本（ADR-0021，与上游 ADR-0002 同一个理由：Codex 清单只收单一路径，分桶后会把 `in-progress/` 一并装出去）。
+**2026-09-14 起七件全部住 `in-progress/`，逐件改造后再毕业回 `engineering/` 或 `productivity/`（ADR-0022）；本段其余写的是毕业后的归属。** 分桶照上游（ADR-0009 的 2026-09-13 附注）：`skills/` 下五个桶，每桶一份 `README.md` 逐件列出、名字链接到 `./<name>/SKILL.md`；promoted 桶（`engineering/`、`productivity/`）里的每件进 `.claude-plugin/plugin.json` 与根 `README.md`（名字链接到 `SKILL.md`），并有一页 `docs/<bucket>/<name>.md`（固定段：What it does、When to reach for it、Common questions、It's working if、Where it fits，页内链接一律绝对）；`misc/`、`in-progress/`、`deprecated/` 里的不进这三处。上游 `engineering/` 装的是主线（daily code work），`productivity/` 装的是离了主线也能单独用的工具；对应到这里，办案主线六件（`ask-loo0ng`、`setup-case`、`doit`、`graph`、`domain`、`filing`，都只在有 `图.json` 的工作区里工作）在 `engineering/`，`to-docx`（清单与门禁都可对任意 DOCX 跑、施加差量默认写临时位置）在 `productivity/`；另外三桶目前只有 README。草稿放分支不放目录，要公开试用的才进 `in-progress/`（这一轮改的是全部七件、跨多次发布，分支装不下，所以七件都在那里）。分发清单只有一份：`.claude-plugin/plugin.json` 的 `skills` 数组逐件列路径（Claude Code 插件）；`.claude-plugin/marketplace.json` 让仓库自成单插件市场。不发 Codex 原生插件，Codex 及其他 harness 经 skills.sh 装编辑副本（ADR-0021，与上游 ADR-0002 同一个理由：Codex 清单只收单一路径，分桶后会把 `in-progress/` 一并装出去）。
 
 ## 命名与编码
 
@@ -93,6 +93,15 @@ for d in tests/*/; do python -m unittest discover -s "$d" -p 'test_*.py' || exit
 ```
 
 `tests/to-docx/` 分两条跑道（ADR-0017 改了 ADR-0015 的口径）：**推算层那条不起 Word，在任何机器上必须全绿、不许 skip**（`test_layout_estimate.py` 全篇，加 `test_gate.py` 与 `test_templates.py` 的无渲染跑道，合起来十几秒）；**渲染层那条要 Word COM**（`NormalAndFaultPairsRendered`、`TemplatesRegressionRendered`），每件门禁起一次 Word 约 7 秒、合起来约六分钟，缺渲染通道时整类 skip 并打印一行说明，不静默。只在开发侧跑，不进 Codex 的 30 秒 shell。别在门禁测试跑的同时另起 Word 出件，两件门禁同时跑会互相关掉对方的实例。
+
+**3.9 那条跑道**：随包脚本的底线是 python 3.9（律师那台 mac 的 `/usr/bin/python3` 是 3.9.6），`tests/python-floor/` 只按形状扫，真跑要自己起一次。装一份钉住的后端再跑全套：
+
+```bash
+uv pip install --python <3.9 解释器> --target <临时目录> -r skills/in-progress/to-docx/requirements.txt
+PYTHONPATH=<临时目录> <3.9 解释器> -m unittest discover -s tests/to-docx -p 'test_*.py'
+```
+
+2026-09-14 在 cpython 3.9.25 上跑过一遍：97 件全绿，14 件 skip（那台临时环境里没装 PyMuPDF，渲染层整类 skip，与主力环境一致）。
 
 skill 层 eval：一个跑器两个后端，用例与种子在 `evals/`（ADR-0015，#25）：
 

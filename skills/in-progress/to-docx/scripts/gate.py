@@ -8,25 +8,27 @@ PyMuPDF 是可选件，只在拿到渲染结果时才 import。缺 Word / WPS / 
 
 结论三档，整件取最重的一档（不通过 > 需人眼 > 通过）：
   推算器给出区间 [lo, hi]、阈值 T：T < lo 该项不通过；T >= hi 该项通过；lo <= T < hi 该项需人眼。
-  需人眼只可能由页数、空白页、最大行高三项产生；其余七项静态判据读 XML 得点值，恒为二值。
+  需人眼只可能由页数、空白页、最大行高三项产生；其余静态判据读 XML 得点值，恒为二值。
   有渲染结果时点值取代区间，需人眼当场坍缩；点值落在推算区间外时结论以点值为准，另出披露项
   「推算区间不含实测值」，同时进审查报告与 stderr。
 
 不通过项（客观几何与结构，任一命中即不通过）：
   行高超阈值、页数超阈值（长标记撑列）；空白页（只有页码的页也算）；表宽超页面；页脚 PAGE 域写死（有
-  --template 时还查丢失）；表格直接接 sectPr；docProps 残留作者 / 最后修改者 / 上次打印时间；正文残留模板
-  占位标记（XX、【】等），有 --template 时还查模板里括号说明段整段残留；模板有表而成品一张表都没有（同样
-  要有 --template）。
+  --template 时还查丢失）；表格直接接 sectPr；docProps 残留作者 / 最后修改者 / 上次打印时间；模板有表而
+  成品一张表都没有（要有 --template）；**改动段残留占位**：--changed 指的那几段里还有占位、且不在高亮
+  区间里（ADR-0023：缺的槽留原占位加黄是正常出件形态，所以只查改动段、且排除高亮里的；没给 --changed
+  就不查这一项，只出一条披露项）。律师改过的位置不在 --changed 里，因此不受检（ADR-0023）。
 披露项（写进审查报告，不判不通过）：空单元格坐标；页数；无渲染结果时的那一条；有渲染结果时另有请求字体
-  不在嵌入字体里、正文有字没渲出来（无渲染时这两条整条消失，不报「无」）。
+  不在嵌入字体里、正文有字没渲出来、渲出来的「表」在文书里没有（荧光笔矩形被 find_tables 认成表，那几张
+  不拿来量行高）。无渲染时这几条整条消失，不报「无」。
 
-fail-closed：守的不是落盘这道门，是不把测出来的事故当合格件交出去。转换器写在临时位置，本脚本
+fail-closed：守的不是落盘这道门，是不把测出来的事故当合格件交出去。出件那一步写在临时位置，本脚本
 --deliver <目标> 在通过与需人眼两档把它一次性拷进工作区，位置相同、文件名不加装饰；不通过不落盘；
-目标已存在则拒绝、不覆盖。
+目标已存在则拒绝，除非调用方显式给 --overwrite（重出覆盖同一份文书，ADR-0023）。
 
 用法：
-  python gate.py <文书.docx> [--template <模板.docx>] [--deliver <目标.docx>] [--json]
-                 [--max-pages N] [--max-row-height 磅] [--powershell <exe>] [--no-render]
+  python gate.py <文书.docx> [--template <模板.docx>] [--changed 2,3,13] [--deliver <目标.docx>] [--json]
+                 [--max-pages N] [--max-row-height 磅] [--powershell <exe>] [--no-render] [--slot-pattern <正则>]
 
 退出码：0 通过（有 --deliver 则已落盘）；1 不通过（不落盘）；3 需人眼（有 --deliver 则已落盘）；
 2 门禁跑不动：文书或模板打不开、推算层自身抛异常、用法错误、落盘被拒。
@@ -59,8 +61,18 @@ DEFAULT_MAX_PAGES = 30
 DEFAULT_MAX_ROW_HEIGHT = 200.0  # 磅；1-2 模板的印模行 116 磅，实测事故 250～313 磅
 FOOTER_ZONE = 72.0  # 磅；页脚坐在下页边距里，底边 1 英寸内的字当页脚
 PAGE_NUMBER_ONLY = re.compile(r"^[\s\d\-–/第页共]*$")
-PLACEHOLDER = re.compile(r"X{2,}|×{2,}|＿{2,}|_{3,}|【[^】\n]{0,40}】")
-NOTE_PARAGRAPH = re.compile(r"^（.{6,}）$")
+# 占位的形状：与打清单那个 CLI 的同名表逐字相同（两个 CLI 互不 import，各自带一份），tests/to-docx 有一条
+# 断言守着两份在 19 件官方模板上给出同一组槽。顺序即优先级，长的写在前。形状可加：往表里加一行，或 --slot-pattern。
+SLOT_SHAPES = (
+    ("日期", r"X+年X+月X*日?"),
+    ("案号年份", r"（20X{1,2}）"),
+    ("年份", r"20XX"),
+    ("方括号块", r"【[^】\n]*】"),        # 也收整段的条件块「【若有异议：…】」
+    ("X 串", r"X{2,}"),
+    ("叉串", r"×{2,}"),
+    ("下划线串", r"＿{2,}|_{3,}"),
+    ("量词前的单个 X", r"(?<![A-Za-z])X(?=[家元名人份次个件笔项户万亿])"),
+)
 TEMP_DIRNAME = "to-docx-gate"
 CJK = re.compile(r"[㐀-鿿豈-﫿]")
 # 中文字体名与 PDF 里 BaseFont 名的对应，只为披露项做归一，不求全
@@ -105,6 +117,15 @@ class NoRender(Exception):
 
 def _text(el) -> str:
     return "".join(t.text or "" for t in el.iter(W + "t"))
+
+
+def compile_slots(extra: Optional[List[str]] = None) -> "re.Pattern":
+    """出厂形状加上这次临时加的几条（--slot-pattern，可重复）。临时的排在后面，不抢出厂形状的先手。"""
+    shapes = [p for _, p in SLOT_SHAPES] + list(extra or [])
+    try:
+        return re.compile("|".join(shapes))
+    except re.error as e:
+        raise CannotRun("占位正则编译不了：%s" % e)
 
 
 class Docx:
@@ -229,7 +250,7 @@ def _footer_visible_text(xml: str) -> str:
 
 
 def static_checks(doc: Docx, template: Optional[Docx]) -> Tuple[List[str], List[str]]:
-    """七项静态判据：读 XML 得点值，没有区间，恒为二值，永远不产生需人眼（ADR-0017）。"""
+    """五项静态判据：读 XML 得点值，没有区间，恒为二值，永远不产生需人眼（ADR-0017）。"""
     fails: List[str] = []
     notes: List[str] = []
 
@@ -267,19 +288,9 @@ def static_checks(doc: Docx, template: Optional[Docx]) -> Tuple[List[str], List[
         if empties:
             notes.append("空单元格：第 %d 张表 %s" % (i, "、".join(empties)))
 
-    body_text = doc.body_text()
-    hits = sorted(set(m.group(0) for m in PLACEHOLDER.finditer(body_text)))
-    if hits:
-        fails.append("模板占位残留：%s" % "、".join(h[:20] for h in hits[:8]))
+    # 全篇查占位与模板说明段整段残留这两条，随 ADR-0023 的填模板差量路线删掉：缺的槽保留模板原占位加黄
+    # 正是出件的正常形态，全篇一查必报，而说明段是不是该留由律师判。占位改由 check_changed 只在改动段查。
     if template is not None:
-        compact = re.sub(r"\s+", "", body_text)
-        leftover_notes = []
-        for t in template.paragraph_texts():
-            t = t.strip()
-            if NOTE_PARAGRAPH.match(t) and re.sub(r"\s+", "", t) in compact:
-                leftover_notes.append(t[:20])
-        if leftover_notes:
-            fails.append("模板原文残留：%s" % "、".join(leftover_notes))
         if template.tables() and not doc.tables():
             fails.append("模板表缺失：模板有 %d 张表，成品一张都没有" % len(template.tables()))
 
@@ -292,6 +303,70 @@ def static_checks(doc: Docx, template: Optional[Docx]) -> Tuple[List[str], List[
         elif template is not None and any(_footer_has_page_field(f) for f in template.footers()):
             fails.append("页脚 PAGE 域丢失：模板页脚有 PAGE 域，成品没有")
     return fails, notes
+
+
+# ---------------------------------------------------------------- 门禁第一样：改动段没有残留占位
+
+def _run_text(r: ET.Element) -> str:
+    """一个 run 的文字，与 python-docx 的 Run.text 同口径（tab 记 \\t，换行记 \\n）：两边算出的字符位置
+    必须逐字对齐，不然「槽在不在高亮里」会错位。"""
+    out = []
+    for child in r:
+        if child.tag == W + "t":
+            out.append(child.text or "")
+        elif child.tag == W + "tab":
+            out.append("\t")
+        elif child.tag in (W + "br", W + "cr"):
+            out.append("\n")
+    return "".join(out)
+
+
+def _run_is_highlighted(r: ET.Element) -> bool:
+    rpr = r.find(W + "rPr")
+    if rpr is None:
+        return False
+    h = rpr.find(W + "highlight")
+    if h is not None and h.get(W + "val") not in (None, "none"):
+        return True
+    shd = rpr.find(W + "shd")
+    return shd is not None and (shd.get(W + "fill") or "").upper() == "FFFF00"
+
+
+def paragraph_highlight_ranges(p: ET.Element) -> List[Tuple[int, int]]:
+    """段落里连续的高亮 run 并成的字符区间。"""
+    out: List[Tuple[int, int]] = []
+    pos = 0
+    for r in p.iter(W + "r"):
+        t = _run_text(r)
+        if t and _run_is_highlighted(r):
+            if out and out[-1][1] == pos:
+                out[-1] = (out[-1][0], pos + len(t))
+            else:
+                out.append((pos, pos + len(t)))
+        pos += len(t)
+    return out
+
+
+def paragraph_text(p: ET.Element) -> str:
+    return "".join(_run_text(r) for r in p.iter(W + "r"))
+
+
+def check_changed(doc: Docx, changed: List[int], slot_re: "re.Pattern") -> List[str]:
+    """改动段没有残留占位，且不在高亮里。段号是施加差量那一步回显的那一串（正文里全部 w:p 按文档顺序，
+    单元格里的段落也在序列里），指的就是这一件里的段。改动段以外一律不查：模板自带的槽与律师改过的位置
+    都不该被拦（ADR-0023）。"""
+    fails = []
+    ps = list(doc.body.iter(W + "p"))
+    for idx in sorted(set(changed)):
+        if idx < 0 or idx >= len(ps):
+            fails.append("改动段号不在这件里：p%d（这件一共 %d 段）" % (idx, len(ps)))
+            continue
+        p = ps[idx]
+        hl = paragraph_highlight_ranges(p)
+        for m in slot_re.finditer(paragraph_text(p)):
+            if not any(a <= m.start() and m.end() <= b for a, b in hl):
+                fails.append("改动段残留占位：p%d「%s」还是占位，又不在高亮里" % (idx, m.group(0)[:20]))
+    return fails
 
 
 # ---------------------------------------------------------------- 版面推算（标准库，门禁本体）
@@ -782,6 +857,8 @@ def render_measure(pdf: pathlib.Path, doc: Docx) -> Dict[str, object]:
     fonts = set()
     rendered = []
     tallest, where = 0.0, ""
+    phantom: List[str] = []
+    real_cols = {len(_grid_widths(tbl)) for tbl in doc.tables()}   # 文书自己有几张表、各几列
     for i, page in enumerate(pdfdoc, 1):
         body = _page_body_text(page)
         rendered.append(re.sub(r"\s+", "", body))
@@ -790,6 +867,13 @@ def render_measure(pdf: pathlib.Path, doc: Docx) -> Dict[str, object]:
         for f in page.get_fonts():
             fonts.add(f[3].split("+")[-1])
         for table_no, t in enumerate(page.find_tables().tables, 1):
+            if t.col_count not in real_cols:
+                # 渲出来的「表」是 PyMuPDF 按线与矩形认出来的，认错了就会把行高报成天文数字。填模板这条路
+                # 每一件都带荧光笔（ADR-0023），而一页散开的黄矩形正好被认成一张多行多列的表：8-1 一张表
+                # 都没有的件被读出「第 1 张表第 1 行 274.4 磅」。文书自己的 XML 才知道有没有表、几列，
+                # 所以只量列数对得上的那些；文书一张表都没有时，一行都不量。
+                phantom.append("第 %d 页第 %d 张表（%d 列）" % (i, table_no, t.col_count))
+                continue
             for row_no, row in enumerate(t.rows, 1):
                 h = row.bbox[3] - row.bbox[1]
                 if h > tallest:
@@ -811,6 +895,9 @@ def render_measure(pdf: pathlib.Path, doc: Docx) -> Dict[str, object]:
             lost.append(chunk)
     if lost:
         notes.append("有字没渲出来（多半是固定行高裁掉了）：%s" % "、".join(c[:12] for c in lost[:6]))
+    if phantom:
+        notes.append("渲出来的这几张「表」文书里没有，没拿它们量行高（多半是荧光笔矩形被读成了表）：%s"
+                     % "、".join(phantom[:6]))
     return {"页数": len(pdfdoc), "空白页": blank, "最大行高": round(tallest, 1),
             "最大行高位置": where or "全篇", "披露项": notes}
 
@@ -943,10 +1030,15 @@ def format_checklist(lines: List[str]) -> str:
 # ---------------------------------------------------------------- 门禁与落盘
 
 def run_gate(docx_path: pathlib.Path, template_path: Optional[pathlib.Path], max_pages: int, max_row_height: float,
-             powershell: Optional[str], no_render: bool = False) -> Dict[str, object]:
+             powershell: Optional[str], no_render: bool = False, changed: Optional[List[int]] = None,
+             slot_patterns: Optional[List[str]] = None) -> Dict[str, object]:
     doc = Docx(docx_path)
     template = Docx(template_path) if template_path else None
     fails, notes = static_checks(doc, template)
+    if changed is None:
+        notes.append("未给 --changed：没查改动段残留占位（律师兜底自写的件与单独跑门禁时本来就没有改动段）")
+    else:
+        fails += check_changed(doc, changed, compile_slots(slot_patterns))
     try:
         ranges = estimate_ranges(doc)
     except Exception as e:  # 推算层是门禁本体，它自己挂了才是「门禁跑不动」
@@ -974,7 +1066,7 @@ def run_gate(docx_path: pathlib.Path, template_path: Optional[pathlib.Path], max
     fails += verdicts["不通过项"]
     notes += verdicts["披露项"] + outliers
     if template is None:
-        notes.append("未给 --template：没查页脚 PAGE 域丢失、模板说明段残留与模板表缺失")
+        notes.append("未给 --template：没查页脚 PAGE 域丢失与模板表缺失")
     conclusion = "不通过" if fails else ("需人眼" if needs else "通过")
     return {
         "文件": str(docx_path),
@@ -993,9 +1085,11 @@ def run_gate(docx_path: pathlib.Path, template_path: Optional[pathlib.Path], max
     }
 
 
-def deliver(src: pathlib.Path, target: pathlib.Path) -> None:
-    if target.exists():
-        raise Refused("目标已存在，不覆盖：%s（成品仍在 %s）" % (target, src))
+def deliver(src: pathlib.Path, target: pathlib.Path, overwrite: bool = False) -> None:
+    """落盘。默认不覆盖：第一次出件撞上已有的件多半是弄错了路径。重出要覆盖同一份文书（ADR-0023：一节点
+    一份、不留版本）就显式给 --overwrite，覆盖这件事因此永远是调用方点头的，不是脚本自己决定的。"""
+    if target.exists() and not overwrite:
+        raise Refused("目标已存在，不覆盖：%s（成品仍在 %s；重出要覆盖就加 --overwrite）" % (target, src))
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(str(src), str(target))
 
@@ -1022,8 +1116,14 @@ def format_report(result: Dict[str, object]) -> str:
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="gate.py", description="版式门禁：静态检查加版面推算，有渲染时以渲染加信；只读，不合格不落盘。")
     ap.add_argument("docx", help="要检查的文书（.docx）")
-    ap.add_argument("--template", help="该节点的官方模板，给了才查页脚 PAGE 域丢失、模板说明段残留与模板表缺失")
-    ap.add_argument("--deliver", help="通过与需人眼两档把文书一次性拷到这个路径（已存在则拒绝）")
+    ap.add_argument("--template", help="该节点的官方模板，给了才查页脚 PAGE 域丢失与模板表缺失")
+    ap.add_argument("--changed", action="append",
+                    help="这次改动了哪几段（施加差量那一步回显的那一串，如 2,3,13），给了才查改动段残留占位；可重复")
+    ap.add_argument("--slot-pattern", action="append", default=[],
+                    help="临时多认一种占位形状（正则，可重复），与打清单那个 CLI 的同名参数写法一致")
+    ap.add_argument("--deliver", help="通过与需人眼两档把文书一次性拷到这个路径（已存在则拒绝，除非给 --overwrite）")
+    ap.add_argument("--overwrite", action="store_true",
+                    help="重出时覆盖 --deliver 指的那一份（一节点一份文书、不留版本，ADR-0023）")
     ap.add_argument("--json", action="store_true", help="结果按 JSON 打印")
     ap.add_argument("--max-pages", type=int, default=DEFAULT_MAX_PAGES, help="页数阈值，默认 %(default)s")
     ap.add_argument("--max-row-height", type=float, default=DEFAULT_MAX_ROW_HEIGHT, help="表格行高阈值（磅），默认 %(default)s")
@@ -1035,6 +1135,22 @@ def build_parser() -> argparse.ArgumentParser:
 EXIT_CODES = {"通过": 0, "不通过": 1, "需人眼": 3}
 
 
+def parse_changed(values: Optional[List[str]]) -> Optional[List[int]]:
+    """--changed 收的是段号：逗号、空格分隔都行，带不带 p 前缀都认（回显里是「改动段：2,3,13」）。"""
+    if values is None:
+        return None
+    out = []
+    for chunk in values:
+        for token in re.split(r"[,\s]+", chunk.strip()):
+            if not token or token == "无":
+                continue
+            m = re.match(r"^p?(\d+)$", token)
+            if not m:
+                raise CannotRun("--changed 只收段号（2,3,13 或 p2 p3），读不懂：%r" % token)
+            out.append(int(m.group(1)))
+    return out
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     args = build_parser().parse_args(argv)
     docx_path = pathlib.Path(args.docx)
@@ -1044,7 +1160,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             raise CannotRun("文书不存在：%s" % docx_path)
         if template is not None and not template.is_file():
             raise CannotRun("模板不存在：%s" % template)
-        result = run_gate(docx_path, template, args.max_pages, args.max_row_height, args.powershell, args.no_render)
+        result = run_gate(docx_path, template, args.max_pages, args.max_row_height, args.powershell, args.no_render,
+                          parse_changed(args.changed), args.slot_pattern)
     except CannotRun as e:
         sys.stderr.write("门禁无法运行：%s\n" % e)
         return 2
@@ -1052,7 +1169,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     refused = None
     if result["结论"] in ("通过", "需人眼") and args.deliver:
         try:
-            deliver(docx_path, pathlib.Path(args.deliver))
+            deliver(docx_path, pathlib.Path(args.deliver), args.overwrite)
             delivered = str(pathlib.Path(args.deliver))
         except Refused as e:
             refused = str(e)

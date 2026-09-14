@@ -23,4 +23,4 @@ npx skills@latest add f4de01/loo0ng-skills --skill=<name>
 - **[graph](./graph/SKILL.md)**: 图引擎。`图.json` 的唯一写入口：律师一句话改图的构成，编排 skill 追加生成与确认条目，每次写图后重算视图。
 - **[domain](./domain/SKILL.md)**: 领域目录与雏形。领域图、官方模板原件、指引手册原文三样的家；从指南长雏形，拍板后经引擎写入；活图与出厂种子的分工。
 - **[filing](./filing/SKILL.md)**: 归档与陈述。收件箱归档搬运；律师在对话里说的一句话落成陈述文件，落盘后只读。
-- **[to-docx](./to-docx/SKILL.md)**: 出件与门禁。Markdown 最小集以官方模板为载体转成 DOCX；版式门禁三档结论，不合格不落盘；门禁可单独对任意 DOCX 跑。
+- **[to-docx](./to-docx/SKILL.md)**: 填模板与门禁。把一件 DOCX 打成带编号的清单，按模型写的差量原地施加，没填的槽代码留黄；版式门禁查两样，三档结论，不合格不落盘；清单与门禁都能单独对任意 DOCX 跑。
