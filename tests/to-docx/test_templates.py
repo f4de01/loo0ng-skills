@@ -97,15 +97,7 @@ class TemplatesRegression(unittest.TestCase):
 
     def check_metadata(self, tpl, out, 遍):
         """元数据在收尾无条件清掉（2.0 的真实事故，落进第一类：施加的构造）。19 件逐件看一眼。"""
-        core = read_xml(out, "docProps/core.xml")
-        bad = []
-        for tag, 名 in ((support.DC + "creator", "作者"), (support.CP + "lastModifiedBy", "最后修改者")):
-            el = core.find(tag)
-            if el is not None and (el.text or "").strip():
-                bad.append("%s %s：%s没清" % (tpl.name, 遍, 名))
-        if core.find(support.CP + "lastPrinted") is not None:
-            bad.append("%s %s：上次打印时间没清" % (tpl.name, 遍))
-        return bad
+        return ["%s %s：%s" % (tpl.name, 遍, 名) for 名 in support.metadata_leftovers(out)]
 
 
 class TemplatesShape(unittest.TestCase):

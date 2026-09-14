@@ -175,10 +175,8 @@ class ApplyFive(FillCase):
 
     def test_delete_of_a_paragraph_after_a_table_that_is_not_the_last_still_removes_it(self):
         """同一位置、后面还有别的段：照常删。守的只是「表直接接 sectPr」这一种，不是表后的每一段。"""
-        tbl_idx = next(i for i, b in enumerate(support.body_blocks(self.tpl)) if b.tag == W + "tbl")
-        blocks = support.body_blocks(self.tpl)
-        self.assertGreater(len(blocks) - tbl_idx - 1, 1, "这件模板表后要有不止一段，这条才成立")
-        idx = support.paragraph_count(self.tpl) - (len(blocks) - tbl_idx - 1)   # 表后第一段的段号
+        idx, 表后段数 = support.first_paragraph_after_last_table(self.tpl)
+        self.assertGreater(表后段数, 1, "这件模板表后要有不止一段，这条才成立")
         before = support.paragraph_count(self.tpl)
         r = self.ok([{"op": "delete", "at": "p%d" % idx}], "表后照删.docx")
         self.assertIn("删段", r.out)
@@ -376,11 +374,7 @@ class Metadata(FillCase):
         core = read_xml(self.tpl, "docProps/core.xml")
         self.assertTrue((core.find(support.DC + "creator").text or "").strip(), "模板原件本来有作者")
         r = self.ok([{"op": "fill", "at": "p2#1", "text": "某"}], "元数据.docx")
-        out = support.out_path(r)
-        core = read_xml(out, "docProps/core.xml")
-        self.assertFalse((core.find(support.DC + "creator").text or "").strip())
-        self.assertFalse((core.find(support.CP + "lastModifiedBy").text or "").strip())
-        self.assertIsNone(core.find(support.CP + "lastPrinted"))
+        self.assertEqual(support.metadata_leftovers(support.out_path(r)), [])
 
 
 class TempOutput(FillCase):

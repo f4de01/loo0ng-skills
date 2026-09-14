@@ -213,14 +213,15 @@ def replace_range(p, start: int, end: int, new_text: Optional[str], highlight: O
 
 
 def _table_would_meet_sectpr(p) -> bool:
-    """删了这一段，正文最后一张表会不会直接接上 sectPr：前一个兄弟是表、后面再没有段或表。
-    Word 打开那样的件会报修复（2.0 推断的风险，ADR-0024 搬进施加构造）。"""
+    """删了这一段，正文最后一张表会不会直接接上 sectPr：往前数第一个段或表是表、往后再没有段或表。
+    书签、校对标记这类夹在中间的兄弟不算数。Word 打开那样的件会报修复（2.0 推断的风险，ADR-0024 搬进施加构造）。"""
     if p.getparent().tag != qn("w:body"):
         return False
-    prev = p.getprevious()
+    blocks = (qn("w:p"), qn("w:tbl"))
+    prev = next((el for el in p.itersiblings(preceding=True) if el.tag in blocks), None)
     if prev is None or prev.tag != qn("w:tbl"):
         return False
-    return not any(el.tag in (qn("w:p"), qn("w:tbl")) for el in p.itersiblings())
+    return not any(el.tag in blocks for el in p.itersiblings())
 
 
 def _delete_paragraph(p) -> str:
@@ -331,7 +332,7 @@ def _planned(idx: int, p, plist: List[dict], pattern: "re.Pattern") -> Tuple[Lis
                 raise Rejected("p%d#%d 的 fill 缺 text" % (idx, n))
             if new == "":
                 # 空串不是一个值：按「没填」处理，槽留原占位、由收尾留黄。不拒：拒改是内容检查，模型会学着删槽过检。
-                skipped.append("fill %s「%s」空串：按没填处理，留黄" % (op["at"], old))
+                skipped.append("fill %s「%s」空串：按没填处理，槽留原占位" % (op["at"], old))
                 continue
         elif kind == "replace":
             new = op.get("new")

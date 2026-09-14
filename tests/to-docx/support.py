@@ -203,6 +203,27 @@ def ending_with_a_table(src: pathlib.Path, dst: pathlib.Path):
     return dst, 填.paragraphs(doc).index(kept)
 
 
+def first_paragraph_after_last_table(src: pathlib.Path):
+    """正文最后一张表之后第一段的段号，连同表后有几段。"""
+    doc = Document(str(src))
+    tbl = doc.element.body.findall(qn("w:tbl"))[-1]
+    after = [el for el in tbl.itersiblings() if el.tag == qn("w:p")]
+    return 填.paragraphs(doc).index(after[0]), len(after)
+
+
+def metadata_leftovers(docx: pathlib.Path):
+    """收尾该清掉的元数据里还剩着的：作者、最后修改者、上次打印时间。全清了就是空表。"""
+    core = read_xml(docx, "docProps/core.xml")
+    left = []
+    for tag, 名 in ((DC + "creator", "作者"), (CP + "lastModifiedBy", "最后修改者")):
+        el = core.find(tag)
+        if el is not None and (el.text or "").strip():
+            left.append("%s没清" % 名)
+    if core.find(CP + "lastPrinted") is not None:
+        left.append("上次打印时间没清")
+    return left
+
+
 def body_blocks(docx: pathlib.Path):
     body = read_xml(docx).find(W + "body")
     return [c for c in body if c.tag in (W + "p", W + "tbl")]
