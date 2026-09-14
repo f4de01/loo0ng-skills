@@ -1,3 +1,3 @@
 interface:
   display_name: "filing"
-  short_description: "收件箱归档搬运；律师一句话落成陈述文件"
+  short_description: "归档：按计划把待归档或工作区外目录里的文件搬进三格，并维护归档索引"

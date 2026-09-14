@@ -1,6 +1,6 @@
-"""两个 CLI 的依赖边界（#27 验收）：import 只含标准库，互不引用，也不引用图引擎。
+"""归档 CLI 的依赖边界：import 只含标准库，不引用图引擎，也不引用别的 skill 的脚本。
 
-运行：python -m unittest tests/filing/test_isolation.py
+运行：python -m unittest discover -s tests/filing -p 'test_*.py'
 """
 import ast
 import pathlib
@@ -9,7 +9,7 @@ import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 SCRIPTS = REPO / "skills" / "in-progress" / "filing" / "scripts"
-CLIS = ("archive.py", "statement.py")
+CLIS = ("archive.py",)
 
 
 def imported_modules(path):
@@ -24,6 +24,10 @@ def imported_modules(path):
 
 
 class IsolationTest(unittest.TestCase):
+    def test_scripts_dir_holds_only_the_archive_cli(self):
+        self.assertEqual(sorted(p.name for p in SCRIPTS.glob("*.py")), sorted(CLIS),
+                         "filing 只有一个 CLI：陈述落档随 ADR-0023 退场")
+
     def test_only_standard_library(self):
         for name in CLIS:
             mods = imported_modules(SCRIPTS / name)
@@ -32,15 +36,12 @@ class IsolationTest(unittest.TestCase):
                 self.assertIn(m, sys.stdlib_module_names, "%s 引用了非标准库模块 %s" % (name, m))
 
     def test_no_cross_reference(self):
-        forbidden = ("archive", "statement", "graph", "loo0ng")
+        forbidden = ("archive", "graph", "loo0ng", "fill", "sketch", "setup")
         for name in CLIS:
             text = (SCRIPTS / name).read_text(encoding="utf-8")
             mods = imported_modules(SCRIPTS / name)
             for f in forbidden:
                 self.assertNotIn(f, mods, "%s import 了 %s" % (name, f))
-            for other in CLIS:
-                if other != name:
-                    self.assertNotIn("import %s" % other[:-3], text)
             self.assertNotIn("graph.py", text, "%s 不该指向引擎脚本" % name)
 
 

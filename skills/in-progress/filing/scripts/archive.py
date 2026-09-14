@@ -1,41 +1,69 @@
 #!/usr/bin/env python3
-"""归档搬运 CLI：把收件箱里的文件按相对路径原样搬到去向格下。标准库零依赖，Windows 中文路径可用。
+"""归档 CLI：按模型写的归档计划把文件搬进本案，并维护归档索引。标准库零依赖，Windows 中文路径可用。
 
-去向只有四格：材料、指南、模板/官方、模板/生成（ADR-0007）。判断去向归模型，本脚本只搬：
-不改名、不覆盖、不越界、不合并目录；同名已存在则那件不搬、留在收件箱并报出；
-压缩包与照片只能归材料（原样，不解压不识图）；永不写入 材料/律师陈述/。
-不登记、不算指纹、不去重、不写图（图.json 一字不动）。
+来源两种：`待归档/`（移动）与工作区外的任意目录（复制，原件不动）。去向只有三格：材料、参考/模板、
+参考/指南（ADR-0023）。「去向」与「一句话是什么」是判断，归模型写进计划；本脚本只做确定性的那一半
+（ADR-0024 第一类）：不改名、不覆盖、按内容哈希去重、子目录相对路径原样、外部来源只复制。
+不解压、不识图、不做 OCR、不转 PDF；永不写 材料/律师说过的.md，永不写图。
 
 用法：
-  python archive.py [--workspace <案件工作区>] list
-  python archive.py [--workspace <案件工作区>] move --to <去向> <收件箱内相对路径>...
+  python archive.py [--workspace <案件工作区>] list [--from <工作区外目录>]
+  python archive.py [--workspace <案件工作区>] apply --plan <计划.json> [--from <工作区外目录>] [--date YYYY-MM-DD]
 
-退出码：0 全部搬到；1 有拒绝（越界、不存在、去向不合规则时整条命令不搬；同名时那件不搬、其余照搬）；2 用法错误。
+计划是一个 JSON 数组，一条一件：路径、去向、说明三个必填字段，材料下可另给子目录（格式见 references/格式.md）。
+
+退出码：0 命令跑到底（逐件结果在回显里，含「已有」与「同名冲突」）；1 整条拒绝，一件不搬；2 用法错误。
 """
 import argparse
+import datetime as _dt
+import hashlib
+import json
 import os
 import pathlib
+import shutil
 import sys
-from typing import List, NamedTuple, Optional, Tuple
+from typing import Dict, List, NamedTuple, Optional, Tuple
 
 WORKSPACE_MARKER = "图.json"
-INBOX = "收件箱"
-STATEMENTS_DIR = "律师陈述"  # 材料/律师陈述/ 归落档脚本，归档永不写入
-DESTINATIONS = ("材料", "指南", "模板/官方", "模板/生成")
+PENDING = "待归档"
+INDEX = "归档索引.md"
 MATERIALS = "材料"
-ARCHIVE_OR_PHOTO = {".zip", ".rar", ".7z", ".tar", ".gz", ".tgz", ".bz2", ".xz",
-                    ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tif", ".tiff", ".heic", ".heif", ".webp"}
+DESTINATIONS = ("材料", "参考/模板", "参考/指南")
+SAYINGS = "材料/律师说过的.md"  # 律师说过的那份文件由出件追加，归档永不写它
+TEXT_COLUMN = "原件"  # 「文本」列：本版全是原件；OCR 与 PDF 转文本是后续版本
+PLAN_KEYS = ("路径", "去向", "说明", "子目录")
+REQUIRED_KEYS = ("路径", "去向", "说明")
+INDEX_HEADER = (
+    "# 归档索引\n"
+    "\n"
+    "一行一件，由归档脚本追加与更新，按归档先后排列；出件开场先读它再决定读哪些原件。\n"
+    "「文本」列现在全是「原件」：将来转出的文本放原件旁同名加 `.md`，这一列指向它。\n"
+    "\n"
+    "| 相对路径 | 是什么 | 归档日期 | 文本 |\n"
+    "| --- | --- | --- | --- |\n"
+)
 
 
 class Rejected(Exception):
-    """整条命令拒绝：一件都不搬。"""
+    """整条命令拒绝：一件都不搬，索引一行不写。"""
 
 
-class Move(NamedTuple):
-    rel: pathlib.PurePosixPath  # 收件箱内相对路径，回显用
+class Item(NamedTuple):
+    rel: str         # 来源目录内的相对路径，回显用
     src: pathlib.Path
+    dest: str        # 三格之一
+    note: str        # 一句话是什么，进索引
+    target_rel: str  # 工作区内相对路径
     target: pathlib.Path
 
+
+class Outcome(NamedTuple):
+    line: str                       # 回显一行
+    row: Optional[Tuple[str, str]]  # 落进索引的 (相对路径, 一句话)；未搬的为 None
+    kind: str                       # 已归档 / 已有 / 同名冲突
+
+
+# ---------------------------------------------------------------- 路径与内容
 
 def workspace_root(path: str) -> pathlib.Path:
     root = pathlib.Path(path).resolve()
@@ -44,61 +72,184 @@ def workspace_root(path: str) -> pathlib.Path:
     return root
 
 
-def inbox_relative(root: pathlib.Path, raw: str) -> pathlib.PurePosixPath:
-    """把律师或模型给的相对路径规整成收件箱内的相对路径；绝对路径、.. 与越界都拒绝。"""
+def source_root(root: pathlib.Path, raw: Optional[str]) -> Tuple[pathlib.Path, bool]:
+    """回（来源目录, 是不是复制）。不给 --from 就是待归档（移动）；给了就得在工作区外（复制）。"""
+    if raw is None:
+        pending = root / PENDING
+        if not pending.is_dir():
+            raise Rejected("%s 下没有 %s/；没有待归档就没有东西要搬" % (root, PENDING))
+        return pending, False
+    src = pathlib.Path(raw).expanduser()
+    if not src.is_dir():
+        raise Rejected("--from %s 不是一个目录" % raw)
+    src = src.resolve()
+    if src == root or root in src.parents:
+        raise Rejected("%s 在本案工作区里；工作区内只收 %s/（不传 --from），根上的文件先挪进 %s/"
+                       % (raw, PENDING, PENDING))
+    if src in root.parents:
+        raise Rejected("%s 套着本案工作区；换一个不含工作区的目录" % raw)
+    return src, True
+
+
+def relative_in(base: pathlib.Path, raw: str, label: str) -> str:
+    """把计划里的路径规整成来源目录内的相对路径；绝对路径、.. 与越界都拒绝。"""
     text = raw.replace("\\", "/").strip()
     if not text:
-        raise Rejected("路径为空")
+        raise Rejected("%s 的路径为空" % label)
     if pathlib.PureWindowsPath(text).is_absolute() or pathlib.PurePosixPath(text).is_absolute():
-        raise Rejected("%s 是绝对路径；只收收件箱内的相对路径" % raw)
+        raise Rejected("%s 是绝对路径；计划里只写来源目录内的相对路径" % raw)
     rel = pathlib.PurePosixPath(text)
     if ".." in rel.parts:
         raise Rejected("%s 越界：路径里不得有 .." % raw)
-    inbox = (root / INBOX).resolve()
-    target = (inbox / rel).resolve()
-    if inbox != target and inbox not in target.parents:
-        raise Rejected("%s 越界：不在收件箱内" % raw)
-    if target == inbox:
-        raise Rejected("%s 指向收件箱本身" % raw)
-    return rel
+    target = (base / rel).resolve()
+    if base != target and base not in target.parents:
+        raise Rejected("%s 越界：不在 %s 里" % (raw, base))
+    return rel.as_posix()
 
 
-def first_archive_or_photo(path: pathlib.Path) -> Optional[pathlib.Path]:
-    """文件按扩展名判；目录则找里面第一个压缩包或照片。没有返回 None。"""
-    candidates = [path] if path.is_file() else sorted(p for p in path.rglob("*") if p.is_file())
-    for p in candidates:
-        if p.suffix.lower() in ARCHIVE_OR_PHOTO:
-            return p
-    return None
+def subdir_of(raw: str, dest: str, label: str) -> str:
+    """材料下的主题子目录；其余两格不收。"""
+    text = raw.replace("\\", "/").strip().strip("/")
+    if not text:
+        return ""
+    if dest != MATERIALS:
+        raise Rejected("%s：只有 %s 下能建主题子目录，去向 %s 不收「子目录」" % (label, MATERIALS, dest))
+    parts = pathlib.PurePosixPath(text).parts
+    if pathlib.PureWindowsPath(text).is_absolute() or any(p in ("..", ".") for p in parts):
+        raise Rejected("%s 的子目录 %s 不合法：只写 %s 下的相对路径，不得有 .. 或绝对路径" % (label, raw, MATERIALS))
+    return "/".join(parts)
 
 
-def plan(root: pathlib.Path, dest: str, raws: List[str]) -> List[Move]:
-    """先把每一件都验完再搬：任一件越界、不存在或去向不合规则，整条命令拒绝。"""
-    inbox = root / INBOX
-    moves = []
-    seen = set()
-    for raw in raws:
-        rel = inbox_relative(root, raw)
-        src = inbox / rel
+def digest(path: pathlib.Path) -> str:
+    h = hashlib.sha256()
+    with open(str(path), "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def files_under(base: pathlib.Path) -> List[str]:
+    if not base.is_dir():
+        return []
+    return sorted(p.relative_to(base).as_posix() for p in base.rglob("*") if p.is_file())
+
+
+def archived_index(root: pathlib.Path) -> Tuple[Dict[str, str], Dict[str, str]]:
+    """扫三格里已归档的文件，回（内容哈希 → 相对路径, 文件名 → 相对路径）。多份同哈希或同名取排序第一份。"""
+    by_hash, by_name = {}, {}
+    for dest in DESTINATIONS:
+        base = root / dest
+        for rel in files_under(base):
+            shown = "%s/%s" % (dest, rel)
+            by_hash.setdefault(digest(base / rel), shown)
+            by_name.setdefault(pathlib.PurePosixPath(rel).name, shown)
+    return by_hash, by_name
+
+
+# ---------------------------------------------------------------- 计划
+
+def load_plan(root: pathlib.Path, base: pathlib.Path, plan_path: str) -> List[Item]:
+    """整份计划先验完再搬：任一条不合法，整条命令拒绝。"""
+    try:
+        raw = pathlib.Path(plan_path).read_text(encoding="utf-8")
+    except OSError as e:
+        raise Rejected("读不到计划 %s：%s" % (plan_path, e))
+    try:
+        data = json.loads(raw)
+    except ValueError as e:
+        raise Rejected("计划 %s 不是合法 JSON：%s" % (plan_path, e))
+    if not isinstance(data, list) or not data:
+        raise Rejected("计划要是一个非空 JSON 数组，一条一件")
+
+    items, seen_src, seen_target = [], set(), set()
+    for i, entry in enumerate(data, 1):
+        label = "第 %d 条" % i
+        if not isinstance(entry, dict):
+            raise Rejected("%s 不是一个对象" % label)
+        extra = sorted(k for k in entry if k not in PLAN_KEYS)
+        if extra:
+            raise Rejected("%s 有不认得的字段：%s；只收 %s" % (label, "、".join(extra), "、".join(PLAN_KEYS)))
+        for key in REQUIRED_KEYS:
+            if not isinstance(entry.get(key), str) or not entry[key].strip():
+                raise Rejected("%s 缺 %s（三个字段都必填，写成一行文字）" % (label, key))
+        sub_raw = entry.get("子目录", "")
+        if not isinstance(sub_raw, str):
+            raise Rejected("%s 的子目录要写成一行文字" % label)
+        dest = entry["去向"].strip()
+        if dest not in DESTINATIONS:
+            raise Rejected("%s 的去向 %s 不是三格之一：%s" % (label, dest, "、".join(DESTINATIONS)))
+        note = entry["说明"].strip()
+        if "\n" in note or "\r" in note or "|" in note:
+            raise Rejected("%s 的说明要是一行，且不得含竖线（它进索引表）" % label)
+        sub = subdir_of(sub_raw, dest, label)
+
+        rel = relative_in(base, entry["路径"], label)
+        src = base / rel
         if not src.exists():
-            raise Rejected("收件箱里没有 %s" % rel.as_posix())
-        if dest == MATERIALS and rel.parts[0] == STATEMENTS_DIR:
-            raise Rejected("%s 会落进 材料/%s/；那格只收落档脚本写的律师陈述，归档永不写入" % (rel.as_posix(), STATEMENTS_DIR))
-        if dest != MATERIALS:
-            hit = first_archive_or_photo(src)
-            if hit is not None:
-                raise Rejected("%s 是压缩包或照片，只能原样归 %s" % (hit.relative_to(inbox).as_posix(), MATERIALS))
-        if rel in seen:
-            raise Rejected("%s 给了两次" % rel.as_posix())
-        seen.add(rel)
-        moves.append(Move(rel, src, root / dest / rel))
-    return moves
+            raise Rejected("%s 里没有 %s" % (base, rel))
+        if not src.is_file():
+            raise Rejected("%s 是目录；索引一行一件，计划里逐个文件写（list 已经逐件列出来了）" % rel)
+        if rel in seen_src:
+            raise Rejected("%s 在计划里给了两次" % rel)
+        seen_src.add(rel)
+
+        target_rel = "/".join(x for x in (dest, sub, rel) if x)
+        if target_rel == SAYINGS:
+            raise Rejected("%s 会写到 %s；那份文件由出件追加，归档永不写它" % (rel, SAYINGS))
+        if target_rel in seen_target:
+            raise Rejected("计划里有两条都落到 %s" % target_rel)
+        seen_target.add(target_rel)
+        items.append(Item(rel, src, dest, note, target_rel, root / target_rel))
+    return items
 
 
-def prune_empty_dirs(inbox: pathlib.Path, start: pathlib.Path) -> None:
-    """搬空的收件箱子目录顺手清掉，收件箱本身留着。"""
+# ---------------------------------------------------------------- 归档索引
+
+def index_rows(text: str) -> Dict[str, int]:
+    """已有索引里 相对路径 → 行号；认不出的行一律不动。"""
+    rows = {}
+    for n, line in enumerate(text.splitlines()):
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            continue
+        cells = [c.strip() for c in stripped.strip("|").split("|")]
+        if len(cells) < 4 or cells[0] in ("相对路径", "---"):
+            continue
+        rows.setdefault(cells[0], n)
+    return rows
+
+
+def write_index(root: pathlib.Path, rows: List[Tuple[str, str]], date: str) -> Tuple[int, int]:
+    """新件追加到末尾，已有那一行原地更新；其余行一字不动、不重排。回（新增, 更新）。"""
+    if not rows:
+        return 0, 0
+    path = root / INDEX
+    text = path.read_text(encoding="utf-8") if path.is_file() else INDEX_HEADER
+    if not text.endswith("\n"):
+        text += "\n"
+    lines = text.splitlines()
+    where = index_rows(text)
+    added = updated = 0
+    for target_rel, note in rows:
+        line = "| %s | %s | %s | %s |" % (target_rel, note, date, TEXT_COLUMN)
+        if target_rel in where:
+            lines[where[target_rel]] = line
+            updated += 1
+        else:
+            where[target_rel] = len(lines)
+            lines.append(line)
+            added += 1
+    with open(str(path), "w", encoding="utf-8", newline="\n") as f:
+        f.write("\n".join(lines) + "\n")
+    return added, updated
+
+
+# ---------------------------------------------------------------- 动作
+
+def prune_empty_dirs(base: pathlib.Path, start: pathlib.Path) -> None:
+    """搬空的待归档子目录顺手清掉，待归档本身留着。"""
     cur = start
-    while cur != inbox and cur.is_dir():
+    while cur != base and cur.is_dir():
         try:
             cur.rmdir()
         except OSError:
@@ -106,28 +257,66 @@ def prune_empty_dirs(inbox: pathlib.Path, start: pathlib.Path) -> None:
         cur = cur.parent
 
 
-def move(root: pathlib.Path, dest: str, raws: List[str]) -> Tuple[List[str], List[str]]:
-    moves = plan(root, dest, raws)
-    done, refused = [], []
-    inbox = root / INBOX
-    for rel, src, target in moves:
-        shown = "%s/%s" % (dest, rel.as_posix())
-        if target.exists():
-            refused.append("未搬：%s（%s 已存在，留在收件箱）" % (rel.as_posix(), shown))
+def list_source(root: pathlib.Path, base: pathlib.Path) -> List[str]:
+    by_hash, by_name = archived_index(root)
+    out, counts = [], {"新": 0, "已有": 0, "同名": 0}
+    for rel in files_under(base):
+        h = digest(base / rel)
+        name = pathlib.PurePosixPath(rel).name
+        if h in by_hash:
+            counts["已有"] += 1
+            out.append("%s\t已有 → %s" % (rel, by_hash[h]))
+        elif name in by_name:
+            counts["同名"] += 1
+            out.append("%s\t同名 → %s（内容不同）" % (rel, by_name[name]))
+        else:
+            counts["新"] += 1
+            out.append("%s\t新" % rel)
+    if not out:
+        return ["%s 里没有文件。" % base]
+    out.append("共 %d 件：新 %d，已有 %d，同名 %d。" % (len(out), counts["新"], counts["已有"], counts["同名"]))
+    return out
+
+
+def apply_plan(root: pathlib.Path, base: pathlib.Path, copying: bool, items: List[Item], date: str) -> List[str]:
+    by_hash, _ = archived_index(root)
+    outcomes = []
+    for item in items:
+        h = digest(item.src)
+        if h in by_hash:
+            outcomes.append(Outcome("已有：%s（与 %s 内容相同，未搬）" % (item.rel, by_hash[h]), None, "已有"))
             continue
-        target.parent.mkdir(parents=True, exist_ok=True)
-        # 同文件系统内改路径。不覆盖靠上面的存在检查；Windows 上 os.rename 遇已存在目标另会报错，POSIX 上不会。
-        os.rename(src, target)
-        prune_empty_dirs(inbox, src.parent)
-        done.append("已归档：%s → %s" % (rel.as_posix(), shown))
-    return done, refused
+        if item.target.exists():
+            outcomes.append(Outcome("同名冲突：%s → %s 已存在且内容不同，未搬，留在原处"
+                                    % (item.rel, item.target_rel), None, "同名冲突"))
+            continue
+        item.target.parent.mkdir(parents=True, exist_ok=True)
+        if copying:
+            shutil.copy2(str(item.src), str(item.target))
+        else:
+            os.rename(str(item.src), str(item.target))
+            prune_empty_dirs(base, item.src.parent)
+        by_hash[h] = item.target_rel
+        outcomes.append(Outcome("已归档：%s → %s%s"
+                                % (item.rel, item.target_rel, "（复制，原件不动）" if copying else ""),
+                                (item.target_rel, item.note), "已归档"))
+
+    added, updated = write_index(root, [o.row for o in outcomes if o.row is not None], date)
+    kinds = [o.kind for o in outcomes]
+    lines = [o.line for o in outcomes]
+    lines.append("共 %d 件：已归档 %d，已有 %d，同名冲突 %d；%s 新增 %d 行、更新 %d 行。"
+                 % (len(outcomes), kinds.count("已归档"), kinds.count("已有"), kinds.count("同名冲突"),
+                    INDEX, added, updated))
+    return lines
 
 
-def list_inbox(root: pathlib.Path) -> List[str]:
-    inbox = root / INBOX
-    if not inbox.is_dir():
-        return []
-    return sorted(p.relative_to(inbox).as_posix() for p in inbox.rglob("*") if p.is_file())
+def check_date(raw: Optional[str]) -> str:
+    if not raw:
+        return _dt.date.today().isoformat()
+    try:
+        return _dt.date.fromisoformat(raw).isoformat()
+    except ValueError:
+        raise Rejected("--date 须是 YYYY-MM-DD，实际 %r" % raw)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -135,10 +324,12 @@ def build_parser() -> argparse.ArgumentParser:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--workspace", default=".", help="案件工作区（默认当前目录；开发侧测试用）")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("list", help="列出收件箱里所有文件的相对路径")
-    mv = sub.add_parser("move", help="把收件箱内的文件或目录原样搬到去向格下")
-    mv.add_argument("--to", required=True, choices=DESTINATIONS, help="去向格")
-    mv.add_argument("paths", nargs="+", metavar="收件箱内相对路径")
+    ls = sub.add_parser("list", help="逐件列出来源目录里的文件，并标出已有与同名")
+    ls.add_argument("--from", dest="source", help="工作区外的来源目录（默认 %s/）" % PENDING)
+    ap_apply = sub.add_parser("apply", help="按计划搬运并写索引")
+    ap_apply.add_argument("--plan", required=True, help="归档计划 JSON（写在临时位置，不进工作区）")
+    ap_apply.add_argument("--from", dest="source", help="工作区外的来源目录（默认 %s/，外部一律复制）" % PENDING)
+    ap_apply.add_argument("--date", help="归档日期（YYYY-MM-DD，默认今天；开发侧测试用）")
     return ap
 
 
@@ -146,17 +337,17 @@ def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
     try:
         root = workspace_root(args.workspace)
+        base, copying = source_root(root, args.source)
         if args.cmd == "list":
-            names = list_inbox(root)
-            print("\n".join(names) if names else "收件箱为空。")
-            return 0
-        done, refused = move(root, args.to, args.paths)
+            lines = list_source(root, base)
+        else:
+            date = check_date(args.date)
+            lines = apply_plan(root, base, copying, load_plan(root, base, args.plan), date)
     except Rejected as e:
         print("拒绝：%s。一件都没搬。" % e, file=sys.stderr)
         return 1
-    for line in done + refused:
-        print(line)
-    return 1 if refused else 0
+    print("\n".join(lines))
+    return 0
 
 
 if __name__ == "__main__":
