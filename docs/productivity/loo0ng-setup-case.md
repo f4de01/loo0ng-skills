@@ -1,0 +1,56 @@
+## What it does
+
+`loo0ng-setup-case` 在一个空目录里长出案件工作区，一案一次。一条命令落下六格（`收件箱/`、`材料/律师陈述/`、`指南/`、`模板/官方/`、`模板/生成/`、`文书/`）、图与两份视图、起手图上挂到的官方模板原件、工作区指针块；接着归档收件箱、指南非空时跑一次雏形，末尾回显一张起手清单。
+
+整条路上只有一个确认点。起手清单出现之前的五步不问律师，清单要律师一句话拍板才写图，写图之后不再问第二遍。没有任何节点会被它自动确认：起手登记的既有成品只是「已生成」，确认是另一个入口的事。
+
+## When to reach for it
+
+你打 `/loo0ng-setup-case`（Codex 里是 `$loo0ng-setup-case`）触发它，模型不会自己调它。会话当前目录必须是一个空目录：目录里已经有 `图.json` 时它拒绝，那已经是一个案件工作区了。
+
+| 你要的 | 打法 |
+| --- | --- |
+| 新案子，从这个领域的整份领域图起手（最常见） | `/loo0ng-setup-case 整份 <领域名>` |
+| 新案子，空图，自己一句句长 | `/loo0ng-setup-case 空图 <领域名>` |
+| 新案子，全新领域，活图与种子都还没有 | `/loo0ng-setup-case 空图 <一个此前没有的领域名>` |
+| 开发者交付的定制图 | 把定制图的路径写进那句话 |
+
+已经起手的案子要改图的构成（加节点、改标题），不是重新起手，一句话说给模型，它调用 [loo0ng-graph](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-graph.md)。要办某个节点，用 [loo0ng-doit](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-doit.md)。
+
+## Prerequisites
+
+- 一个空目录，会话在它里面开。
+- 领域名由你给。它写进图的「领域」字段与工作区指针块，填错了整案的前方、惰性带入与时限都挂在错的领域上，而起手一案一次，改它要换一个空目录从头来。
+- 这个领域的活图住 `~/.loo0ng/领域/<领域名>/`，第一次在这个领域上起手时从 skill 包内的出厂种子整份拷出，已经在就一个字不动。
+
+## 起手图三选一与领域名是两件事
+
+起手要定的是两件：哪一种起手图，和这案子是哪个领域。你那句话里说了的照办，没说清的那一件（或两件）它一次问齐、给选项，不替你选。
+
+**领域名只能由你给，不许从本机上有什么推出来。** 本机只装了一个「破产」种子，不等于这案子是破产案；你答了一个此前没有过的领域名，那不是笔误，是新领域从空图起手：这个案子没有前方、没有惰性带入、没有时限，图上只有你自己一句句长出来的节点。
+
+## Common questions
+
+**我只说了「空图」，它把本机唯一那个「破产」种子当成了默认领域。**
+0.1.0 现场报过的洞，已经堵上：正文现在要求领域名只能由律师给，问起手图那一次连领域一起问。再遇到就是它没照正文做，把那句话原样拿去问模型为什么没问领域。
+
+**0.1.0 起手的工作区，升级之后怎么办？**
+本版不迁移。那时落进工作区 `AGENTS.md` 的领域目录路径指着 skill 包内的种子，要手改同一行：把「领域目录」那一行换成 `sketch.py home --name <领域名>` 回显的活图路径，图与六格一个字不动。此前已确认的节点不会自动补进活图，补法见 [loo0ng-domain](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-domain.md)。
+
+**起手清单里的「既有成品」登记之后算确认了吗？**
+不算。它只是「已生成、来源记律师」，审查报告里照实写着工作台没参与写作、没跑门禁。要确认，得读过报告后在办节点的对话里说一句「确认」。
+
+**起手图上挂到的官方模板从哪里来？**
+从领域目录的 `模板/` 拷进工作区的 `模板/官方/`，出件读的是工作区里这一份。图上没挂的不拷，领域目录里缺原件只报不拒。
+
+## It's working if
+
+- 空目录里多出六格与 `图.json`、`图视图.md`、`图视图.json` 三份文件，收件箱里的东西各归各位。
+- 回复末尾「落了什么」恰好五行，件数与节点名逐个写实，没有的那一样写「0 件」。
+- 起手清单出现时，图在你说一句话之前一个字不动；你说「第 3 条不要」它就只写其余的。
+- 工作区 `AGENTS.md` 里「领域目录」那一行指的是 `~/.loo0ng/领域/` 下的活图，不是 skill 包内的 `assets/`。
+- 它从不替你把某个节点标成已确认。
+
+## Where it fits
+
+`loo0ng-setup-case` 是**一案一次的起手**，主线的第 1 步：起手，然后开新对话用 [loo0ng-doit](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-doit.md) 一个节点一个对话地办下去。它自己不出件、不确认。收件箱归档与从指南长雏形它只是调用者，机制的主人分别是 [loo0ng-filing](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-filing.md) 与 [loo0ng-domain](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-domain.md)。起手之后不知道先办哪个，问 [ask-loo0ng](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/ask-loo0ng.md)，它是整套 skill 的路由。

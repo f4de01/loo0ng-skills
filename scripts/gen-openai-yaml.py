@@ -9,6 +9,7 @@ display-name 必须等于 skill 目录名（即 name）：Codex 的 $ 补全显�
 
 用法：
   python scripts/gen-openai-yaml.py [--check] [--skills skills]
+递归扫 skills/<bucket>/<name>/SKILL.md（Matt 分桶布局，ADR-0009 附注 2026-09-13）。
 退出码：0 全部同步（或已写出）；1 --check 下有不同步；2 frontmatter 缺字段或解析不了。
 """
 import argparse
@@ -78,7 +79,8 @@ def render(front: Dict[str, object], skill_dir: pathlib.Path) -> str:
 
 
 def skill_dirs(root: pathlib.Path) -> List[pathlib.Path]:
-    return sorted(p.parent for p in root.glob("*/SKILL.md"))
+    """skills/<bucket>/<name>/SKILL.md，照 Matt 分桶递归找；桶下没有 SKILL.md 的目录（如只有 README.md 的空桶）不算。"""
+    return sorted(p.parent for p in root.rglob("SKILL.md") if "node_modules" not in p.parts)
 
 
 def generate(root: pathlib.Path, check: bool) -> Tuple[List[str], List[str]]:

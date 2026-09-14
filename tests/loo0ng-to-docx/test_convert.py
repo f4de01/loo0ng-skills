@@ -1,4 +1,4 @@
-"""skills/loo0ng-to-docx/scripts/md2docx.py 的脚本层单测（unittest）。不需要 Word。
+"""skills/productivity/loo0ng-to-docx/scripts/md2docx.py 的脚本层单测（unittest）。不需要 Word。
 
 运行：python -m unittest tests/loo0ng-to-docx/test_convert.py
 

@@ -8,7 +8,7 @@ import sys
 import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-SCRIPTS = REPO / "skills" / "loo0ng-filing" / "scripts"
+SCRIPTS = REPO / "skills" / "productivity" / "loo0ng-filing" / "scripts"
 CLIS = ("archive.py", "statement.py")
 
 

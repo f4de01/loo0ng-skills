@@ -28,10 +28,10 @@ def 假仓库(根, 名单=("a-skill", "b-skill")):
     (根 / ".claude-plugin").mkdir(parents=True)
     (根 / ".claude-plugin" / "plugin.json").write_text(
         json.dumps({"name": "x", "version": "0.0.0",
-                    "skills": ["./skills/" + n for n in 名单]},
+                    "skills": ["./skills/productivity/" + n for n in 名单]},
                    ensure_ascii=False, indent=2) + LF, encoding="utf-8")
     for n in 名单:
-        d = 根 / "skills" / n
+        d = 根 / "skills" / "productivity" / n
         (d / "scripts" / "__pycache__").mkdir(parents=True)
         (d / "assets").mkdir()
         (d / "SKILL.md").write_bytes(("---" + LF + "name: " + n + LF + "---" + LF + "正文" + LF).encode("utf-8"))
@@ -72,7 +72,7 @@ class 打包(unittest.TestCase):
             self.assertEqual([n for n in z.namelist() if "__pycache__" in n], [])
 
     def test_BOM即停且不产出(self):
-        p = self.根 / "skills" / "a-skill" / "SKILL.md"
+        p = self.根 / "skills" / "productivity" / "a-skill" / "SKILL.md"
         p.write_bytes(BOM + p.read_bytes())
         r = 跑("--root", str(self.根), "--zip", str(self.出))
         self.assertEqual(r.returncode, 1)
@@ -82,7 +82,7 @@ class 打包(unittest.TestCase):
 
     def test_登记的目录不在即停(self):
         import shutil
-        shutil.rmtree(self.根 / "skills" / "b-skill")
+        shutil.rmtree(self.根 / "skills" / "productivity" / "b-skill")
         r = 跑("--root", str(self.根), "--zip", str(self.出))
         self.assertEqual(r.returncode, 1)
         self.assertIn("b-skill", r.stderr)

@@ -21,7 +21,7 @@ hRule="exact" 的行高与格里写什么无关，所以只要成品里有那张
 段。提示词里那句「这台机器上没装 Word」不是绕路，是律师那台机器（mac + WPS）的常态，也是需人眼这
 一档存在的前提：有渲染结果时点值取代推算区间、这一档当场坍缩（ADR-0017）。开发机装着 Word 与 
 PyMuPDF，同一件带渲染跑实测点值 200.1 磅、结论是不通过，所以本用例靠这句话让 skill 走 
-skills/loo0ng-to-docx/SKILL.md「没有渲染后端」那一节写明的显式跑道（--no-render）；这也顺带覆盖
+skills/productivity/loo0ng-to-docx/SKILL.md「没有渲染后端」那一节写明的显式跑道（--no-render）；这也顺带覆盖
 了那条跑道本身。局限两条：一是它把「模型会不会把这句人话翻成那个旗」与「拿到退出码 3 之后做什么」
 绑在同一个用例里，翻不出来就红在前一件事上；二是 Codex 侧沙箱里本来就起不来 Word COM，那一侧不论
 翻不翻得出来都走无渲染跑道，真正测到这条翻译的只有 Claude Code 侧。断言重跑门禁时带 --no-render，
@@ -41,7 +41,7 @@ import tempfile
 import zipfile
 
 REPO = pathlib.Path(__file__).resolve().parents[3]
-GATE = REPO / "skills" / "loo0ng-to-docx" / "scripts" / "gate.py"
+GATE = REPO / "skills" / "productivity" / "loo0ng-to-docx" / "scripts" / "gate.py"
 节点 = "管理人银行账户备案报告"
 模板 = "1-3.关于管理人银行账户备案的报告.docx"
 

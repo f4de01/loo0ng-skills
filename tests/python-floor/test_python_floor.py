@@ -1,6 +1,6 @@
 """随包分发的脚本与种子回放跑得动 python 3.9（#61 验收）：律师那台 mac 的 /usr/bin/python3 是 3.9.6。
 
-扫两处：`skills/*/scripts/*.py` 是随包分发、在律师机器上跑的七件；`evals/种子/*/回放.py` 由
+扫两处：`skills/*/*/scripts/*.py` 是随包分发、在律师机器上跑的七件；`evals/种子/*/回放.py` 由
 `replay_seed` 用跑测试的那个解释器起，#61 的验收要求 `test_seeds.py` 在 3.9 上绿，所以种子同受
 这条约束（#61 的票里漏了这一处，验收就卡在它上面）。`tests/` 与 `scripts/` 下的开发侧脚本按
 ADR-0015 只在开发机上跑，不扫。
@@ -18,7 +18,7 @@ import pathlib
 import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-SHIPPED = sorted((REPO / "skills").glob("*/scripts/*.py"))
+SHIPPED = sorted((REPO / "skills").glob("*/*/scripts/*.py"))   # skills/<bucket>/<name>/scripts/
 SEEDS = sorted((REPO / "evals" / "种子").glob("*/回放.py"))
 TARGETS = SHIPPED + SEEDS
 
@@ -32,7 +32,7 @@ def parse(path, feature_version=None):
 
 class PythonFloorTest(unittest.TestCase):
     def test_finds_what_it_claims_to_scan(self):
-        self.assertTrue(SHIPPED, "skills/*/scripts/*.py 一个都没扫到，这条断言就白站着")
+        self.assertTrue(SHIPPED, "skills/*/*/scripts/*.py 一个都没扫到，这条断言就白站着")
         self.assertTrue(SEEDS, "evals/种子/*/回放.py 一个都没扫到，这条断言就白站着")
 
     def test_syntax_is_3_9(self):

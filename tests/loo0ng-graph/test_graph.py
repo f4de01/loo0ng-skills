@@ -1,4 +1,4 @@
-"""skills/loo0ng-graph/scripts/graph.py 的脚本层单测（unittest，标准库零依赖）。
+"""skills/productivity/loo0ng-graph/scripts/graph.py 的脚本层单测（unittest，标准库零依赖）。
 
 运行：python -m unittest tests/loo0ng-graph/test_graph.py
 
@@ -18,7 +18,7 @@ import tempfile
 import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-SCRIPT = REPO / "skills" / "loo0ng-graph" / "scripts" / "graph.py"
+SCRIPT = REPO / "skills" / "productivity" / "loo0ng-graph" / "scripts" / "graph.py"
 DOMAIN = REPO / "evals" / "领域" / "菜园" / "领域图.json"
 
 spec = importlib.util.spec_from_file_location("loo0ng_graph", SCRIPT)
