@@ -1,5 +1,0 @@
-interface:
-  display_name: "loo0ng-doit"
-  short_description: "办节点：出一版、兜底登记、确认、不适用，一个对话一个节点"
-policy:
-  allow_implicit_invocation: false

@@ -1,0 +1,5 @@
+interface:
+  display_name: "setup-case"
+  short_description: "起手：建六格、起手图三选一、归档、起手清单等一句话"
+policy:
+  allow_implicit_invocation: false

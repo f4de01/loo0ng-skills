@@ -10,7 +10,7 @@ import sys
 import tempfile
 
 REPO = pathlib.Path(__file__).resolve().parents[3]
-GATE = REPO / "skills" / "productivity" / "loo0ng-to-docx" / "scripts" / "gate.py"
+GATE = REPO / "skills" / "productivity" / "to-docx" / "scripts" / "gate.py"
 节点 = "管理人银行账户备案报告"
 模板 = "1-3.关于管理人银行账户备案的报告.docx"
 种子里的陈述 = 2
@@ -104,7 +104,7 @@ def check_没有节点被自动确认(workspace, reply):
 
 def check_收尾两行(workspace, reply):
     assert "确认" in reply or "拍板" in reply, "收尾第一行没说本节点在本对话里拍板：\n%s" % reply
-    assert "新对话" in reply or "loo0ng-doit" in reply, "收尾第二行没说下一个节点开新对话：\n%s" % reply
+    assert "新对话" in reply or "doit" in reply, "收尾第二行没说下一个节点开新对话：\n%s" % reply
 
 
 def check_没往工作区乱写(workspace, reply):

@@ -2,7 +2,7 @@
 
 每个种子都是「按真实的破产领域目录起手，再逐条调引擎摆出一个状态」，只有那几条命令不同；
 把重复的部分收在这里，种子的 `回放.py` 只剩它自己那几步，读起来就是那个状态本身。
-起手与写图仍走真的 CLI（skill "loo0ng-setup-case" 与 skill "loo0ng-graph"），
+起手与写图仍走真的 CLI（skill "setup-case" 与 skill "graph"），
 引擎一改、起手一改，用这些种子的用例立刻红。
 
 文书与审查报告都是合成的几行字，当事人与法院一律写甲乙丙，不含隐私检查器五类正则能命中的值。
@@ -14,14 +14,14 @@ import sys
 import time
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-SETUP = REPO / "skills" / "productivity" / "loo0ng-setup-case" / "scripts" / "setup.py"
-ENGINE = REPO / "skills" / "productivity" / "loo0ng-graph" / "scripts" / "graph.py"
-SKETCH = REPO / "skills" / "productivity" / "loo0ng-domain" / "scripts" / "sketch.py"
+SETUP = REPO / "skills" / "engineering" / "setup-case" / "scripts" / "setup.py"
+ENGINE = REPO / "skills" / "engineering" / "graph" / "scripts" / "graph.py"
+SKETCH = REPO / "skills" / "engineering" / "domain" / "scripts" / "sketch.py"
 LIVE_HOME_ENV = "LOO0NG_HOME"  # 活图的「家」，与 sketch.py、跑器同一个名字
 # 默认直接给包内的出厂种子，不走活图（ADR-0019 的 sketch.py home）：这些种子要的是一个确定的状态，
 # 拷一份活图只是多一层间接。它同时是「0.1.0 起手、没迁移过的工作区」那个形状：指针块指着种子、
 # 仍读得到，路由照常答（#92 第 2 条）。要一份真的活图的种子调 用活图() 换掉它。
-出厂种子 = REPO / "skills" / "productivity" / "loo0ng-domain" / "assets" / "破产"
+出厂种子 = REPO / "skills" / "engineering" / "domain" / "assets" / "破产"
 _领域目录 = [出厂种子]
 
 

@@ -15,10 +15,10 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "共用"))
 import 基线  # noqa: E402
 
 REPO = pathlib.Path(__file__).resolve().parents[3]
-SETUP = REPO / "skills" / "productivity" / "loo0ng-setup-case" / "scripts" / "setup.py"
-ENGINE = REPO / "skills" / "productivity" / "loo0ng-graph" / "scripts" / "graph.py"
-STATEMENT = REPO / "skills" / "productivity" / "loo0ng-filing" / "scripts" / "statement.py"
-DOMAIN_DIR = REPO / "skills" / "productivity" / "loo0ng-domain" / "assets" / "破产"
+SETUP = REPO / "skills" / "engineering" / "setup-case" / "scripts" / "setup.py"
+ENGINE = REPO / "skills" / "engineering" / "graph" / "scripts" / "graph.py"
+STATEMENT = REPO / "skills" / "engineering" / "filing" / "scripts" / "statement.py"
+DOMAIN_DIR = REPO / "skills" / "engineering" / "domain" / "assets" / "破产"
 
 已确认 = "管理人承诺书及团队人员"
 已生成 = "管理人印章备案报告"

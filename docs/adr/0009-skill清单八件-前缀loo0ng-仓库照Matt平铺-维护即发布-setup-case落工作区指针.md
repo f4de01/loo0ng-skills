@@ -75,3 +75,11 @@ date: 2026-09-05
 「仓库结构照 Matt 但不分桶」与「不照抄 aihero 站点的文档页与分桶」两条作废，改为**严格照上游布局**：`skills/` 下五个桶（engineering、productivity、misc、in-progress、deprecated），七件全部住 `productivity/`（上游 CLAUDE.md 对它的定义是「daily non-code workflow tools」，办案正是），另外四桶只有 `README.md`；每桶一份 `README.md` 逐件列出、名字链接到 `SKILL.md`；根 `README.md` 的条目同样链接到 `SKILL.md`（上游明文规则，此前漏了）；promoted 的每件另有一页 `docs/<bucket>/<name>.md`，段序照上游 `.agents/writing-docs.md`。`skills/README.md` 随之删除（上游没有它，桶 README 顶替）。
 
 当初不分桶的依据（Codex 清单只接单一路径）不再成立：`.codex-plugin/plugin.json` 仍指 `./skills/` 递归扫描，五桶里只有 `productivity/` 有 `SKILL.md`，装到的仍是这七件。代价照实写：哪天往 `in-progress/` 或 `misc/` 放了东西，Codex 插件路线会一并装上，那正是上游 ADR-0002 描述的问题，到那时再定。离线兜底包与 `link-skills.ps1` 的链接名仍只取 `<name>`，律师机上 `~/.agents/skills/<name>` 的形状不变。本次不动发布链（`scripts/release.py` 加 `workflow_dispatch` 那套）与路由的覆盖面。
+
+## 附注（2026-09-13，去前缀）
+
+「前缀 `loo0ng-` 写进 `name:` 本身」作废：六件的 `name` 改为裸基名 `setup-case`、`doit`、`graph`、`domain`、`filing`、`to-docx`，路由仍叫 `ask-loo0ng`（照 `ask-matt` 形，本来就不带前缀）。目录名、`display_name`、`plugin.json` 路径、docs 页、测试目录、路由入口表随之同名。当初加前缀的理由是 Codex 没有插件命名空间、怕裸名与别的 skill 撞上；改的理由是律师打的与看到的都是裸名（Codex 路线本来就显示裸名，ADR-0021），前缀只增加要打的字与要记的名，两平台补全都按子串命中，撞名的代价等真撞上再付。无别名，装了旧名的机器要按 README 重装；旧名在 `CHANGELOG.md` 与本文照 ADR 惯例保留。本文标题与正文不改，凡在别处读到 `loo0ng-graph` 这类旧名都按裸基名读。
+
+## 附注（2026-09-13，分桶修正）
+
+上一条附注「七件全部住 `productivity/`」作废。上游的 `engineering/` 装主线（daily code work，`ask-matt`、`tdd`、`implement`、`wayfinder` 都在那里），`productivity/` 装离了主线也能单独用的工具（`grilling`、`handoff`、`writing-for-agents`）；把「非代码」读成字面义才把七件全塞进 `productivity/`，桶就没了信息量。改为：办案主线六件 `ask-loo0ng`、`setup-case`、`doit`、`graph`、`domain`、`filing` 住 `engineering/`（六件都只在有 `图.json` 的工作区里工作），`to-docx` 住 `productivity/`（门禁可对任意 DOCX 跑、转换器默认写临时位置，离了案子也能用）。docs 页随桶：`docs/engineering/<name>.md` 六页、`docs/productivity/to-docx.md` 一页。装到律师机上的形状不变（链接名与 skills.sh 的目录名都只取 `<name>`）。

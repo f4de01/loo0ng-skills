@@ -84,12 +84,12 @@ class LoadCaseTest(unittest.TestCase):
 
     def test_loads_fields(self):
         d = make_case(self.root, "冒烟", prompt="写一个文件\n", 回复正则=r"已写入", 回合上限=5, 超时秒=60,
-                      skill="loo0ng-doit", 允许工具=["Bash(python *)"], 说明="冒烟")
+                      skill="doit", 允许工具=["Bash(python *)"], 说明="冒烟")
         case = skill_eval.load_case(d)
         self.assertEqual(case.name, "冒烟")
         self.assertEqual(case.prompt, "写一个文件")
         self.assertEqual(case.seed, "")
-        self.assertEqual(case.skill, "loo0ng-doit")
+        self.assertEqual(case.skill, "doit")
         self.assertEqual(case.reply_re, r"已写入")
         self.assertEqual(case.max_turns, 5)
         self.assertEqual(case.timeout, 60)
@@ -97,7 +97,7 @@ class LoadCaseTest(unittest.TestCase):
         self.assertEqual(len(case.checks), 2)
 
     def test_skill_requires_a_description(self):
-        d = make_case(self.root, "有skill无说明", skill="loo0ng-doit")
+        d = make_case(self.root, "有skill无说明", skill="doit")
         with self.assertRaises(skill_eval.EvalError) as cm:
             skill_eval.load_case(d)
         self.assertIn("说明", str(cm.exception))
@@ -185,11 +185,11 @@ class PromptAndCommandTest(unittest.TestCase):
         self.assertEqual(skill_eval.build_prompt("codex", case), "写一个文件")
 
     def test_codex_uses_stand_in_prompt_for_skill(self):
-        case = skill_eval.load_case(make_case(self.root, "a", prompt="帮我起手", skill="loo0ng-setup-case", 说明="替身"))
+        case = skill_eval.load_case(make_case(self.root, "a", prompt="帮我起手", skill="setup-case", 说明="替身"))
         p = skill_eval.build_prompt("codex", case)
-        self.assertIn("~/.agents/skills/loo0ng-setup-case/SKILL.md", p)
+        self.assertIn("~/.agents/skills/setup-case/SKILL.md", p)
         self.assertTrue(p.endswith("帮我起手"))
-        self.assertEqual(skill_eval.build_prompt("claude", case), "/loo0ng-setup-case 帮我起手")
+        self.assertEqual(skill_eval.build_prompt("claude", case), "/setup-case 帮我起手")
 
     def test_claude_command(self):
         ws = self.root / "ws"

@@ -8,7 +8,7 @@ import re
 
 CELLS = ["收件箱", "材料", "材料/律师陈述", "指南", "模板/官方", "模板/生成", "文书"]
 活图末尾 = "领域/破产"                      # ~/.loo0ng/领域/破产（ADR-0019）；eval 里 LOO0NG_HOME 指进临时目录
-出厂种子 = "skills/productivity/loo0ng-domain/assets"    # 指针块不该指进这里：包一升级它就被换掉
+出厂种子 = "skills/engineering/domain/assets"    # 指针块不该指进这里：包一升级它就被换掉
 成品 = "管理人承诺书（已交法院）.md"
 成品节点 = "管理人承诺书及团队人员"
 新节点 = "联络人备案表"
@@ -76,7 +76,7 @@ def check_工作区指针块四项齐全(workspace, reply):
         "领域目录指进了 skill 包内的出厂种子（%s）：包一升级律师累计的东西就被抹掉，" \
         "正是 ADR-0019 要挡的事故。活图路径由 sketch.py home 取，实际 %r" % (出厂种子, 路径)
     assert pathlib.Path(路径).is_absolute(), "领域目录要写绝对路径，实际 %r" % 路径
-    for expected in ("图.json", "图视图.md", "图视图.json", "loo0ng-doit", "只读"):
+    for expected in ("图.json", "图视图.md", "图视图.json", "doit", "只读"):
         assert expected in agents, "指针块里缺 %s：\n%s" % (expected, agents)
     assert (workspace / "CLAUDE.md").read_text(encoding="utf-8").strip() == "@AGENTS.md", \
         "CLAUDE.md 只该有一行 @AGENTS.md"
@@ -161,7 +161,7 @@ def check_收尾第二段说该拍板什么(workspace, reply):
 
 
 def check_收尾第三段给下一句(workspace, reply):
-    assert re.search(r"loo0ng-doit", reply), "收尾第三段没给下一句该打什么：\n%s" % reply
+    assert re.search(r"doit", reply), "收尾第三段没给下一句该打什么：\n%s" % reply
 
 
 def check_回显里出现过雏形与既有成品(workspace, reply):

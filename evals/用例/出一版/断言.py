@@ -5,7 +5,7 @@ import subprocess
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[3]
-GATE = REPO / "skills" / "productivity" / "loo0ng-to-docx" / "scripts" / "gate.py"
+GATE = REPO / "skills" / "productivity" / "to-docx" / "scripts" / "gate.py"
 TEMPLATE_NAME = "1-2.关于管理人印章备案的报告.docx"
 
 

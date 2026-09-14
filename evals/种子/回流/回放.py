@@ -31,7 +31,7 @@ sys.path.insert(0, str(REPO / "evals" / "共用"))
 import 活图断言 as 助手      # noqa: E402  「指纹」与基线文件名只有一份，用例的断言与本回放读同一处
 import 回放助手              # noqa: E402  取活图路径这一步与七个路由种子共用一份写法
 
-ENGINE = REPO / "skills" / "productivity" / "loo0ng-graph" / "scripts" / "graph.py"
+ENGINE = REPO / "skills" / "engineering" / "graph" / "scripts" / "graph.py"
 DOMAIN_DIR = 回放助手.出厂种子  # 包内 assets/破产/：活图由 home 从它拷出，案件那一层的 --domain 也指它
 RUNNER = REPO / "scripts" / "skill-eval.py"
 EVALS = REPO / "evals" / "用例"

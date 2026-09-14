@@ -31,7 +31,7 @@ def check_两份都列出来了(workspace, reply):
 
 def check_下一句是图里靠前的那一份(workspace, reply):
     for 前缀 in ("/", "$"):
-        串 = "%sloo0ng-doit 确认 %s" % (前缀, 先)
+        串 = "%sdoit 确认 %s" % (前缀, 先)
         assert 串 in reply, "回复里没有可原样打的整串「%s」：\n%s" % (串, reply)
     尾 = reply[reply.rfind("下一句该打什么"):]
     assert 后 not in 尾, "下一句该是图里靠前的那一份，不是「%s」：\n%s" % (后, 尾)

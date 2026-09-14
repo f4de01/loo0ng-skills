@@ -2,12 +2,12 @@
 
 签名 (workspace: Path, reply: str)。
 断言只断结论类别与项名，不断数值（#59）：196.0 / 206.0 这些数是推算层的实现细节，钉在
-tests/loo0ng-to-docx 里；这里钉的是门禁之外那一段，也就是编排 skill 拿到退出码 3 之后做什么。
+tests/to-docx 里；这里钉的是门禁之外那一段，也就是编排 skill 拿到退出码 3 之后做什么。
 
 用例说明（原文）。`用例.json` 的 说明 按 docs/agents/skills.md 的键表只留一句话，
 长的理由与局限住在这里：
 
-编排 skill "loo0ng-doit" 拿到门禁退出码 3（需人眼）之后做什么：这一档在别的用例里一步都没走过（#73）。
+编排 skill "doit" 拿到门禁退出码 3（需人眼）之后做什么：这一档在别的用例里一步都没走过（#73）。
 种子「带内」把待办节点「管理人银行账户备案报告」挂着的官方模板 1-3 第一行行高钉成固定 200 磅，
 hRule="exact" 的行高与格里写什么无关，所以只要成品里有那张表，最大行高的推算区间就恒把默认阈值夹
 在中间，一次自由生成于是落带内、且不通过项为空。前提是模型照模板写出了那张表：钉子钉在模板的表格
@@ -17,16 +17,16 @@ hRule="exact" 的行高与格里写什么无关，所以只要成品里有那张
 退出码 3 不被当成生成失败（三件照常落进 文书/<节点标题>/、文件名不加装饰）、须目验清单原样在审查
 报告第一段且每一行都带项名、阈值与最坏越界、图上多一条来源 agent 的生成条目且三条相对路径都指着
 真在的文件、不触发重试（只落一版）与没有节点被自动确认。按 #59 只断结论类别与项名，不断 196.0 / 
-206.0 这些数：数值钉在 tests/loo0ng-to-docx 的 ThreeValuedConclusion 里，这里钉的是门禁之外那一
+206.0 这些数：数值钉在 tests/to-docx 的 ThreeValuedConclusion 里，这里钉的是门禁之外那一
 段。提示词里那句「这台机器上没装 Word」不是绕路，是律师那台机器（mac + WPS）的常态，也是需人眼这
 一档存在的前提：有渲染结果时点值取代推算区间、这一档当场坍缩（ADR-0017）。开发机装着 Word 与 
 PyMuPDF，同一件带渲染跑实测点值 200.1 磅、结论是不通过，所以本用例靠这句话让 skill 走 
-skills/productivity/loo0ng-to-docx/SKILL.md「没有渲染后端」那一节写明的显式跑道（--no-render）；这也顺带覆盖
+skills/productivity/to-docx/SKILL.md「没有渲染后端」那一节写明的显式跑道（--no-render）；这也顺带覆盖
 了那条跑道本身。局限两条：一是它把「模型会不会把这句人话翻成那个旗」与「拿到退出码 3 之后做什么」
 绑在同一个用例里，翻不出来就红在前一件事上；二是 Codex 侧沙箱里本来就起不来 Word COM，那一侧不论
 翻不翻得出来都走无渲染跑道，真正测到这条翻译的只有 Claude Code 侧。断言重跑门禁时带 --no-render，
 理由同上（办节点出一版那个用例不带，因为它断的是通过那一档）。审查报告第一段只跳空行、标题行与围
-栏行，模型给清单加围栏不算改字。Claude Code 侧拼成 /loo0ng-doit <提示词>，Codex 侧用替身提示词，
+栏行，模型给清单加围栏不算改字。Claude Code 侧拼成 /doit <提示词>，Codex 侧用替身提示词，
 测的是正文不是触发。Codex 侧跑在默认的 workspace-write 上：沙箱里 `python` 敲不动（#28；根因是
 PATH 上那两个目录沙箱账户读不到），转换器的环境由 agent 自备、经 uv 走得通（ADR-0018，#78 实
 测）。实测 Claude Code 侧 22 至 38 回合、Codex 侧 7 至 15 回合（旧设置，全权限；各跑七次）与 14
@@ -41,7 +41,7 @@ import tempfile
 import zipfile
 
 REPO = pathlib.Path(__file__).resolve().parents[3]
-GATE = REPO / "skills" / "productivity" / "loo0ng-to-docx" / "scripts" / "gate.py"
+GATE = REPO / "skills" / "productivity" / "to-docx" / "scripts" / "gate.py"
 节点 = "管理人银行账户备案报告"
 模板 = "1-3.关于管理人银行账户备案的报告.docx"
 

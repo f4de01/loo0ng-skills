@@ -57,4 +57,4 @@ def check_案件图里那个节点没被改(workspace, reply):
 
 
 def check_回复给了下一句(workspace, reply):
-    assert "loo0ng-doit" in reply or "新对话" in reply, "收尾第三段没说下一句该打什么：\n%s" % reply
+    assert "doit" in reply or "新对话" in reply, "收尾第三段没说下一句该打什么：\n%s" % reply

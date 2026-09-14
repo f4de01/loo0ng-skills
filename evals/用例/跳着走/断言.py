@@ -22,7 +22,7 @@ def check_命中问3(workspace, reply):
 
 def check_下一句是同一块里最早的那个(workspace, reply):
     for 前缀 in ("/", "$"):
-        串 = "%sloo0ng-doit 出一版 %s" % (前缀, 同模块最早的)
+        串 = "%sdoit 出一版 %s" % (前缀, 同模块最早的)
         assert 串 in reply, "回复里没有可原样打的整串「%s」：\n%s" % (串, reply)
 
 

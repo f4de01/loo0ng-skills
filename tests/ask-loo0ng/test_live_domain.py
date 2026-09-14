@@ -18,11 +18,11 @@ import pathlib
 import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-SKILL_DIR = REPO / "skills" / "productivity" / "ask-loo0ng"
+SKILL_DIR = REPO / "skills" / "engineering" / "ask-loo0ng"
 SKILL = SKILL_DIR / "SKILL.md"
 正文文件 = (SKILL, SKILL_DIR / "references" / "下一任务.md")
 # 包内路径的几种写法。路由一处都不该出现：它拿到的路径只有 AGENTS.md 那一行给的。
-包内路径 = ("assets/", "assets\\", "loo0ng-domain/scripts", "~/.loo0ng")
+包内路径 = ("assets/", "assets\\", "domain/scripts", "~/.loo0ng")
 # 「领域图随包分发」这类措辞：ADR-0019 之后它是错的，包内那份是出厂种子，律师读的是活图。
 过时措辞 = ("领域图随 skill 包", "领域图随包", "skill 包内置的领域图", "领域图内置在 skill 包")
 

@@ -1,7 +1,7 @@
 """种子「图引擎」：用合成小领域整份起手一个测试工作区。
 
 用法：python 回放.py <工作区>    （由 scripts/skill-eval.py 调，也可手跑）
-走真的起手 CLI（skill "loo0ng-setup-case"，#31 落地）：六格、图与两份视图、工作区指针块
+走真的起手 CLI（skill "setup-case"，#31 落地）：六格、图与两份视图、工作区指针块
 （ADR-0009 机制 B）都由它落，引擎一改、起手一改，用这个种子的用例立刻红。
 工作区里没有任何案件内容。
 """
@@ -10,7 +10,7 @@ import subprocess
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[3]
-SETUP = REPO / "skills" / "productivity" / "loo0ng-setup-case" / "scripts" / "setup.py"
+SETUP = REPO / "skills" / "engineering" / "setup-case" / "scripts" / "setup.py"
 DOMAIN_DIR = REPO / "evals" / "领域" / "菜园"
 
 

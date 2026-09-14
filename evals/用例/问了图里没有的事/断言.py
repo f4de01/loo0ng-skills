@@ -20,7 +20,7 @@ def check_说了对不上(workspace, reply):
 
 
 def check_指向办节点入口(workspace, reply):
-    assert "loo0ng-doit" in reply, "该指向 loo0ng-doit（它按律师说的标题把节点建进图再出件）：\n%s" % reply
+    assert "doit" in reply, "该指向 doit（它按律师说的标题把节点建进图再出件）：\n%s" % reply
 
 
 def check_照常答了三问(workspace, reply):
@@ -42,6 +42,6 @@ def check_下一句是律师问的那件事(workspace, reply):
     所以整串按形状断言：前缀 + 入口 + 出一版 + 含「情况说明」的标题。
     """
     for 前缀 in ("/", r"\$"):
-        整串 = 前缀 + r"loo0ng-doit 出一版 [^\n`]*情况说明"
+        整串 = 前缀 + r"doit 出一版 [^\n`]*情况说明"
         assert re.search(整串, reply), "回复里没有可原样打的整串「%s出一版 …情况说明」：\n%s" % (
             前缀.replace("\\", ""), reply)
