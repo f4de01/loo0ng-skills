@@ -1,198 +1,218 @@
-"""skills/in-progress/graph/scripts/graph.py 的脚本层单测（unittest，标准库零依赖）。
+"""skills/in-progress/graph/scripts/graph.py 的起手与校验面（unittest，标准库零依赖）。
 
-运行：python -m unittest tests/graph/test_graph.py
+运行：python -m unittest discover -s tests/graph -p 'test_*.py' -t .
 
 缝是引擎 CLI 加工作区里的文件：每个测试在临时目录里调 main(argv)，再读 图.json 与两份视图断言。
-领域一律用合成小领域 evals/领域/菜园/领域图.json，证明引擎不认破产语义（ADR-0015）。
+工作区与预设图都由 tests/共用/工作区.py 用引擎自己造（#12），不从 evals/种子 拷；领域一律是
+合成小领域「菜园」，证明引擎不认破产语义（ADR-0015）。
 """
-import contextlib
-import importlib.util
-import io
-import json
-import os
 import pathlib
 import shutil
-import subprocess
 import sys
 import tempfile
 import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-SCRIPT = REPO / "skills" / "in-progress" / "graph" / "scripts" / "graph.py"
-DOMAIN = REPO / "evals" / "领域" / "菜园" / "领域图.json"
+sys.path.insert(0, str(REPO / "tests" / "共用"))
+import 工作区 as 工  # noqa: E402
 
-spec = importlib.util.spec_from_file_location("loo0ng_graph", SCRIPT)
-graph = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(graph)
-
-
-class Run:
-    def __init__(self, code, out, err):
-        self.code, self.out, self.err = code, out, err
-
-    def __repr__(self):
-        return "Run(code=%r, out=%r, err=%r)" % (self.code, self.out, self.err)
+graph = 工.引擎
+SCRIPT = 工.引擎脚本
 
 
 class EngineCase(unittest.TestCase):
-    """每个测试一个临时工作区；cli() 默认对工作区里的 图.json 操作，并带上合成领域图。"""
+    """每个测试一个临时根目录：下面一格放预设图，一格放案件工作区。"""
 
     def setUp(self):
         self.tmp = pathlib.Path(tempfile.mkdtemp(prefix="graph-test-"))
         self.addCleanup(shutil.rmtree, self.tmp, True)
-        self.graph_path = self.tmp / "图.json"
+        self._第几个 = 0
 
-    def cli(self, *argv, domain=True, kind=None, graph_path=None):
-        args = ["--graph", str(graph_path or self.graph_path)]
-        if domain:
-            args += ["--domain", str(DOMAIN)]
-        if kind:
-            args += ["--kind", kind]
-        args += list(argv)
-        out, err = io.StringIO(), io.StringIO()
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            try:
-                code = graph.main(args)
-            except SystemExit as e:  # argparse 的用法错误
-                code = e.code
-        return Run(code, out.getvalue(), err.getvalue())
+    def 新目录(self, 前缀):
+        """一个测试里可以起好几个工作区或预设图，各占一格，互不相扰。"""
+        self._第几个 += 1
+        return self.tmp / ("%s%d" % (前缀, self._第几个))
 
-    def ok(self, *argv, **kw):
-        r = self.cli(*argv, **kw)
+    def 预设图(self, 模块=None, 名="菜园"):
+        return 工.造预设图(self.新目录("预设图"), 模块 if 模块 is not None else 工.菜园, 名=名)
+
+    def 空图工作区(self):
+        return 工.起工作区(self.新目录("案件"))
+
+    def 整份工作区(self, 模块=None):
+        return 工.起工作区(self.新目录("案件"), 预设图=self.预设图(模块))
+
+    def ok(self, ws, *argv):
+        r = ws.调(*argv)
         self.assertEqual(r.code, 0, r)
         return r
 
-    def rejected(self, *argv, **kw):
-        r = self.cli(*argv, **kw)
+    def rejected(self, ws, *argv):
+        r = ws.调(*argv)
         self.assertEqual(r.code, 1, r)
         return r
 
-    def read(self, path=None):
-        return json.loads((path or self.graph_path).read_text(encoding="utf-8"))
 
-    def view_json(self):
-        return json.loads((self.tmp / "图视图.json").read_text(encoding="utf-8"))
-
-    def view_md(self):
-        return (self.tmp / "图视图.md").read_text(encoding="utf-8")
-
-    def node(self, title, data=None):
-        data = data or self.read()
-        for m in data["模块"]:
-            for n in m["节点"]:
-                if n["标题"] == title or n["id"] == title:
-                    return n
-        raise AssertionError("图里没有节点 %s" % title)
-
-    def module(self, title, data=None):
-        data = data or self.read()
-        for m in data["模块"]:
-            if m["标题"] == title or m["id"] == title:
-                return m
-        raise AssertionError("图里没有模块 %s" % title)
-
-    def titles(self, module_title, data=None):
-        return [n["标题"] for n in self.module(module_title, data)["节点"]]
-
-    def module_titles(self, data=None):
-        return [m["标题"] for m in (data or self.read())["模块"]]
-
-    def view_node(self, title, view=None):
-        view = view or self.view_json()
-        for m in view["模块"]:
-            for n in m["节点"]:
-                if n["标题"] == title:
-                    return n
-        raise AssertionError("视图里没有节点 %s" % title)
-
-
-# ---------------------------------------------------------------- 起手与校验
+# ---------------------------------------------------------------- 起手只剩两条
 
 class InitTest(EngineCase):
-    def test_empty_start_writes_graph_and_both_views(self):
-        self.ok("init", "--empty")
-        data = self.read()
-        self.assertEqual(data, {"格式版本": graph.FORMAT_VERSION, "领域": "菜园", "模块": []})
-        self.assertTrue((self.tmp / "图视图.md").is_file())
-        self.assertTrue((self.tmp / "图视图.json").is_file())
+    def test_空图起手落图与两份视图(self):
+        ws = self.空图工作区()
+        self.assertEqual(ws.读图(), {"格式版本": graph.FORMAT_VERSION, "模块": []})
+        self.assertTrue(ws.视图md.is_file())
+        self.assertTrue(ws.视图json.is_file())
 
-    def test_empty_start_without_domain_needs_a_name(self):
-        r = self.cli("init", "--empty", domain=False)
-        self.assertNotEqual(r.code, 0)
-        self.ok("init", "--empty", "--name", "试验", domain=False)
-        self.assertEqual(self.read()["领域"], "试验")
+    def test_空图不再要领域名(self):
+        """领域自格式版本 2 起不是图的字段（ADR-0023）：--name 连参数都没有。"""
+        r = 工.跑引擎("--graph", self.tmp / "别的.json", "init", "--empty", "--name", "菜园")
+        self.assertEqual(r.code, 2, r)
 
-    def test_full_start_copies_domain_graph_without_deadlines(self):
-        self.ok("init", "--full")
-        data = self.read()
-        self.assertEqual(self.module_titles(data), ["整地", "播种", "养护", "收获"])
-        self.assertEqual(self.titles("养护", data), ["浇水", "除草", "搭架"])
-        self.assertEqual(self.node("施底肥", data)["id"], "n-difei")
-        self.assertEqual(self.node("施底肥", data)["空白模板"], {"来源": "官方", "文件": "施肥记录.docx"})
-        for m in data["模块"]:
-            for n in m["节点"]:
-                self.assertNotIn("时限", n, n)
-                self.assertEqual(n["条目"], [])
+    def test_整份拷入带来构成模板时限与稳定id(self):
+        ws = self.整份工作区()
+        self.assertEqual(ws.模块标题(), ["整地", "播种", "养护", "收获"])
+        self.assertEqual(ws.节点标题("养护"), ["浇水", "除草", "搭架"])
+        n = ws.节点("施底肥")
+        self.assertEqual(n["id"], "n-1-2", "预设图的 id 原样带过来，别处按 id 认它")
+        self.assertEqual(n["空白模板"], "施肥记录.docx")
+        self.assertEqual(n["时限"], "自松土完成之日起 3 日内（手册，示例）", "时限句随起手拷入")
+        self.assertEqual(n["条目"], [])
+        self.assertNotIn("时限", ws.节点("松土"), "预设图里没时限的节点不凭空长一个")
+        for m in ws.读图()["模块"]:
+            for x in m["节点"]:
+                self.assertEqual(x["条目"], [])
 
-    def test_init_refuses_when_graph_exists(self):
-        self.ok("init", "--empty")
-        self.rejected("init", "--empty")
+    def test_整份拷入收目录也收文件(self):
+        目录 = self.预设图()
+        ws = 工.起工作区(self.tmp / "甲", 预设图=目录)
+        self.assertEqual(ws.模块标题(), ["整地", "播种", "养护", "收获"])
+        (self.tmp / "乙").mkdir()
+        r = 工.跑引擎("--graph", self.tmp / "乙" / "图.json", "init",
+                      "--preset", 目录 / graph.PRESET_FILENAME)
+        self.assertEqual(r.code, 0, r)
 
-    def test_init_from_custom_graph(self):
-        custom = self.tmp / "定制.json"
-        custom.write_text(json.dumps({"格式版本": graph.FORMAT_VERSION, "领域": "菜园", "模块": [
-            {"id": "m-a", "标题": "甲", "节点": [{"id": "n-a", "标题": "甲一", "空白模板": "无", "条目": []}]}]},
-            ensure_ascii=False), encoding="utf-8")
-        self.ok("init", "--from", str(custom))
-        self.assertEqual(self.module_titles(), ["甲"])
+    def test_案件图上律师仍不能写时限(self):
+        """时限来源从运行时查预设图改成起手拷入，但案件图上写它照旧拒（ADR-0016、ADR-0023）。"""
+        ws = self.整份工作区()
+        r = self.rejected(ws, "set-time-limit", "--node", "松土", "--time-limit", "三日内")
+        self.assertIn("时限", r.err)
+        self.rejected(ws, "add-node", "--module", "整地", "--title", "翻晒", "--time-limit", "三日内")
+        self.assertEqual(ws.节点标题("整地"), ["松土", "施底肥"], "拒了就一个字都不落")
 
+    def test_旧的起手参数都是用法错(self):
+        """--full、--from、--domain 删了（ADR-0023）：传了就是用法错，不是静默忽略。"""
+        for 参数 in (["init", "--full"], ["init", "--from", "x.json"],
+                     ["--domain", "x", "init", "--empty"], ["--kind", "domain", "init", "--empty"]):
+            r = 工.跑引擎("--graph", self.tmp / "新.json", *参数)
+            self.assertEqual(r.code, 2, "%s 该是用法错：%r" % (参数, r))
+
+    def test_起手二选一给零个或两个都拒(self):
+        for 参数 in ([], ["--empty", "--preset", str(self.预设图())]):
+            r = 工.跑引擎("--graph", self.tmp / "新.json", "init", *参数)
+            self.assertEqual(r.code, 1, r)
+            self.assertIn("二选一", r.err)
+
+    def test_图已存在就不再起手(self):
+        ws = self.空图工作区()
+        self.rejected(ws, "init", "--empty")
+
+    def test_预设图不合校验时案件图不落盘(self):
+        坏 = self.tmp / "坏预设图"
+        坏.mkdir()
+        (坏 / graph.PRESET_FILENAME).write_text('{"格式版本": 2}', encoding="utf-8")
+        目标 = self.tmp / "案件" / "图.json"
+        r = 工.跑引擎("--graph", 目标, "init", "--preset", 坏)
+        self.assertEqual(r.code, 1, r)
+        self.assertIn("预设图不合校验", r.err)
+        self.assertFalse(目标.exists())
+
+
+# ---------------------------------------------------------------- 校验
 
 class ValidationTest(EngineCase):
-    def write_raw(self, obj):
-        self.graph_path.write_text(json.dumps(obj, ensure_ascii=False), encoding="utf-8")
+    def 写原样(self, ws, obj):
+        import json
+        ws.图.write_text(json.dumps(obj, ensure_ascii=False), encoding="utf-8")
 
-    def test_invalid_file_is_refused_and_left_untouched(self):
-        self.ok("init", "--empty")
-        raw = self.read()
+    def test_不合校验即拒且文件一字不动(self):
+        ws = self.空图工作区()
+        raw = ws.读图()
         raw["状态"] = "乱写"
-        self.write_raw(raw)
-        before = self.graph_path.read_bytes()
-        r = self.rejected("add-module", "--title", "甲")
+        self.写原样(ws, raw)
+        before = ws.图.read_bytes()
+        r = self.rejected(ws, "add-module", "--title", "甲")
         self.assertIn("不合校验", r.err)
-        self.assertEqual(self.graph_path.read_bytes(), before)
+        self.assertEqual(ws.图.read_bytes(), before)
 
-    def test_deadline_in_case_graph_is_invalid(self):
-        self.ok("init", "--full")
-        raw = self.read()
-        raw["模块"][0]["节点"][0]["时限"] = "偷偷写的"
-        self.write_raw(raw)
-        r = self.rejected("add-module", "--title", "甲")
-        self.assertIn("时限", r.err)
+    def test_顶层还带领域即拒并指出原因(self):
+        ws = self.空图工作区()
+        raw = ws.读图()
+        raw["领域"] = "菜园"
+        self.写原样(ws, raw)
+        r = self.rejected(ws, "add-module", "--title", "甲")
+        self.assertIn("领域", r.err)
+        self.assertIn("ADR-0023", r.err)
 
-    def test_unknown_format_version_is_refused(self):
-        self.write_raw({"格式版本": 99, "领域": "菜园", "模块": []})
-        r = self.rejected("add-module", "--title", "甲")
+    def test_空白模板的旧写法即拒(self):
+        ws = self.整份工作区()
+        raw = ws.读图()
+        raw["模块"][0]["节点"][1]["空白模板"] = {"来源": "官方", "文件": "施肥记录.docx"}
+        self.写原样(ws, raw)
+        r = self.rejected(ws, "add-module", "--title", "甲")
+        self.assertIn("旧写法", r.err)
+        self.rejected(ws, "set-template", "--node", "松土", "--template", "官方:x.docx")
+
+    def test_空白模板只收文件名不收路径(self):
+        ws = self.整份工作区()
+        r = self.rejected(ws, "set-template", "--node", "松土", "--template", "模板/x.docx")
+        self.assertIn("不带路径", r.err)
+
+    def test_生成条目还带源即拒(self):
+        ws = self.整份工作区()
+        ws.出一版("整地", "松土")
+        raw = ws.读图()
+        raw["模块"][0]["节点"][0]["条目"][0]["源"] = "文书/松土/松土.md"
+        self.写原样(ws, raw)
+        r = self.rejected(ws, "add-module", "--title", "甲")
+        self.assertIn("源", r.err)
+        r = 工.跑引擎("--graph", ws.图, "generate", "--node", "松土", "--doc", "a.docx",
+                      "--review", "b.md", "--source", "c.md")
+        self.assertEqual(r.code, 2, "--source 删了，传了就是用法错：%r" % r)
+
+    def test_格式版本不认识即拒(self):
+        ws = self.空图工作区()
+        self.写原样(ws, {"格式版本": 99, "模块": []})
+        r = self.rejected(ws, "add-module", "--title", "甲")
         self.assertIn("格式版本", r.err)
 
-    def test_not_json_is_refused(self):
-        self.graph_path.write_text("{oops", encoding="utf-8")
-        self.rejected("add-module", "--title", "甲")
+    def test_格式版本1的图先报版本不对(self):
+        """旧版本的图字段本来就不一样；先报「顶层多了个 领域」会把人引到错的地方。"""
+        ws = self.空图工作区()
+        self.写原样(ws, {"格式版本": 1, "领域": "菜园", "模块": []})
+        r = self.rejected(ws, "add-module", "--title", "甲")
+        self.assertIn("本引擎只认 2", r.err)
+        self.assertIn("重新起手", r.err)
 
-    def test_duplicate_title_is_invalid(self):
-        self.ok("init", "--full")
-        raw = self.read()
+    def test_不是JSON即拒(self):
+        ws = self.空图工作区()
+        ws.图.write_text("{oops", encoding="utf-8")
+        self.rejected(ws, "add-module", "--title", "甲")
+
+    def test_标题重复即拒(self):
+        ws = self.整份工作区()
+        raw = ws.读图()
         raw["模块"][0]["节点"][1]["标题"] = "松土"
-        self.write_raw(raw)
-        self.rejected("add-module", "--title", "甲")
+        self.写原样(ws, raw)
+        self.rejected(ws, "add-module", "--title", "甲")
 
-    def test_validate_subcommand(self):
-        self.ok("init", "--full")
-        self.ok("validate")
-        self.write_raw({"格式版本": 1})
-        self.rejected("validate")
+    def test_validate子命令(self):
+        ws = self.整份工作区()
+        self.assertEqual(ws.调("validate").code, 0)
+        self.写原样(ws, {"格式版本": 2})
+        self.assertEqual(ws.调("validate").code, 1)
 
-    def test_missing_graph_is_refused(self):
-        r = self.rejected("add-module", "--title", "甲")
+    def test_图不在即拒(self):
+        r = 工.跑引擎("--graph", self.tmp / "没有的" / "图.json", "add-module", "--title", "甲")
+        self.assertEqual(r.code, 1, r)
         self.assertIn("图.json", r.err)
 
 
