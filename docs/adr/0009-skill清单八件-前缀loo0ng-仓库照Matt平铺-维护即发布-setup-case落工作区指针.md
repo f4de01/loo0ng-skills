@@ -87,3 +87,5 @@ date: 2026-09-05
 ## 附注（2026-09-14，开发机两条路各 harness 择一）
 
 「本机开发者即律师，只用 `link-skills.ps1` 条目级 junction 到两个目录」改为照上游 install-block「两条路互斥」按 harness 择一：Claude Code 侧装插件 `loo0ng-skills@loo0ng-marketplace`，Codex 侧挂 junction。起因是去前缀（同日前一条附注）之后裸名在 Claude Code 的 `/` 列表里与本机四十多件别的 skill 混在一起、tab 补不出来；插件的 `loo0ng-skills:` 命名空间顶替了原来写进 name 的前缀，这正是本文当年「前缀不靠插件命名空间」那条反过来的用法，Codex 没有命名空间的问题由 `$` 补全按子串命中兜住。代价：Claude Code 侧看到的是 `claude plugin update` 拉到的 GitHub 默认分支那一版，不是工作副本；测未合并的分支要先把市场换成本仓库绝对路径（`docs/agents/skills.md`「分发事实」）。跑器 `skill-eval.py` 的 Claude Code 侧随之拼 `/loo0ng-skills:<skill>`，`--claude-plugin ""` 退回裸名。
+
+同日再定：Codex 侧也照上游走 skills.sh 拷贝，开发机暂不装，`~/.agents/skills/` 里的七条 junction 一并清掉；`link-skills.ps1` 退回维护者开发脚本的位置，两侧都不再靠它。跑器 Codex 侧的替身提示词读 `~/.agents/skills/<名>/SKILL.md`，装上 skills.sh 的拷贝之后才跑得起来。
