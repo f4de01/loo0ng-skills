@@ -408,5 +408,91 @@ class TempOutput(FillCase):
         self.assertTrue(got["留黄"])
 
 
+class HighlightList(FillCase):
+    """apply 回显末尾的高亮清单（#14）：一处一行，记段落号（提示用）、高亮处原文、记录时整段文字，不记偏移。
+    它是给模型下次重出读的：对照当前文书清单里的 ⟪⟫ 判律师填没填（判断归模型，ADR-0024）。"""
+
+    def _list(self, stdout):
+        lines = stdout.splitlines()
+        head = next(i for i, l in enumerate(lines) if l.startswith("高亮清单 "))
+        n = int(re.match(r"高亮清单 (\d+) 处", lines[head]).group(1))
+        return n, lines[head + 1:]
+
+    def _ranges(self, docx):
+        doc = support.Document(str(docx))
+        out = []
+        for idx, p in enumerate(填.paragraphs(doc)):
+            t = 填.text_of(p)
+            where = 填._where(p, doc).strip()
+            for s, e in 填.highlight_ranges(p):
+                out.append((idx, where, t[s:e], t))
+        return out
+
+    def _head(self, idx, where):
+        return "p%d%s" % (idx, " " + where if where else "")
+
+    def test_the_list_covers_every_highlight_in_the_file_that_was_written(self):
+        r = self.ok([{"op": "fill", "at": "p2#1", "text": "某年某月某日"},
+                     {"op": "fill", "at": "p2#9", "text": "某所", "highlight": True},
+                     {"op": "highlight", "at": "p10", "text": "特此报告"}])
+        n, lines = self._list(r.out)
+        expected = self._ranges(support.out_path(r))
+        self.assertEqual(n, len(expected), r.out)
+        self.assertEqual(len(lines), n, "一处一行，清单之后不再有别的行")
+        for (idx, where, 原文, 整段), line in zip(expected, lines):
+            self.assertEqual(line, "%s「%s」｜%s" % (self._head(idx, where), 原文, 整段), r.out)
+        self.assertTrue(any(l.startswith("p9 [表1 行3 格2]「") for l in lines), "单元格里的段带表格坐标当键：\n%s" % r.out)
+        self.assertTrue(any("「某所」" in l for l in lines), "模型带黄填的那处也在清单里")
+        self.assertTrue(any("「特此报告」" in l for l in lines), "模型加黄的那句也在清单里")
+        self.assertFalse(any("「某年某月某日」" in l for l in lines), "填了没带黄的不在清单里")
+
+    def test_the_list_is_numbered_by_the_file_that_was_written(self):
+        r = self.ok([{"op": "delete", "at": "p10"}], "删段.docx")
+        _, lines = self._list(r.out)
+        expected = self._ranges(support.out_path(r))
+        self.assertEqual([l.split("「", 1)[0] for l in lines], [self._head(idx, w) for idx, w, _, _ in expected])
+
+    def test_template_highlights_stay_listed_until_unhighlighted(self):
+        tpl = template(带自带高亮的模板)
+        kept = self.ok([], "留着.docx", tpl)
+        _, lines = self._list(kept.out)
+        inherited = [(idx, w, 原文) for idx, w, 原文, _ in self._ranges(tpl)]
+        self.assertTrue(inherited)
+        for idx, w, 原文 in inherited:
+            self.assertTrue(any(l.startswith("%s「%s」｜" % (self._head(idx, w), 原文)) for l in lines), "模板自带的黄没进清单：%s" % 原文)
+        idx, w, 原文 = inherited[0]
+        gone = self.ok([{"op": "unhighlight", "at": "p%d" % idx, "text": 原文}], "去了.docx", tpl)
+        _, lines = self._list(gone.out)
+        self.assertFalse(any(l.startswith("%s「%s」｜" % (self._head(idx, w), 原文)) for l in lines), "去了黄的不该还在清单里")
+
+    def test_one_line_per_highlight_even_with_a_line_break_inside(self):
+        r = self.ok([{"op": "fill", "at": "p2#1", "text": "甲\n乙", "highlight": True}], "换行.docx")
+        n, lines = self._list(r.out)
+        self.assertEqual(len(lines), n)
+        line = next(l for l in lines if l.startswith("p2「"))
+        self.assertIn("甲⏎乙", line, "换行写成 ⏎，一处仍是一行")
+
+    def test_no_highlight_rest_still_lists_what_is_yellow(self):
+        r = self.ok([{"op": "fill", "at": "p2#1", "text": "某", "highlight": True}], "不留黄.docx", None, "--no-highlight-rest")
+        n, lines = self._list(r.out)
+        self.assertEqual(n, 1, r.out)
+        self.assertTrue(lines[0].startswith("p2「某」｜"))
+
+    def test_json_output_carries_the_list(self):
+        out = self.dir / "json.docx"
+        diff = self.dir / "j.json"
+        diff.write_text(json.dumps([{"op": "fill", "at": "p2#1", "text": "某", "highlight": True}], ensure_ascii=False), encoding="utf-8")
+        r = support.run(support.FILL, "apply", self.tpl, "--diff", diff, "--out", out, "--json")
+        self.assertEqual(r.code, 0, r)
+        got = json.loads(r.out)["高亮清单"]
+        self.assertEqual(len(got), len(self._ranges(out)))
+        self.assertEqual(sorted(got[0]), ["p", "原文", "整段", "格"])
+        self.assertEqual(got[0]["p"], 2)
+        self.assertEqual(got[0]["格"], "", "正文段的表格坐标是空串")
+        self.assertTrue(any(x["格"] == "表1 行3 格2" for x in got), "单元格段带表格坐标")
+        self.assertEqual(got[0]["原文"], "某")
+        self.assertEqual(got[0]["整段"], 填.text_of(填.paragraphs(support.Document(str(out)))[2]))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -11,6 +11,8 @@
   apply  施加差量，写出一件 DOCX。改动一律落到「段落里的字符区间」上，不落到 run 序号上：占位在官方模板里
          大多横跨 run。施加完后没被填也没高亮的槽由代码一律加黄，模型不必逐个写；元数据收尾无条件清掉。
          --out 可直接写 文书/ 下的路径并覆盖（重出覆盖同一份，载体与产物可以是同一路径）；不给就写临时位置。
+         回显末尾是写出来那件里的**高亮清单**：一处一行，段落号（提示用）、高亮处原文、记录时整段文字，
+         不记偏移；它进审查报告的「高亮清单」段，重出时模型对照当前清单里的 ⟪⟫ 判律师填没填（#14）。
 
 差量的形状（一个 JSON 数组，一条一个改动）：
 
@@ -40,7 +42,7 @@
                        [--no-highlight-rest] [--json] [--slot-pattern <正则>]...
 
 退出码：0 写出（apply 的 stdout 第一行「已写出 <路径>」，第二行「出件环境：…」，第三行「改动段：…」，
-其后是逐条日志）；1 拒绝（差量不合法、拒改的 run、文件打不开；原因在 stderr）；2 用法错误。
+其后是逐条日志、留黄、最后一块高亮清单）；1 拒绝（差量不合法、拒改的 run、文件打不开；原因在 stderr）；2 用法错误。
 """
 import argparse
 import copy
@@ -416,6 +418,30 @@ def apply(doc, ops: List[dict], highlight_rest: bool = True,
     return sorted(final[id(p)] for p in changed if id(p) in final), log, rest
 
 
+# ---------------------------------------------------------------- 高亮清单（#14）
+
+def record_highlights(doc) -> List[Tuple[int, str, str, str]]:
+    """写出来那件里的高亮清单：一处一条 (段落号, 表格坐标, 高亮处原文, 记录时整段文字)。
+
+    段落号只是提示；键是整段文字（重出时模型按它认段落，律师增删段落编号会飘）加高亮处原文（判律师改没改：
+    填了字就不再等于原文）。单元格里的段多半只有那一个槽，整段文字就是原文、填了就整段都变，所以单元格段
+    另带清单同款的表格坐标「表1 行3 格2」当键。不记字符偏移、不记段内序号：律师在段里填字两者都飘
+    （原型第 5 条）。判「律师填没填」是判断，归模型加正文（ADR-0024）；这里只记，不比。
+    """
+    out = []
+    for idx, p in enumerate(paragraphs(doc)):
+        t = text_of(p)
+        where = _where(p, doc).strip().strip("[]")
+        for s, e in highlight_ranges(p):
+            out.append((idx, where, t[s:e], t))
+    return out
+
+
+def _one_line(text: str) -> str:
+    """清单一处一行：段里的换行（w:br）写成 ⏎，别把一处拆成两行。"""
+    return text.replace("\n", "⏎")
+
+
 # ---------------------------------------------------------------- 收尾：元数据
 
 def clear_metadata(doc) -> None:
@@ -548,16 +574,21 @@ def cmd_apply(args) -> int:
     out = pathlib.Path(args.out) if args.out else default_out_path(src)
     # 先整篇施加完、清完元数据，再落盘：拒改在这一行之前抛出，--out 指的已有文件（含载体本身）一个字都不动。
     changed, log, rest = apply(doc, ops, not args.no_highlight_rest, compile_slots(args.slot_pattern))
+    highlights = record_highlights(doc)
     clear_metadata(doc)
     out.parent.mkdir(parents=True, exist_ok=True)
     part = out.with_name(out.name + ".part")
     doc.save(str(part))
     os.replace(str(part), str(out))   # 写完整件再换名：覆盖同一份时不会留下半成品
+    shown = args.out or str(out)   # 路径照给的样子回显（律师机与开发机的分隔符不同，别替他换）
     if args.json:
-        print(json.dumps({"产物": str(out), "出件环境": environment_line(), "改动段": changed,
-                          "日志": log, "留黄": rest}, ensure_ascii=False, indent=2))
+        print(json.dumps({"产物": shown, "出件环境": environment_line(), "改动段": changed,
+                          "日志": log, "留黄": rest,
+                          "高亮清单": [{"p": i, "格": where, "原文": t, "整段": para}
+                                   for i, where, t, para in highlights]},
+                         ensure_ascii=False, indent=2))
         return 0
-    print("已写出 %s" % out)
+    print("已写出 %s" % shown)
     print(environment_line())
     print("改动段：%s" % (",".join(str(i) for i in changed) if changed else "无"))
     for line in log:
@@ -565,6 +596,9 @@ def cmd_apply(args) -> int:
     print("代码留黄 %d 处" % len(rest))
     for line in rest:
         print(line)
+    print("高亮清单 %d 处" % len(highlights))
+    for i, where, t, para in highlights:
+        print("p%d%s「%s」｜%s" % (i, " [%s]" % where if where else "", _one_line(t), _one_line(para)))
     return 0
 
 
