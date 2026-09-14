@@ -274,7 +274,7 @@ def highlight_state(node, root: pathlib.Path) -> str:
     try:
         with zipfile.ZipFile(str(path)) as z:
             xml = z.read("word/document.xml")
-    except (zipfile.BadZipFile, KeyError, OSError):
+    except Exception:  # 坏 zip、坏 deflate 流、加密件、少了正文、读不动：一律按 未清 算
         return HL_LEFT
     return HL_LEFT if HIGHLIGHT_RE.search(xml) else HL_CLEAR
 
@@ -394,18 +394,21 @@ class Engine:
         if self.kind == "preset":
             self.refuse_if_in_package(self.graph_path)
         validate_graph(self.data, kind=self.kind, label=self.graph_path.name)
+        # 视图先算后写：算它要去读节点当前的文书，那一步碰的是引擎管不着的文件。先算，
+        # 出事时图还一个字没写，退出码 1 说的「文件一字不动」才是真的；算成了再一起落盘。
+        view = build_view(self.data, self.graph_path) if self.kind == "case" else None
         write_json_atomic(self.graph_path, self.data)
-        if self.kind == "case":
-            self.write_views()
+        if view is not None:
+            self.write_views(view)
+
+    def write_views(self, view=None):
+        if view is None:
+            view = build_view(self.data, self.graph_path)
+        write_json_atomic(self.graph_path.with_name(VIEW_JSON), view)
+        write_text_atomic(self.graph_path.with_name(VIEW_MD), render_markdown(view))
 
     def say(self, text: str):
         self.notes.append(text)
-
-    # ---- 视图（ADR-0011）
-    def write_views(self):
-        view = build_view(self.data, self.graph_path)
-        write_json_atomic(self.graph_path.with_name(VIEW_JSON), view)
-        write_text_atomic(self.graph_path.with_name(VIEW_MD), render_markdown(view))
 
     # ---- 解析（图自足：图里没有就是没有，不去别处找）
     def resolve_module(self, key: str) -> dict:
@@ -596,8 +599,9 @@ class Engine:
 
     # ---- 另存（ADR-0023）
     def export_preset(self, out_arg: str):
-        out = pathlib.Path(out_arg)
-        target = out / PRESET_FILENAME if (out.is_dir() or not out.suffix) else out
+        # --out 一律是目录，不按后缀猜：「破产3.0」这种名字带点的预设图，猜法会把它当成
+        # 文件名落错形状，也会让下面那条包内拒写的判据看错一层目录。
+        target = pathlib.Path(out_arg) / PRESET_FILENAME
         self.refuse_if_in_package(target)
         if target.exists():
             raise Rejected("%s 已存在，另存不覆盖：换个名字，或先把旧的移走" % target)
@@ -774,7 +778,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("views", help="只重算两份视图（案件图）")
 
     p = sub.add_parser("export-preset", help="另存：剥掉条目与不适用记录，输出一份预设图")
-    p.add_argument("--out", required=True, help="个人预设图目录（落 %s），或直接给文件路径" % PRESET_FILENAME)
+    p.add_argument("--out", required=True, help="个人预设图目录，%s 落在它下面" % PRESET_FILENAME)
 
     p = sub.add_parser("add-module", help="新增模块")
     p.add_argument("--title", required=True)

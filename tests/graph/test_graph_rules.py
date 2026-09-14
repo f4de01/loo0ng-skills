@@ -293,6 +293,24 @@ class ExportPresetTest(EngineCase):
         self.assertEqual(新.模块标题(), ["整地", "播种", "养护", "收获"])
         self.assertEqual(新.节点("松土")["条目"], [])
 
+    def test_名字带点的预设图也落成目录(self):
+        """--out 一律是目录，不按后缀猜：「菜园3.0」的 .0 会被 Path.suffix 当成后缀。"""
+        ws = self.整份工作区()
+        出 = self.tmp / "个人预设图" / "菜园3.0"
+        self.ok(ws, "export-preset", "--out", str(出))
+        self.assertTrue((出 / graph.PRESET_FILENAME).is_file(), "落成了文件而不是目录：%s" % 出)
+        新 = 工.起工作区(self.新目录("案件"), 预设图=出)
+        self.assertEqual(新.模块标题(), ["整地", "播种", "养护", "收获"])
+
+    def test_另存落进包内即拒名字带点也拒(self):
+        """包内拒写的判据看的是目录层次；--out 按后缀猜目录会让它看错一层，绕开这条拒。"""
+        ws = self.整份工作区()
+        假包 = self.tmp / "domain" / "assets" / "预设图"
+        for 名 in ("菜园", "菜园2.0"):
+            r = self.rejected(ws, "export-preset", "--out", str(假包 / 名))
+            self.assertIn("ADR-0020", r.err, 名)
+            self.assertFalse((假包 / 名).exists(), "拒了却落了盘：%s" % (假包 / 名))
+
     def test_另存不覆盖已有的(self):
         ws = self.整份工作区()
         出 = self.tmp / "个人预设图" / "菜园二版"
@@ -408,12 +426,55 @@ class ViewTest(EngineCase):
         self.assertEqual(ws.视图节点("松土")["高亮"], "无文书")
 
     def test_读不出来的文书算未清(self):
-        """证不出已清就不能说已清：这一列是提示律师去看那份文书，不是裁定。"""
+        """证不出已清就不能说已清：这一列是提示律师去看那份文书，不是裁定。
+
+        坏文件有好几种坏法，各自抛不同的异常（坏 zip、坏 deflate 流、少了正文、加密件）。
+        一种都不能把引擎打崩：律师工作区里有一份坏 docx，整个图就不能再写了。"""
+        ws = self.整份工作区()
+        文书 = ws.根 / ws.文书相对路径("整地", "松土")
+        ws.出一版("整地", "松土")
+        好的 = 文书.read_bytes()
+        坏法 = {
+            "根本不是 zip": "这不是个 zip".encode("utf-8"),
+            "zip 头对但 deflate 流是烂的": 好的[:len(好的) // 2],
+            "空文件": b"",
+        }
+        for 名, 字节 in 坏法.items():
+            with self.subTest(坏法=名):
+                文书.write_bytes(字节)
+                r = ws.调("views")
+                self.assertEqual(r.code, 0, "%s：引擎被打崩了，%r" % (名, r))
+                self.assertEqual(ws.视图节点("松土")["高亮"], "未清", 名)
+        文书.write_bytes(好的)
+
+    def test_扫描抛什么都不打崩引擎(self):
+        """上一条造得出来的坏法只覆盖一部分异常：坏 deflate 流抛 zlib.error、加密件抛
+        RuntimeError，两种都造不出来又都在真机上出得了。这里直接钉住那条契约：
+        读那份文书抛什么，高亮都只算 未清，引擎照常写完。"""
+        import zlib
         ws = self.整份工作区()
         ws.出一版("整地", "松土")
-        (ws.根 / ws.文书相对路径("整地", "松土")).write_bytes("这不是个 zip".encode("utf-8"))
-        self.ok(ws, "views")
-        self.assertEqual(ws.视图节点("松土")["高亮"], "未清")
+        for 异常 in (zlib.error("Error -3 while decompressing data"),
+                     RuntimeError("File is encrypted, password required"),
+                     MemoryError(), ValueError("说不清的坏法")):
+            with self.subTest(异常=type(异常).__name__):
+                with mock.patch.object(graph.zipfile, "ZipFile", side_effect=异常):
+                    r = ws.调("views")
+                self.assertEqual(r.code, 0, "%r 把引擎打崩了：%r" % (异常, r))
+                self.assertEqual(ws.视图节点("松土")["高亮"], "未清")
+
+    def test_文书坏掉时写图仍是全有或全无(self):
+        """算视图要读文书，读文书碰的是引擎管不着的文件。那一步出事时图必须一个字没写：
+        不然退出码 1 说着「文件一字不动」，图却已经多了一条条目，而视图还停在上一版。"""
+        ws = self.整份工作区()
+        ws.出一版("整地", "松土")
+        (ws.根 / ws.文书相对路径("整地", "松土")).write_bytes("坏掉的 docx".encode("utf-8"))
+        with mock.patch.object(graph, "highlight_state", side_effect=RuntimeError("模拟扫描炸了")):
+            with self.assertRaises(RuntimeError):
+                ws.调("add-node", "--module", "整地", "--title", "翻晒")
+        self.assertNotIn("翻晒", ws.节点标题("整地"), "视图算不出来时，图一个字都不该写进去")
+        self.assertEqual([n["标题"] for n in ws.读视图()["模块"][0]["节点"]], ["松土", "施底肥"],
+                         "图与视图没有分家")
 
     def test_视图记最近一次生成与确认(self):
         ws = self.整份工作区()
