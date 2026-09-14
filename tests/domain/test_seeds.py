@@ -23,8 +23,8 @@ import unittest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 EVALS = REPO / "evals" / "用例"
 RUNNER = REPO / "scripts" / "skill-eval.py"
-SKETCH = REPO / "skills" / "engineering" / "domain" / "scripts" / "sketch.py"
-DOMAIN_GRAPH = REPO / "skills" / "engineering" / "domain" / "assets" / "破产" / "领域图.json"
+SKETCH = REPO / "skills" / "in-progress" / "domain" / "scripts" / "sketch.py"
+DOMAIN_GRAPH = REPO / "skills" / "in-progress" / "domain" / "assets" / "破产" / "领域图.json"
 
 spec = importlib.util.spec_from_file_location("skill_eval_runner", RUNNER)
 runner = importlib.util.module_from_spec(spec)
@@ -101,7 +101,7 @@ class 回流种子(unittest.TestCase):
 
     def test_活图是包内出厂种子的一份拷贝(self):
         self.assertEqual(DOMAIN_GRAPH.read_bytes(), (self.活图() / "领域图.json").read_bytes(),
-                         "活图该是 skills/engineering/domain/assets/破产/ 那份出厂种子的逐字副本")
+                         "活图该是 skills/in-progress/domain/assets/破产/ 那份出厂种子的逐字副本")
 
     def test_基线记下了回流前的样子(self):
         基线 = self.基线()

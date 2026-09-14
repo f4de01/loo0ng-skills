@@ -8,7 +8,7 @@ import re
 
 CELLS = ["收件箱", "材料", "材料/律师陈述", "指南", "模板/官方", "模板/生成", "文书"]
 活图末尾 = "领域/破产"                      # ~/.loo0ng/领域/破产（ADR-0019）；eval 里 LOO0NG_HOME 指进临时目录
-出厂种子 = "skills/engineering/domain/assets"    # 指针块不该指进这里：包一升级它就被换掉
+出厂种子 = "skills/in-progress/domain/assets"    # 指针块不该指进这里：包一升级它就被换掉
 成品 = "管理人承诺书（已交法院）.md"
 成品节点 = "管理人承诺书及团队人员"
 新节点 = "联络人备案表"

@@ -10,13 +10,13 @@ import sys
 import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-SCRIPT = REPO / "skills" / "engineering" / "domain" / "scripts" / "sketch.py"
+SCRIPT = REPO / "skills" / "in-progress" / "domain" / "scripts" / "sketch.py"
 # 律师面对的三个入口：两个编排 skill 加路由（ADR-0005、ADR-0008）。起手那一回合里没有回流这个动作；
 # 办节点那件是律师侧逐节点回流的驱动者（ADR-0019），另按下面几条测；路由不再拿「回流」二字卡
 # （ADR-0019 取代了 ADR-0012「路由不路由到回流」那一句），只测它没多长出第四个入口。
 不提回流的入口 = ("setup-case",)
-办节点 = REPO / "skills" / "engineering" / "doit" / "SKILL.md"
-路由 = REPO / "skills" / "engineering" / "ask-loo0ng" / "SKILL.md"
+办节点 = REPO / "skills" / "in-progress" / "doit" / "SKILL.md"
+路由 = REPO / "skills" / "in-progress" / "ask-loo0ng" / "SKILL.md"
 # 开发侧批量那条路的印记：它们出现在办节点的正文里，就是把开发会话的活儿搬进了律师的回合。
 # 「assets/」与「第二双眼」不在这张单子上：办节点提这两样都是为了拦（别往包内种子写、这条路没有第二双眼）。
 开发侧印记 = ("from-case", "开分支", "npm run changeset", "--proposal")
@@ -54,7 +54,7 @@ class 回流两条路(unittest.TestCase):
 
     def test_起手的正文不提回流(self):
         found = [p for name in 不提回流的入口
-                 for p in (REPO / "skills" / "engineering" / name).rglob("*.md")
+                 for p in (REPO / "skills" / "in-progress" / name).rglob("*.md")
                  if "回流" in p.read_text(encoding="utf-8")]
         self.assertEqual([], found, "起手那一回合里没有回流这个动作：%s" % [str(p) for p in found])
 
@@ -79,7 +79,7 @@ class 回流两条路(unittest.TestCase):
             self.assertNotIn(印记, text, "开发侧批量那条不在办案会话里做，正文不该出现 %r" % 印记)
 
     def test_两条路都写在领域skill的references里(self):
-        step = (REPO / "skills" / "engineering" / "domain" / "references" / "回流.md").read_text(encoding="utf-8")
+        step = (REPO / "skills" / "in-progress" / "domain" / "references" / "回流.md").read_text(encoding="utf-8")
         for 词 in ("回流", "律师侧", "开发侧", "活图", "出厂种子", "第二双眼"):
             self.assertIn(词, step, "回流的规矩住在 domain 的 references 里，缺 %r" % 词)
 

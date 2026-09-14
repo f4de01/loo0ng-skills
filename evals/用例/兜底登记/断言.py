@@ -10,7 +10,7 @@ import sys
 import tempfile
 
 REPO = pathlib.Path(__file__).resolve().parents[3]
-GATE = REPO / "skills" / "productivity" / "to-docx" / "scripts" / "gate.py"
+GATE = REPO / "skills" / "in-progress" / "to-docx" / "scripts" / "gate.py"
 节点 = "管理人印章备案报告"
 成品 = "印章备案-我自己写的.docx"
 模板 = "1-2.关于管理人印章备案的报告.docx"

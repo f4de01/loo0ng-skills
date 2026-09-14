@@ -25,9 +25,9 @@ import tempfile
 import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-SCRIPT = REPO / "skills" / "engineering" / "graph" / "scripts" / "graph.py"
+SCRIPT = REPO / "skills" / "in-progress" / "graph" / "scripts" / "graph.py"
 DOMAIN = REPO / "evals" / "领域" / "菜园" / "领域图.json"
-真包 = REPO / "skills" / "engineering" / "domain" / "assets"
+真包 = REPO / "skills" / "in-progress" / "domain" / "assets"
 
 spec = importlib.util.spec_from_file_location("loo0ng_graph", SCRIPT)
 graph = importlib.util.module_from_spec(spec)

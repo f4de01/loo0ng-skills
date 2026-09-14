@@ -1,6 +1,6 @@
 """tests/to-docx 的公用件：定位仓库、模板目录与两个 CLI，跑子进程，读 DOCX 里的 XML。
 
-模板目录：官方模板原件住领域目录 skills/engineering/domain/assets/破产/模板/（ADR-0004、ADR-0009，#29）。找不到就直接报错，不 skip。
+模板目录：官方模板原件住领域目录 skills/in-progress/domain/assets/破产/模板/（ADR-0004、ADR-0009，#29）。找不到就直接报错，不 skip。
 """
 import json
 import pathlib
@@ -11,7 +11,7 @@ import zipfile
 import xml.etree.ElementTree as ET
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-SCRIPTS = REPO / "skills" / "productivity" / "to-docx" / "scripts"
+SCRIPTS = REPO / "skills" / "in-progress" / "to-docx" / "scripts"
 CONVERTER = SCRIPTS / "md2docx.py"
 GATE = SCRIPTS / "gate.py"
 FIXTURES = pathlib.Path(__file__).resolve().parent / "fixtures"
@@ -22,7 +22,7 @@ DC = "{http://purl.org/dc/elements/1.1/}"
 
 
 def templates_dir() -> pathlib.Path:
-    templates = REPO / "skills" / "engineering" / "domain" / "assets" / "破产" / "模板"
+    templates = REPO / "skills" / "in-progress" / "domain" / "assets" / "破产" / "模板"
     if (templates / PROBE_TEMPLATE).is_file():
         return templates
     raise AssertionError("找不到官方模板目录 %s" % templates)

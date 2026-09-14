@@ -13,13 +13,5 @@
     "skills",
     "workbench"
   ],
-  "skills": [
-    "./skills/engineering/ask-loo0ng",
-    "./skills/engineering/doit",
-    "./skills/engineering/domain",
-    "./skills/engineering/filing",
-    "./skills/engineering/graph",
-    "./skills/engineering/setup-case",
-    "./skills/productivity/to-docx"
-  ]
+  "skills": []
 }

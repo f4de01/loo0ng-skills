@@ -16,7 +16,7 @@ import sys
 REPO = pathlib.Path(__file__).resolve().parents[3]
 SEED_DIR = pathlib.Path(__file__).resolve().parent
 在办中 = SEED_DIR.parent / "在办中"
-MD2DOCX = REPO / "skills" / "productivity" / "to-docx" / "scripts" / "md2docx.py"
+MD2DOCX = REPO / "skills" / "in-progress" / "to-docx" / "scripts" / "md2docx.py"
 TEMPLATE_NAME = "1-2.关于管理人印章备案的报告.docx"
 成品 = "印章备案-我自己写的.docx"
 

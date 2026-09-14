@@ -3,13 +3,12 @@
 改任何入口必改这张表是 `AGENTS.md` 的结构不变量；这里把它变成会红的断言。
 运行：python -m unittest tests/ask-loo0ng/test_入口表.py
 """
-import json
 import pathlib
 import re
 import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-SKILL_DIR = REPO / "skills" / "engineering" / "ask-loo0ng"
+SKILL_DIR = REPO / "skills" / "in-progress" / "ask-loo0ng"
 SKILL = SKILL_DIR / "SKILL.md"
 YAML = SKILL_DIR / "agents" / "openai.yaml"
 # 律师面对的三个入口：两个编排 skill 加路由本身（ADR-0005、ADR-0008、ADR-0010）。
@@ -37,21 +36,21 @@ class 入口表Test(unittest.TestCase):
 
     def test_每个入口的名字都真有这件skill(self):
         for name in 表里的行():
-            skill = REPO / "skills" / "engineering" / name / "SKILL.md"
+            skill = REPO / "skills" / "in-progress" / name / "SKILL.md"
             self.assertTrue(skill.is_file(), "入口表指向不存在的 skill：%s" % name)
             front = skill.read_text(encoding="utf-8")
             self.assertIn('name: %s\n' % name, front, "%s 的 frontmatter name 与目录名不一致" % name)
 
     def test_显示名是中文且与工作区指针块一致(self):
-        指针块 = (REPO / "skills" / "engineering" / "setup-case" / "references" / "工作区AGENTS.md").read_text(encoding="utf-8")
+        指针块 = (REPO / "skills" / "in-progress" / "setup-case" / "references" / "工作区AGENTS.md").read_text(encoding="utf-8")
         for name, 名 in 表里的行().items():
             self.assertEqual(显示名[name], 名, "%s 的显示名变了" % name)
             self.assertIn("%s（%s）" % (name, 名), 指针块, "%s 的显示名与工作区指针块对不上" % name)
 
-    def test_登记进了插件与README(self):
-        skills = json.loads((REPO / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))["skills"]
-        self.assertIn("./skills/engineering/ask-loo0ng", skills)
-        self.assertIn("[ask-loo0ng](./skills/engineering/ask-loo0ng/SKILL.md)**（问路）", (REPO / "README.md").read_text(encoding="utf-8"))
+    def test_登记进了桶README(self):
+        # 改造期七件都在 in-progress/，非 promoted：只登记在桶 README，不进 plugin.json 与根 README（ADR-0022）
+        bucket_readme = (REPO / "skills" / "in-progress" / "README.md").read_text(encoding="utf-8")
+        self.assertIn("[ask-loo0ng](./ask-loo0ng/SKILL.md)", bucket_readme)
 
 
 class 双旗Test(unittest.TestCase):
