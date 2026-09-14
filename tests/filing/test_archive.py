@@ -1,6 +1,6 @@
 """skills/in-progress/filing/scripts/archive.py 的脚本层单测（unittest，标准库零依赖）。
 
-运行：python -m unittest discover -s tests/filing -p 'test_*.py' -t .
+运行：python -m unittest discover -s tests/filing -p 'test_*.py'
 
 缝是归档 CLI 加工作区里的文件：每个测试用 tests/共用/工作区.py（#12 交付）在临时目录里起一个案件工作区，
 写几件合成文件，调 main(argv)，再断文件去了哪、归档索引里多了哪几行、退出码是几。
@@ -144,8 +144,15 @@ class ListTest(ArchiveCase):
         self.assertIn("合同.pdf\t新", r.out)
         self.assertIn("扫描/照片.jpg\t新", r.out)
         self.assertIn("已归过的.txt\t已有 → 材料/旧的.txt", r.out)
-        self.assertIn("同名的.txt\t同名 → 材料/同名的.txt（内容不同）", r.out)
-        self.assertIn("共 4 件：新 2，已有 1，同名 1。", r.out)
+        self.assertIn("同名的.txt\t重名 → 材料/同名的.txt（内容不同）", r.out)
+        self.assertIn("共 4 件：新 2，已有 1，重名 1。", r.out)
+
+    def test_missing_pending_dir_is_not_a_refusal(self):
+        """出件开场无条件调 list：工作区缺这一格答「没有文件」，不给一个拒绝回显。"""
+        shutil.rmtree(str(self.ws.待归档))
+        r = self.cli("list")
+        self.assertEqual(r.code, 0, r)
+        self.assertIn("没有文件", r.out)
 
     def test_lists_outside_directory(self):
         外 = self.外部目录()
@@ -409,6 +416,24 @@ class IndexTest(ArchiveCase):
         self.放("乙.txt", b"yi")
         self.搬(self.条("乙.txt", "材料", "第二件"))
         self.assertIn("手写的一段，脚本不该动它。", self.索引())
+        self.assertEqual([r[0] for r in self.索引行()], ["材料/甲.txt", "材料/乙.txt"])
+
+    def test_adds_header_to_an_index_without_one(self):
+        (self.根 / "归档索引.md").write_text("# 归档索引\n\n律师自己先写了一段话。\n", encoding="utf-8")
+        self.放("甲.txt", b"jia")
+        self.搬(self.条("甲.txt", "材料", "第一件"))
+        self.assertIn("律师自己先写了一段话。", self.索引())
+        self.assertIn("| 相对路径 | 是什么 | 归档日期 | 文本 |", self.索引())
+        self.assertEqual(self.索引行(), [["材料/甲.txt", "第一件", 日期, "原件"]])
+
+    def test_leaves_another_table_alone(self):
+        self.放("甲.txt", b"jia")
+        self.搬(self.条("甲.txt", "材料", "第一件"))
+        别的表 = "\n## 律师自己的一张表\n\n| 相对路径 | 备注 |\n| --- | --- |\n| 材料/甲.txt | 别动我 |\n"
+        (self.根 / "归档索引.md").write_text(self.索引() + 别的表, encoding="utf-8")
+        self.放("乙.txt", b"yi")
+        self.搬(self.条("乙.txt", "材料", "第二件"))
+        self.assertIn("| 材料/甲.txt | 别动我 |", self.索引())
         self.assertEqual([r[0] for r in self.索引行()], ["材料/甲.txt", "材料/乙.txt"])
 
     def test_default_date_is_today(self):

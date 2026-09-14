@@ -33,14 +33,14 @@ SAYINGS = "材料/律师说过的.md"  # 律师说过的那份文件由出件追
 TEXT_COLUMN = "原件"  # 「文本」列：本版全是原件；OCR 与 PDF 转文本是后续版本
 PLAN_KEYS = ("路径", "去向", "说明", "子目录")
 REQUIRED_KEYS = ("路径", "去向", "说明")
-INDEX_HEADER = (
-    "# 归档索引\n"
-    "\n"
-    "一行一件，由归档脚本追加与更新，按归档先后排列；出件开场先读它再决定读哪些原件。\n"
-    "「文本」列现在全是「原件」：将来转出的文本放原件旁同名加 `.md`，这一列指向它。\n"
-    "\n"
-    "| 相对路径 | 是什么 | 归档日期 | 文本 |\n"
-    "| --- | --- | --- | --- |\n"
+INDEX_COLUMNS = ("相对路径", "是什么", "归档日期", "文本")
+INDEX_TABLE = ("| %s |" % " | ".join(INDEX_COLUMNS), "| --- | --- | --- | --- |")
+INDEX_PREAMBLE = (
+    "# 归档索引",
+    "",
+    "一行一件，由归档脚本追加与更新，按归档先后排列；出件开场先读它再决定读哪些原件。",
+    "「文本」列现在全是「原件」：将来转出的文本放原件旁同名加 `.md`，这一列指向它。",
+    "",
 )
 
 
@@ -51,9 +51,8 @@ class Rejected(Exception):
 class Item(NamedTuple):
     rel: str         # 来源目录内的相对路径，回显用
     src: pathlib.Path
-    dest: str        # 三格之一
     note: str        # 一句话是什么，进索引
-    target_rel: str  # 工作区内相对路径
+    target_rel: str  # 工作区内相对路径（去向 + 子目录 + 来源子路径）
     target: pathlib.Path
 
 
@@ -75,10 +74,8 @@ def workspace_root(path: str) -> pathlib.Path:
 def source_root(root: pathlib.Path, raw: Optional[str]) -> Tuple[pathlib.Path, bool]:
     """回（来源目录, 是不是复制）。不给 --from 就是待归档（移动）；给了就得在工作区外（复制）。"""
     if raw is None:
-        pending = root / PENDING
-        if not pending.is_dir():
-            raise Rejected("%s 下没有 %s/；没有待归档就没有东西要搬" % (root, PENDING))
-        return pending, False
+        # 待归档/ 不在也不拒：出件开场无条件调 list，缺这一格答「没有文件」就到此为止。
+        return root / PENDING, False
     src = pathlib.Path(raw).expanduser()
     if not src.is_dir():
         raise Rejected("--from %s 不是一个目录" % raw)
@@ -135,7 +132,10 @@ def files_under(base: pathlib.Path) -> List[str]:
 
 
 def archived_index(root: pathlib.Path) -> Tuple[Dict[str, str], Dict[str, str]]:
-    """扫三格里已归档的文件，回（内容哈希 → 相对路径, 文件名 → 相对路径）。多份同哈希或同名取排序第一份。"""
+    """扫三格里已归档的文件，回（内容哈希 → 相对路径, 文件名 → 相对路径）。多份同哈希或同名取排序第一份。
+
+    每次现扫现算，不落哈希缓存：归档索引是律师读的一份清单，不是指纹表（CONTEXT.md「归档索引」）。
+    """
     by_hash, by_name = {}, {}
     for dest in DESTINATIONS:
         base = root / dest
@@ -199,36 +199,55 @@ def load_plan(root: pathlib.Path, base: pathlib.Path, plan_path: str) -> List[It
         if target_rel in seen_target:
             raise Rejected("计划里有两条都落到 %s" % target_rel)
         seen_target.add(target_rel)
-        items.append(Item(rel, src, dest, note, target_rel, root / target_rel))
+        items.append(Item(rel, src, note, target_rel, root / target_rel))
     return items
 
 
 # ---------------------------------------------------------------- 归档索引
 
-def index_rows(text: str) -> Dict[str, int]:
-    """已有索引里 相对路径 → 行号；认不出的行一律不动。"""
+def cells_of(line: str) -> List[str]:
+    return [c.strip() for c in line.strip().strip("|").split("|")]
+
+
+def table_block(lines: List[str]) -> Tuple[Optional[int], int]:
+    """找索引自己那张表：回（表头行号, 表体之后的行号）。找不到表头回 (None, 0)。
+
+    只认表头恰好是四列那一张，表体到第一条不以 | 开头的行为止。索引里别的表与手写的段落
+    因此一字不动：认得出的只有这一张表里的行。
+    """
+    for n, line in enumerate(lines):
+        if line.strip().startswith("|") and cells_of(line)[:4] == list(INDEX_COLUMNS):
+            end = n + 1
+            while end < len(lines) and lines[end].strip().startswith("|"):
+                end += 1
+            return n, end
+    return None, 0
+
+
+def index_rows(lines: List[str], head: int, end: int) -> Dict[str, int]:
+    """索引表里 相对路径 → 行号。分隔行与表头不算。"""
     rows = {}
-    for n, line in enumerate(text.splitlines()):
-        stripped = line.strip()
-        if not stripped.startswith("|"):
-            continue
-        cells = [c.strip() for c in stripped.strip("|").split("|")]
-        if len(cells) < 4 or cells[0] in ("相对路径", "---"):
+    for n in range(head + 1, end):
+        cells = cells_of(lines[n])
+        if len(cells) < 4 or cells[0] in INDEX_COLUMNS or set(cells[0]) <= {"-", ":"}:
             continue
         rows.setdefault(cells[0], n)
     return rows
 
 
 def write_index(root: pathlib.Path, rows: List[Tuple[str, str]], date: str) -> Tuple[int, int]:
-    """新件追加到末尾，已有那一行原地更新；其余行一字不动、不重排。回（新增, 更新）。"""
+    """新件插在表末，已有那一行原地更新；表外的行与已有行的顺序一字不动。回（新增, 更新）。"""
     if not rows:
         return 0, 0
     path = root / INDEX
-    text = path.read_text(encoding="utf-8") if path.is_file() else INDEX_HEADER
-    if not text.endswith("\n"):
-        text += "\n"
-    lines = text.splitlines()
-    where = index_rows(text)
+    lines = path.read_text(encoding="utf-8").splitlines() if path.is_file() else list(INDEX_PREAMBLE)
+    head, end = table_block(lines)
+    if head is None:  # 索引不在、或在但没有这张表：把表头补到末尾
+        if lines and lines[-1].strip():
+            lines.append("")
+        head, end = len(lines), len(lines) + len(INDEX_TABLE)
+        lines.extend(INDEX_TABLE)
+    where = index_rows(lines, head, end)
     added = updated = 0
     for target_rel, note in rows:
         line = "| %s | %s | %s | %s |" % (target_rel, note, date, TEXT_COLUMN)
@@ -236,8 +255,9 @@ def write_index(root: pathlib.Path, rows: List[Tuple[str, str]], date: str) -> T
             lines[where[target_rel]] = line
             updated += 1
         else:
-            where[target_rel] = len(lines)
-            lines.append(line)
+            lines.insert(end, line)
+            where[target_rel] = end
+            end += 1
             added += 1
     with open(str(path), "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(lines) + "\n")
@@ -258,8 +278,13 @@ def prune_empty_dirs(base: pathlib.Path, start: pathlib.Path) -> None:
 
 
 def list_source(root: pathlib.Path, base: pathlib.Path) -> List[str]:
+    """逐件列出来源目录，并给每件一个状态。
+
+    「重名」是提示不是拦截：本案已归档的件里有同名不同内容的一件，去向还没定，拦不拦得看律师。
+    `apply` 那一步的「同名冲突」是另一回事，它只在目标路径已经被占时才拦。
+    """
     by_hash, by_name = archived_index(root)
-    out, counts = [], {"新": 0, "已有": 0, "同名": 0}
+    out, counts = [], {"新": 0, "已有": 0, "重名": 0}
     for rel in files_under(base):
         h = digest(base / rel)
         name = pathlib.PurePosixPath(rel).name
@@ -267,14 +292,14 @@ def list_source(root: pathlib.Path, base: pathlib.Path) -> List[str]:
             counts["已有"] += 1
             out.append("%s\t已有 → %s" % (rel, by_hash[h]))
         elif name in by_name:
-            counts["同名"] += 1
-            out.append("%s\t同名 → %s（内容不同）" % (rel, by_name[name]))
+            counts["重名"] += 1
+            out.append("%s\t重名 → %s（内容不同）" % (rel, by_name[name]))
         else:
             counts["新"] += 1
             out.append("%s\t新" % rel)
     if not out:
         return ["%s 里没有文件。" % base]
-    out.append("共 %d 件：新 %d，已有 %d，同名 %d。" % (len(out), counts["新"], counts["已有"], counts["同名"]))
+    out.append("共 %d 件：新 %d，已有 %d，重名 %d。" % (len(out), counts["新"], counts["已有"], counts["重名"]))
     return out
 
 
@@ -324,7 +349,7 @@ def build_parser() -> argparse.ArgumentParser:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--workspace", default=".", help="案件工作区（默认当前目录；开发侧测试用）")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    ls = sub.add_parser("list", help="逐件列出来源目录里的文件，并标出已有与同名")
+    ls = sub.add_parser("list", help="逐件列出来源目录里的文件，并标出已有与重名")
     ls.add_argument("--from", dest="source", help="工作区外的来源目录（默认 %s/）" % PENDING)
     ap_apply = sub.add_parser("apply", help="按计划搬运并写索引")
     ap_apply.add_argument("--plan", required=True, help="归档计划 JSON（写在临时位置，不进工作区）")
