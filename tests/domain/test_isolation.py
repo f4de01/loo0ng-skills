@@ -66,12 +66,18 @@ class 回流两条路(unittest.TestCase):
         for 名 in ("setup-case", "doit", "ask-loo0ng"):
             self.assertTrue(any("`%s`" % 名 in 行 for 行 in 表), "入口表缺 %s" % 名)
 
-    def test_办节点正文里有律师侧那条路(self):
+    def test_办节点正文里有律师侧那条路的触发(self):
+        """机制的主人是 domain（#124 主人判据、ADR-0022 重做 doit 时搬的）：办节点只留触发条件加一行调用，
+        缺失判定、问法、写入命令住 domain 的 references/回流.md 律师侧那一节。"""
         text = 办节点.read_text(encoding="utf-8")
-        self.assertIn("逐节点回流", text, "那一问挂在确认之后（ADR-0019），办节点的正文里要有它")
+        self.assertIn("调用 skill \"domain\"", text, "那一问挂在确认之后（ADR-0019），办节点要在确认之后调用 domain")
+        self.assertIn("归属", text, "触发条件要写明问的是领域图里的归属")
         self.assertIn("活图", text, "律师侧回流写的是活图，不是仓库里的出厂种子")
-        self.assertIn("未拍板不写", text, "与雏形机制同一条规矩，正文里要写死")
-        self.assertIn("没有第二双眼", text, "这条路为什么没有第二双眼，正文里要说清（#91 验收）")
+        self.assertIn("回流.md", text, "规矩在 domain 的 references/回流.md，办节点要指过去")
+        step = (REPO / "skills" / "in-progress" / "domain" / "references" / "回流.md").read_text(encoding="utf-8")
+        self.assertIn("未拍板不写", step, "与雏形机制同一条规矩，回流.md 里要写死")
+        self.assertIn("没有第二双眼", step, "这条路为什么没有第二双眼，回流.md 里要说清（#91 验收）")
+        self.assertIn("先判缺不缺", step, "缺失判定按 id 的反向减法，回流.md 里要写")
 
     def test_办节点正文里没有开发侧那条路(self):
         text = 办节点.read_text(encoding="utf-8")
