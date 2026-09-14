@@ -14,14 +14,14 @@ import sys
 import time
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-SETUP = REPO / "skills" / "engineering" / "setup-case" / "scripts" / "setup.py"
-ENGINE = REPO / "skills" / "engineering" / "graph" / "scripts" / "graph.py"
-SKETCH = REPO / "skills" / "engineering" / "domain" / "scripts" / "sketch.py"
+SETUP = REPO / "skills" / "in-progress" / "setup-case" / "scripts" / "setup.py"
+ENGINE = REPO / "skills" / "in-progress" / "graph" / "scripts" / "graph.py"
+SKETCH = REPO / "skills" / "in-progress" / "domain" / "scripts" / "sketch.py"
 LIVE_HOME_ENV = "LOO0NG_HOME"  # 活图的「家」，与 sketch.py、跑器同一个名字
 # 默认直接给包内的出厂种子，不走活图（ADR-0019 的 sketch.py home）：这些种子要的是一个确定的状态，
 # 拷一份活图只是多一层间接。它同时是「0.1.0 起手、没迁移过的工作区」那个形状：指针块指着种子、
 # 仍读得到，路由照常答（#92 第 2 条）。要一份真的活图的种子调 用活图() 换掉它。
-出厂种子 = REPO / "skills" / "engineering" / "domain" / "assets" / "破产"
+出厂种子 = REPO / "skills" / "in-progress" / "domain" / "assets" / "破产"
 _领域目录 = [出厂种子]
 
 

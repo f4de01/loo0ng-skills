@@ -1,4 +1,4 @@
-"""skills/engineering/setup-case/scripts/setup.py 的脚本层单测（unittest，标准库零依赖）。
+"""skills/in-progress/setup-case/scripts/setup.py 的脚本层单测（unittest，标准库零依赖）。
 
 运行：python -m unittest tests/setup-case/test_setup.py
 
@@ -19,9 +19,9 @@ import tempfile
 import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-SCRIPT = REPO / "skills" / "engineering" / "setup-case" / "scripts" / "setup.py"
-SKETCH = REPO / "skills" / "engineering" / "domain" / "scripts" / "sketch.py"
-SEED_ASSETS = REPO / "skills" / "engineering" / "domain" / "assets"
+SCRIPT = REPO / "skills" / "in-progress" / "setup-case" / "scripts" / "setup.py"
+SKETCH = REPO / "skills" / "in-progress" / "domain" / "scripts" / "sketch.py"
+SEED_ASSETS = REPO / "skills" / "in-progress" / "domain" / "assets"
 DOMAIN = REPO / "evals" / "领域" / "菜园"
 LIVE_HOME_ENV = "LOO0NG_HOME"   # 活图的「家」，与 sketch.py、eval 跑器同一个名字
 

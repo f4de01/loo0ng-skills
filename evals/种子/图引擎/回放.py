@@ -10,7 +10,7 @@ import subprocess
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[3]
-SETUP = REPO / "skills" / "engineering" / "setup-case" / "scripts" / "setup.py"
+SETUP = REPO / "skills" / "in-progress" / "setup-case" / "scripts" / "setup.py"
 DOMAIN_DIR = REPO / "evals" / "领域" / "菜园"
 
 

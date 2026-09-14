@@ -10,7 +10,7 @@ import sys
 import tempfile
 
 REPO = pathlib.Path(__file__).resolve().parents[3]
-GATE = REPO / "skills" / "productivity" / "to-docx" / "scripts" / "gate.py"
+GATE = REPO / "skills" / "in-progress" / "to-docx" / "scripts" / "gate.py"
 节点 = "管理人银行账户备案报告"
 模板 = "1-3.关于管理人银行账户备案的报告.docx"
 种子里的陈述 = 2

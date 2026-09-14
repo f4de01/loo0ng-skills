@@ -13,7 +13,7 @@ skill 包内的**出厂种子**而不是包外的活图（本版不迁移，要�
 
 **为什么是假包。** 判据有两条取或（见 graph.py 的 in_package）：按脚本位置算出的真 assets/，
 或者目录名摆成 `<...>/domain/assets/<领域名>`。这里用第二条造一份形状一样的假包，
-所以引擎照拒不误，而仓库里真的 `skills/engineering/domain/assets/` 一个字节都不会被这条用例碰到；
+所以引擎照拒不误，而仓库里真的 `skills/in-progress/domain/assets/` 一个字节都不会被这条用例碰到；
 拿真包跑就是拿开发者的工作树赌一次规则，规则坏了它会被写脏。真包落在判据 ① 射程里这件事
 由脚本层单测 tests/graph/test_package_guard.py 单独钉住，两条合起来才等于票里那句
 「包内 assets/<领域>/领域图.json 字节不变」。假包放在工作区里的点开头目录下，与种子
@@ -35,8 +35,8 @@ REPO = pathlib.Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "evals" / "共用"))
 import 活图断言 as 助手  # noqa: E402  节点名与「指纹」只有一份，用例的断言与本回放读同一处
 
-SETUP = REPO / "skills" / "engineering" / "setup-case" / "scripts" / "setup.py"
-ENGINE = REPO / "skills" / "engineering" / "graph" / "scripts" / "graph.py"
+SETUP = REPO / "skills" / "in-progress" / "setup-case" / "scripts" / "setup.py"
+ENGINE = REPO / "skills" / "in-progress" / "graph" / "scripts" / "graph.py"
 出厂种子源 = REPO / "evals" / "领域" / 助手.领域名      # 合成小领域「菜园」，当出厂种子的内容用
 
 假包目录名 = ".假包"                                   # 点开头：不算「往工作区乱写」

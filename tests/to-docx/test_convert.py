@@ -1,4 +1,4 @@
-"""skills/productivity/to-docx/scripts/md2docx.py 的脚本层单测（unittest）。不需要 Word。
+"""skills/in-progress/to-docx/scripts/md2docx.py 的脚本层单测（unittest）。不需要 Word。
 
 运行：python -m unittest tests/to-docx/test_convert.py
 
