@@ -48,7 +48,7 @@ skills/<bucket>/<name>/       # 桶照上游五个：engineering、productivity�
 3. `.claude-plugin/plugin.json` 的 `skills` 数组加（或改、删）`./skills/<bucket>/<name>`。
 4. `README.md` 的 User-invoked 或 Model-invoked 组加（或改、删）一行，名字链接到 `./skills/<bucket>/<name>/SKILL.md`；再建（或改名、删）`docs/<bucket>/<name>.md`。
 5. 动到任一入口（`setup-case`、`doit`、`ask-loo0ng`）时，改 `ask-loo0ng` 自持的入口表（ADR-0005）。
-6. 重跑 relink：`powershell -NoProfile -ExecutionPolicy Bypass -File scripts/link-skills.ps1`。改内容不用重跑，只有改名、增删要。
+6. 重跑 relink：`powershell -NoProfile -ExecutionPolicy Bypass -File scripts/link-skills.ps1`（Codex 侧；Claude Code 侧装了插件时脚本自动跳过那个目录）。改内容不用重跑，只有改名、增删要。Claude Code 侧要看到改动得 `claude plugin update loo0ng-skills@loo0ng-marketplace`，它只取 GitHub 默认分支；要测未合并的分支，先按下面「分发事实」把市场换成本仓库绝对路径。
 7. `npm run changeset` 写一条 changeset。
 8. 跑下面的校验与测试。
 
@@ -131,7 +131,7 @@ ADR-0015「目录名保持 ASCII」只指 `tests/`、`evals/` 两个顶层；其
 | 键 | 含义 |
 | --- | --- |
 | `种子` | `evals/种子/` 下的场景名，本票允许为空 |
-| `skill` | 编排 skill 名，可空。Claude Code 侧拼成 `/<skill> <提示词>`，按 junction 路线（`link-skills.ps1`）的名字，插件路线的 `/loo0ng-skills:<skill>` 不在此列；Codex 侧用替身提示词「读 `~/.agents/skills/<skill>/SKILL.md` 并照做：<提示词>」，测的是正文不是触发，触发另由人工实测与完成定义那一次覆盖。带 skill 的用例必须有 `说明` |
+| `skill` | 编排 skill 名，可空。Claude Code 侧拼成 `/loo0ng-skills:<skill> <提示词>`（开发机 Claude Code 侧装的是插件，照上游一个 harness 只装一条路；`--claude-plugin ""` 退回 junction 路线的裸名 `/<skill>`）；Codex 侧用替身提示词「读 `~/.agents/skills/<skill>/SKILL.md` 并照做：<提示词>」，测的是正文不是触发，触发另由人工实测与完成定义那一次覆盖。带 skill 的用例必须有 `说明` |
 | `回复正则` | 对最后一条回复做 `re.search`，可空；报红时断言名是「回复正则」 |
 | `回合上限` | Claude Code 侧交给 `--max-turns`；Codex 侧数 JSONL 流里工具类 item（命令、改文件、MCP、搜索），超了杀进程树。默认 30 |
 | `超时秒` | 单次调用的墙钟上限，超了杀进程树。默认 300 |
@@ -162,11 +162,11 @@ Windows 上工作区用 `os.mkdir` 而不用 `tempfile.mkdtemp`：后者建的�
 #    活图在工作区里的种子（「逐节点回流」「活图多一件」「回流」）还会多回显一行 LOO0NG_HOME=<…>
 python scripts/skill-eval.py --materialize 在办中
 
-# 2. Claude Code 侧（开发会话里就能跑，打的是真名，算真实触发）
+# 2. Claude Code 侧（开发会话里就能跑，打的是真名，算真实触发；插件路线带 loo0ng-skills: 命名空间）
 cd <上一步打印的路径>
 export LOO0NG_HOME=<上一步回显的那个>   # 回显了就必须设：不设的话模型自己跑 home 会写真的 ~/.loo0ng
 MSYS_NO_PATHCONV=1 CLAUDECODE= CLAUDE_CODE_ENTRYPOINT= \
-  claude -p "/<skill 名> <律师那句话>" --output-format json \
+  claude -p "/loo0ng-skills:<skill 名> <律师那句话>" --output-format json \
   --permission-mode acceptEdits --no-session-persistence --allowedTools Bash
 
 # 3. Codex 侧：只能人工，在客户端里 cd 到同一个路径再打 $<skill 名>；
@@ -181,7 +181,7 @@ MSYS_NO_PATHCONV=1 CLAUDECODE= CLAUDE_CODE_ENTRYPOINT= \
 
 **Codex 侧那一次只能人工**：`$名` 在 AFK 下不解析（`codex debug prompt-input '$名 …'` 可复核：那一串原样留在用户消息里，`SKILL.md` 正文一句都不进 prompt），显式触发的 skill 因此在 `codex exec` 下触不到。律师在客户端里打的是带前缀的 `$loo0ng-skills:<名>`，靠补全 tab 选中（#44）。
 
-关票评论按 ADR-0009 只记日期、平台、打的名、结果类别，并写明材料是合成的。验到的与验不到的要分清：验到的是**这条安装路线下**按名字触发、流程走通（Claude Code 侧是 junction 路线的裸名 `/<名>`，Codex 侧是客户端里带前缀的 `$loo0ng-skills:<名>`）；验不到的是真实案件材料下的判断，也验不到插件路线的 `/loo0ng-skills:<名>`（那条另由「两平台注册、补全与拉取实测」与 #44 覆盖）。工作区路径不写进 issue（硬边界 1）。
+关票评论按 ADR-0009 只记日期、平台、打的名、结果类别，并写明材料是合成的。验到的与验不到的要分清：验到的是**这条安装路线下**按名字触发、流程走通（Claude Code 侧是插件路线的 `/loo0ng-skills:<名>`，Codex 侧是客户端里带前缀的 `$loo0ng-skills:<名>`）；验不到的是真实案件材料下的判断，也验不到插件路线的 `/loo0ng-skills:<名>`（那条另由「两平台注册、补全与拉取实测」与 #44 覆盖）。工作区路径不写进 issue（硬边界 1）。
 
 ## 发布
 
@@ -200,6 +200,7 @@ MSYS_NO_PATHCONV=1 CLAUDECODE= CLAUDE_CODE_ENTRYPOINT= \
 
 ## 分发事实（#18，2026-09-05 实测）
 
+- **开发机两条路各 harness 择一，不同装**（照上游 install-block「The two routes are exclusive」；2026-09-14 去前缀后定）：Claude Code 侧装插件（`loo0ng-skills:<name>`，`/loo` 加 tab 聚齐七件），Codex 侧挂 junction（裸名，与律师机 skills.sh 装出来的同形）。`link-skills.ps1` 见到已装插件就只挂 Codex 那个目录。裸名去了 `loo0ng-` 前缀之后，junction 路线在 Claude Code 列表里与四十多件别的 skill 混在一起、tab 补不出来，插件命名空间顶替了原来 name 里的前缀。
 - junction 路线：两个 harness 都扫到；Claude Code 会话内热加载；Codex 显示裸名 `<name>`（仓库不再带 `.codex-plugin/plugin.json`，ADR-0021）。
 - 插件路线：`claude plugin marketplace add` 与 `codex plugin marketplace add … --ref` 对私有仓库都吃本机凭据，缓存是整仓库拷贝。**这条只在开发机上成立**，别当分发口径，见下面「安装源必须是公开仓库」。
 - 本机验证插件路线不必推分支：`claude plugin marketplace add <本仓库绝对路径>` 再 `claude plugin install loo0ng-skills@loo0ng-marketplace`，`claude -p "/loo0ng-skills:<name>"` 可触发；验完 `claude plugin uninstall` 与 `claude plugin marketplace remove loo0ng-marketplace`（#24）。

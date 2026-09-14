@@ -83,3 +83,7 @@ date: 2026-09-05
 ## 附注（2026-09-13，分桶修正）
 
 上一条附注「七件全部住 `productivity/`」作废。上游的 `engineering/` 装主线（daily code work，`ask-matt`、`tdd`、`implement`、`wayfinder` 都在那里），`productivity/` 装离了主线也能单独用的工具（`grilling`、`handoff`、`writing-for-agents`）；把「非代码」读成字面义才把七件全塞进 `productivity/`，桶就没了信息量。改为：办案主线六件 `ask-loo0ng`、`setup-case`、`doit`、`graph`、`domain`、`filing` 住 `engineering/`（六件都只在有 `图.json` 的工作区里工作），`to-docx` 住 `productivity/`（门禁可对任意 DOCX 跑、转换器默认写临时位置，离了案子也能用）。docs 页随桶：`docs/engineering/<name>.md` 六页、`docs/productivity/to-docx.md` 一页。装到律师机上的形状不变（链接名与 skills.sh 的目录名都只取 `<name>`）。
+
+## 附注（2026-09-14，开发机两条路各 harness 择一）
+
+「本机开发者即律师，只用 `link-skills.ps1` 条目级 junction 到两个目录」改为照上游 install-block「两条路互斥」按 harness 择一：Claude Code 侧装插件 `loo0ng-skills@loo0ng-marketplace`，Codex 侧挂 junction。起因是去前缀（同日前一条附注）之后裸名在 Claude Code 的 `/` 列表里与本机四十多件别的 skill 混在一起、tab 补不出来；插件的 `loo0ng-skills:` 命名空间顶替了原来写进 name 的前缀，这正是本文当年「前缀不靠插件命名空间」那条反过来的用法，Codex 没有命名空间的问题由 `$` 补全按子串命中兜住。代价：Claude Code 侧看到的是 `claude plugin update` 拉到的 GitHub 默认分支那一版，不是工作副本；测未合并的分支要先把市场换成本仓库绝对路径（`docs/agents/skills.md`「分发事实」）。跑器 `skill-eval.py` 的 Claude Code 侧随之拼 `/loo0ng-skills:<skill>`，`--claude-plugin ""` 退回裸名。

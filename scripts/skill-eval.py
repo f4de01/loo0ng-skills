@@ -25,7 +25,8 @@
 每次运行另建一个临时的「活图家」，经环境变量 LOO0NG_HOME 交给 harness（ADR-0019）：领域目录的活图
 本来住 ~/.loo0ng/领域/，eval 不该往律师的主目录里拷东西，也不该被上一次跑剩下的活图影响（ADR-0015
 只生不存）。跑完连它一起删。Codex 侧实测吃这个变量，沙箱也写得动 %TEMP% 下的这个目录（#90）。
-Claude Code 侧走 claude -p（--max-turns 由它自己数；MSYS_NO_PATHCONV=1 防 Git Bash 改写 /名）；
+Claude Code 侧走 claude -p（--max-turns 由它自己数；MSYS_NO_PATHCONV=1 防 Git Bash 改写 /名），skill 名带插件
+命名空间 /loo0ng-skills:<名>（开发机 Claude Code 侧装的是插件，照上游一个 harness 只装一条路；--claude-plugin "" 退回裸名）；
 Codex 侧走 codex exec --json，回合数按流里的工具类 item 数，超上限即杀进程树。
 Codex 侧编排 skill 用替身提示词（读 ~/.agents/skills/<名>/SKILL.md 并照做），测的是正文不是触发。
 结果只打印不进仓库。退出码：0 全绿；1 有红；2 用法或用例配置错误。
@@ -60,6 +61,9 @@ CASE_REQUIRED = ("种子", "回复正则")
 SEED_META_FILES = ("回放.py", "状态.md")
 CODEX_TOOL_ITEMS = {"command_execution", "file_change", "mcp_tool_call", "web_search"}
 CODEX_STAND_IN = "读 ~/.agents/skills/{skill}/SKILL.md 并照做：{prompt}"
+# Claude Code 侧走插件路线（照上游：一个 harness 只装一条路，开发机 Claude Code 装的是插件），skill 名带插件命名空间；
+# 传 --claude-plugin "" 退回 junction 路线的裸名。
+DEFAULT_CLAUDE_PLUGIN = "loo0ng-skills"
 
 
 class EvalError(Exception):
@@ -124,6 +128,8 @@ def parse_args(argv=None):
     ap.add_argument("--keep", action="store_true", help="跑完不删临时工作区（排障用）")
     ap.add_argument("--model", default=None, help="模型，透传给 harness；不给则走 CLI 默认")
     ap.add_argument("--effort", default=None, help="推理档，透传给 harness；不给则走 CLI 默认")
+    ap.add_argument("--claude-plugin", default=DEFAULT_CLAUDE_PLUGIN,
+                    help="Claude Code 侧 skill 名前的插件命名空间，默认 %s；给空串走 junction 路线的裸名" % DEFAULT_CLAUDE_PLUGIN)
     opts = ap.parse_args(argv)
     if opts.materialize:
         # 只生工作区这一路不跑用例，跑用例才有意义的参数一个都不收（收了也没处使，静默吃掉更糟）。
@@ -305,12 +311,13 @@ def harness_env(base: Dict[str, str]) -> Dict[str, str]:
     return env
 
 
-def build_prompt(harness: str, case: Case) -> str:
+def build_prompt(harness: str, case: Case, claude_plugin: str = DEFAULT_CLAUDE_PLUGIN) -> str:
     if not case.skill:
         return case.prompt
     if harness == "codex":
         return CODEX_STAND_IN.format(skill=case.skill, prompt=case.prompt)
-    return "/%s %s" % (case.skill, case.prompt)
+    name = "%s:%s" % (claude_plugin, case.skill) if claude_plugin else case.skill
+    return "/%s %s" % (name, case.prompt)
 
 
 def build_command(harness: str, exe: List[str], prompt: str, workspace: pathlib.Path, *,
@@ -484,7 +491,7 @@ def evaluate(case: Case, workspace: pathlib.Path, inv: Invocation) -> List[Failu
 def run_case(case: Case, opts, invoke: Callable = invoke) -> List[RunResult]:
     max_turns = opts.max_turns or case.max_turns or DEFAULT_MAX_TURNS
     timeout = opts.timeout or case.timeout or DEFAULT_TIMEOUT
-    prompt = build_prompt(opts.harness, case)
+    prompt = build_prompt(opts.harness, case, opts.claude_plugin)
     results = []
     for run in range(1, opts.runs + 1):
         workspace = make_workspace(case.name)

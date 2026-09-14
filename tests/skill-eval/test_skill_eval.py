@@ -189,7 +189,8 @@ class PromptAndCommandTest(unittest.TestCase):
         p = skill_eval.build_prompt("codex", case)
         self.assertIn("~/.agents/skills/setup-case/SKILL.md", p)
         self.assertTrue(p.endswith("帮我起手"))
-        self.assertEqual(skill_eval.build_prompt("claude", case), "/setup-case 帮我起手")
+        self.assertEqual(skill_eval.build_prompt("claude", case), "/loo0ng-skills:setup-case 帮我起手")
+        self.assertEqual(skill_eval.build_prompt("claude", case, ""), "/setup-case 帮我起手")
 
     def test_claude_command(self):
         ws = self.root / "ws"
