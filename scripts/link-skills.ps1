@@ -21,7 +21,7 @@ $skillsRoot = Join-Path $Repo 'skills'
 $srcs = @()
 if (Test-Path $skillsRoot) {
   $srcs = @(Get-ChildItem -Path $skillsRoot -Recurse -Filter 'SKILL.md' -File |
-    Where-Object { ($_.FullName -notlike '*\node_modules\*') -and ($_.FullName -notlike '*\deprecated\*') } |
+    Where-Object { ($_.FullName -notlike '*\node_modules\*') -and ($_.FullName -notlike '*\deprecated\*') -and ($_.FullName -notlike '*\misc\*') } |
     ForEach-Object { $_.Directory })
 }
 $names = @($srcs | ForEach-Object { $_.Name })
