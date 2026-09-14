@@ -1,4 +1,4 @@
-"""19 件官方模板逐件回归：每件跑「只留黄」与「全填」两遍，比表格几何与 run 格式，再各跑一次门禁。
+"""19 件官方模板逐件回归：每件跑「只留黄」与「全填」两遍，比表格几何与 run 格式。
 
 运行：python -m unittest tests/to-docx/test_templates.py
 
@@ -7,12 +7,11 @@
 
   - 表格几何（tblPr / tblGrid / 每行 trPr / 每格 tcPr 的 XML）逐字节不变；
   - 槽外每个字符的 run 格式（rPr 去掉 highlight）不变，固定文字与槽混在一段的那些段落正是这条要守的；
-  - 只留黄那一遍：每个槽都落在高亮里，文字一个字不变；
-  - 门禁不给不通过（需人眼是允许的：这台机器没有渲染器，空白页那一项常落在带内，ADR-0017）。
+  - 只留黄那一遍：每个槽都落在高亮里，文字一个字不变；全填那一遍：一个槽都不剩；
+  - 元数据（作者、最后修改者、上次打印时间）在收尾清掉了。
 
-两条跑道（ADR-0017）：默认跑道无渲染，只用门禁本体（推算层），零第三方依赖、任何机器上必须全绿、不许
-skip；`TemplatesRegressionRendered` 把同一批接上渲染层再跑一遍（每件起一次 Word，19 件约两三分钟；Codex
-的 30 秒 shell 装不下），拿不到渲染通道时整类 skip 并打印一行说明。
+版式门禁按 ADR-0024 整件退场：数据泄露与渲染格式两样保证从运行时的门禁挪进了这份测试，每次改 fill.py 都要过
+19 件。不起 Word，任何机器上必须全绿、不许 skip。
 """
 import pathlib
 import shutil
@@ -20,7 +19,7 @@ import tempfile
 import unittest
 
 import support
-from support import W, all_templates, apply, fill_all_ops, gate, read_xml, table_signature, template, 填
+from support import W, all_templates, apply, fill_all_ops, read_xml, table_signature, template, 填
 
 MERGED = ("1-1.", "3-1.", "3-2.", "8-2.")
 填的字 = "某某"
@@ -52,11 +51,7 @@ def 槽外格式(before, after, 文本, 填了) -> str:
 
 
 class TemplatesRegression(unittest.TestCase):
-    EXTRA = ("--no-render",)  # 子类置空即接上渲染层
-
     def setUp(self):
-        if not self.EXTRA:
-            support.require_render(self)
         self.dir = pathlib.Path(tempfile.mkdtemp(prefix="to-docx-tpl-"))
         self.addCleanup(shutil.rmtree, self.dir, True)
 
@@ -79,27 +74,8 @@ class TemplatesRegression(unittest.TestCase):
                 if bad:
                     failures.append("%s %s：%s" % (tpl.name, 遍, bad))
                 failures += self.check_slots(tpl, out, 遍, 文本)
-                failures += self.check_gate(tpl, out, 遍, len(文本))
+                failures += self.check_metadata(tpl, out, 遍)
         self.assertEqual(failures, [], "\n".join(failures))
-
-    def check_gate(self, tpl, out, 遍, 段数):
-        """门禁跑得过这件吗。
-
-        只留黄那一遍是**真的出件形状**（一个槽都填不上时交出去的就是它），整件结论不许是不通过。
-        全填那一遍是合成的极端：每个槽都塞同一串「某某」，篇幅与分页跟着变，6-2 的末页会空出来，那是
-        塞进去的字的事，不是施加机制的事。所以那一遍只断这条路自己管的两项（改动段残留占位、元数据残留）
-        不出现，几何项交给出件时的真门禁。
-        """
-        changed = ",".join(str(i) for i in range(段数))
-        g = gate(out, "--template", tpl, "--changed", changed, *self.EXTRA)
-        if g.result is None:
-            return ["%s %s：门禁跑不动 %s %s" % (tpl.name, 遍, g.code, g.err.strip())]
-        if 遍 == "只留黄":
-            if g.result["结论"] == "不通过":
-                return ["%s 只留黄：门禁不通过 %s" % (tpl.name, g.result["不通过项"])]
-            return []
-        ours = [x for x in g.result["不通过项"] if x.startswith(("改动段", "元数据残留"))]
-        return ["%s 全填：%s" % (tpl.name, ours)] if ours else []
 
     def check_slots(self, tpl, out, 遍, 文本):
         """只留黄：文字一个字不变、每个槽都在高亮里；全填：一个槽都不剩。"""
@@ -119,9 +95,21 @@ class TemplatesRegression(unittest.TestCase):
                     bad.append("%s 只留黄：p%d 的槽「%s」没留黄" % (tpl.name, idx, 原文))
         return bad
 
+    def check_metadata(self, tpl, out, 遍):
+        """元数据在收尾无条件清掉（2.0 的真实事故，落进第一类：施加的构造）。19 件逐件看一眼。"""
+        core = read_xml(out, "docProps/core.xml")
+        bad = []
+        for tag, 名 in ((support.DC + "creator", "作者"), (support.CP + "lastModifiedBy", "最后修改者")):
+            el = core.find(tag)
+            if el is not None and (el.text or "").strip():
+                bad.append("%s %s：%s没清" % (tpl.name, 遍, 名))
+        if core.find(support.CP + "lastPrinted") is not None:
+            bad.append("%s %s：上次打印时间没清" % (tpl.name, 遍))
+        return bad
+
 
 class TemplatesShape(unittest.TestCase):
-    """不跑门禁的几件，只看模板与施加：不分跑道，也就不该被渲染层的 skip 波及。"""
+    """只看模板与施加的几件。"""
 
     def setUp(self):
         self.dir = pathlib.Path(tempfile.mkdtemp(prefix="to-docx-tpl-shape-"))
@@ -157,11 +145,6 @@ class TemplatesShape(unittest.TestCase):
         self.assertEqual(apply(tpl, fill_all_ops(tpl, 填的字), out).code, 0)
         doc = support.Document(str(out))
         self.assertTrue(sum(len(填.highlight_ranges(p)) for p in 填.paragraphs(doc)), "自带的黄被吃掉了")
-
-
-class TemplatesRegressionRendered(TemplatesRegression):
-    """同一批 19 件接上渲染层再跑一遍。缺渲染通道时整类 skip 并打印说明（ADR-0017）。"""
-    EXTRA = ()
 
 
 if __name__ == "__main__":
