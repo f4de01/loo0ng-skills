@@ -11,9 +11,11 @@
 
 1. **登记**：每件 skill 同时出现在 `skills/<bucket>/<name>/`（桶照上游五个，七件都在 `productivity/`）、所在桶的 `README.md`、`.claude-plugin/plugin.json` 的 `skills` 数组、根 `README.md` 两组之一，并有一页 `docs/<bucket>/<name>.md`（后三处只收 promoted 桶 `engineering/`、`productivity/` 里的）；根 README 与桶 README 的条目都把名字链接到它的 `SKILL.md`；`name` 只用小写字母、数字、连字符且带 `loo0ng-` 前缀（路由例外，叫 `ask-loo0ng`）；`SKILL.md` 不带 BOM。
 2. **路由入口表同步**：增删或改名任一入口，必改 `ask-loo0ng` 自持的入口表。
-3. **双旗同步**：编排 skill 与路由同时带 `disable-model-invocation: true` 与 `allow_implicit_invocation: false`；参考 skill 两者都不带。
+3. **双旗同步**：编排 skill 与路由同时带 `disable-model-invocation: true` 与 `allow_implicit_invocation: false`；参考 skill 两者都不带。`agents/openai.yaml` 手写，`display_name` 等于 `name`（ADR-0021）。
 4. **relink**：改名、增删 skill 后重跑 `scripts/link-skills.ps1`。
 5. **领域目录三样**：`skills/productivity/loo0ng-domain/assets/` 只有领域图、官方模板原件、指引手册原文（ADR-0004）；这份是出厂种子，律师的活图在包外（ADR-0019）。
+
+6. **机械校验**：改了 `skills/`、`docs/`、`README.md` 或 `.claude-plugin/` 就跑 `bash scripts/check-skill.sh .`、`bash scripts/check-wiring.sh .`、`claude plugin validate . --strict`，全绿才提交；改名或删除后另跑 `bash scripts/check-stale.sh . <旧名>`；发版前 `bash scripts/check-release.sh .`（ADR-0021）。
 
 长约定见 `docs/agents/skills.md`。
 

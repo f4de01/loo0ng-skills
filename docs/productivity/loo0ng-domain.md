@@ -6,9 +6,9 @@
 
 ## When to reach for it
 
-你一句话说「按这份指南出雏形」「从指南里提节点」「指南里还有哪些没建」「官方模板原件在哪」「领域图在哪」，模型自行调用它。起手末尾归档后 `指南/` 非空，[loo0ng-setup-case](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-setup-case.md) 调它出起手清单里的雏形；你确认一个领域图里没有的节点之后，[loo0ng-doit](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-doit.md) 按它的口径问一次归属。
+你一句话说「按这份指南出雏形」「从指南里提节点」「指南里还有哪些没建」「官方模板原件在哪」「领域图在哪」，模型自行调用它。起手末尾归档后 `指南/` 非空，[loo0ng-setup-case](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-setup-case.md) 调它出起手清单里的雏形；你确认一个领域图里没有的节点之后，[loo0ng-doit](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-doit.md) 按它的口径问一次归属。
 
-改图的其他构成与追加条目归 [loo0ng-graph](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-graph.md)；把指南搬进 `指南/` 是归档，归 [loo0ng-filing](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-filing.md)。
+改图的其他构成与追加条目归 [loo0ng-graph](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-graph.md)；把指南搬进 `指南/` 是归档，归 [loo0ng-filing](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-filing.md)。
 
 ## Prerequisites
 
@@ -48,4 +48,4 @@
 
 ## Where it fits
 
-`loo0ng-domain` 是参考层，领域内容的家与雏形机制的主人。它的写入全经 [loo0ng-graph](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-graph.md) 的引擎；起手时把官方模板拷进工作区是 [loo0ng-setup-case](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-setup-case.md) 做，出件读它是 [loo0ng-to-docx](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-to-docx.md) 做。整套 skill 的路由是 [ask-loo0ng](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/ask-loo0ng.md)。
+`loo0ng-domain` 是参考层，领域内容的家与雏形机制的主人。它的写入全经 [loo0ng-graph](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-graph.md) 的引擎；起手时把官方模板拷进工作区是 [loo0ng-setup-case](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-setup-case.md) 做，出件读它是 [loo0ng-to-docx](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-to-docx.md) 做。整套 skill 的路由是 [ask-loo0ng](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/ask-loo0ng.md)。

@@ -17,7 +17,7 @@
 | 加一个模块 / 模块改名 / 删空模块 | `add-module` / `rename-module` / `delete-module` |
 | 某节点不适用 / 整个模块不适用 | `not-applicable` |
 
-出一版与确认是 [loo0ng-doit](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-doit.md) 的事，它再来调本 skill 落条目。从指南批量长出模块与节点走雏形，是 [loo0ng-domain](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-domain.md)。
+出一版与确认是 [loo0ng-doit](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-doit.md) 的事，它再来调本 skill 落条目。从指南批量长出模块与节点走雏形，是 [loo0ng-domain](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-domain.md)。
 
 ## Prerequisites
 
@@ -50,4 +50,4 @@
 
 ## Where it fits
 
-`loo0ng-graph` 是参考层，所有写图都经它：[loo0ng-doit](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-doit.md) 的生成与确认条目、[loo0ng-setup-case](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-setup-case.md) 的起手图、[loo0ng-domain](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-domain.md) 的雏形写入，都是它的子进程。它不出 HTML、不做可视化。整套 skill 的路由是 [ask-loo0ng](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/ask-loo0ng.md)。
+`loo0ng-graph` 是参考层，所有写图都经它：[loo0ng-doit](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-doit.md) 的生成与确认条目、[loo0ng-setup-case](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-setup-case.md) 的起手图、[loo0ng-domain](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-domain.md) 的雏形写入，都是它的子进程。它不出 HTML、不做可视化。整套 skill 的路由是 [ask-loo0ng](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/ask-loo0ng.md)。

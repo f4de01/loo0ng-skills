@@ -5,5 +5,5 @@ Beta。故意公开，想听反馈；在毕业到 `productivity/`（或 `enginee
 插件装不到这里的 skill，要试就单件装：
 
 ```bash
-npx skills@latest add f4de01/lawyer-workbench-v3 --skill=<name>
+npx skills@latest add f4de01/loo0ng-skills --skill=<name>
 ```

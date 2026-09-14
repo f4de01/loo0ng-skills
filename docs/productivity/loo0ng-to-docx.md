@@ -6,7 +6,7 @@
 
 ## When to reach for it
 
-出一版的第 7 步由 [loo0ng-doit](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-doit.md) 驱动，模型按它的正文调本 skill 写稿、转换、门禁、落盘。你直接说「把这份 docx 检一下」「这稿子转成 word」，模型也自行调用它，产物留在临时位置或你指的位置，不进 `文书/`、不写审查报告、不动图。
+出一版的第 7 步由 [loo0ng-doit](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-doit.md) 驱动，模型按它的正文调本 skill 写稿、转换、门禁、落盘。你直接说「把这份 docx 检一下」「这稿子转成 word」，模型也自行调用它，产物留在临时位置或你指的位置，不进 `文书/`、不写审查报告、不动图。
 
 | 退出码 | 结论 | 落盘 |
 | --- | --- | --- |
@@ -15,7 +15,7 @@
 | 1 | 不通过 | 否 |
 | 2 | 门禁跑不动（文书或模板打不开、用法错、落盘被拒） | 否 |
 
-稿子写什么、整读哪些材料是 [loo0ng-doit](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-doit.md) 的事；往图里追加生成条目归 [loo0ng-graph](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-graph.md)，本 skill 自己不追加。
+稿子写什么、整读哪些材料是 [loo0ng-doit](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-doit.md) 的事；往图里追加生成条目归 [loo0ng-graph](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-graph.md)，本 skill 自己不追加。
 
 ## Prerequisites
 
@@ -57,4 +57,4 @@
 
 ## Where it fits
 
-`loo0ng-to-docx` 是参考层，出一版链条的末端：写稿、转换、门禁、落盘之后，[loo0ng-doit](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-doit.md) 再经 [loo0ng-graph](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-graph.md) 追加生成条目。它读的官方模板原件住领域目录，家在 [loo0ng-domain](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-domain.md)，起手时由 [loo0ng-setup-case](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-setup-case.md) 拷进工作区。整套 skill 的路由是 [ask-loo0ng](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/ask-loo0ng.md)。
+`loo0ng-to-docx` 是参考层，出一版链条的末端：写稿、转换、门禁、落盘之后，[loo0ng-doit](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-doit.md) 再经 [loo0ng-graph](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-graph.md) 追加生成条目。它读的官方模板原件住领域目录，家在 [loo0ng-domain](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-domain.md)，起手时由 [loo0ng-setup-case](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-setup-case.md) 拷进工作区。整套 skill 的路由是 [ask-loo0ng](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/ask-loo0ng.md)。

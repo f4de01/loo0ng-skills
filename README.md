@@ -26,11 +26,11 @@
 本仓库自成单插件市场（`.claude-plugin/marketplace.json`），在会话里：
 
 ```
-/plugin marketplace add f4de01/lawyer-workbench-v3
+/plugin marketplace add f4de01/loo0ng-skills
 /plugin install loo0ng-skills@loo0ng-marketplace
 ```
 
-`owner/repo` 形式只取默认分支；要装某个分支，用 `https://github.com/f4de01/lawyer-workbench-v3.git#<branch>`。**安装源须是公开仓库**：「私有仓库凭本机 gh 或 git 凭据克隆」只在开发机上验过，律师那台 mac 上私有仓库一条都没走通，本仓库为此转成了 public（`docs/实测/mac-20260909/结论.md`）。装上后 skill 名带 `loo0ng-skills:` 前缀，例如 `/loo0ng-skills:ask-loo0ng`。
+`owner/repo` 形式只取默认分支；要装某个分支，用 `https://github.com/f4de01/loo0ng-skills.git#<branch>`。**安装源须是公开仓库**：「私有仓库凭本机 gh 或 git 凭据克隆」只在开发机上验过，律师那台 mac 上私有仓库一条都没走通，本仓库为此转成了 public（`docs/实测/mac-20260909/结论.md`）。装上后 skill 名带 `loo0ng-skills:` 前缀，例如 `/loo0ng-skills:ask-loo0ng`。
 
 </details>
 
@@ -38,10 +38,10 @@
 <summary><strong>Codex 及其他 agent：skills.sh</strong></summary>
 
 ```bash
-npx skills@latest add f4de01/lawyer-workbench-v3 -a codex -a claude-code
+npx skills@latest add f4de01/loo0ng-skills -a codex -a claude-code
 ```
 
-**安装源同样须是公开仓库**：律师那台 mac 上这一条对私有仓库失败过三次，转 public 之后才装上（`docs/实测/mac-20260909/结论.md`）。安装器让你挑 skill 与目标 agent；`-a` 可重复，一次装到两个 harness。`.codex-plugin/plugin.json` 指向 `skills/`，也可经 Codex 插件市场安装（`codex plugin marketplace add`，再 `codex plugin add`）。
+**安装源同样须是公开仓库**：律师那台 mac 上这一条对私有仓库失败过三次，转 public 之后才装上（`docs/实测/mac-20260909/结论.md`）。安装器让你挑 skill 与目标 agent；`-a` 可重复，一次装到两个 harness。
 
 </details>
 
@@ -85,7 +85,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/link-skills.ps1
 
 ### 维护
 
-登记步骤、三条校验命令与测试命令见 `docs/agents/skills.md`。发布走 changesets（`.changeset/README.md`），版本记录在 `CHANGELOG.md`，`package.json` 与两份插件清单、`package-lock.json` 的版本由 `scripts/sync-plugin-version.py` 同步。结算、打 tag 与发 Release 由 `.github/workflows/release.yml` 跑（先干跑一次读结算出来的 CHANGELOG，再真发），Release 上附一个离线兜底包 zip；测试、eval 与版式门禁仍然全部本地跑（ADR-0015 2026-09-12 附注）。
+登记步骤、校验命令与测试命令见 `docs/agents/skills.md`。发布链照上游 mattpocock/skills：每次修改写一张 changeset，推到 `main` 后 `.github/workflows/release.yml` 里的 changesets/action 自动开一个 "chore: version skills" 的 PR，合并即打 tag；`package.json` 的版本由 `scripts/sync-plugin-version.mjs` 抄进 `.claude-plugin/plugin.json`，版本记录在 `CHANGELOG.md`。测试、eval 与版式门禁仍然全部本地跑（ADR-0015 2026-09-12 附注）。
 
 发完一版要装到律师那台机器上时，照 `docs/交付/现场清单.md` 现场做，结果填 `docs/交付/记录表.md`：那是开发者本人在那台机器前的四段（装、跑得动转换器的环境、起手一个案子、跑通一个节点），断网可用。
 

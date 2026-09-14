@@ -15,13 +15,13 @@
 | 「确认 X」「X 这份就这样」 | 落一条确认条目，原话原样存 |
 | 「X 不适用」「模块 Y 本案不办」 | 落不适用条目，是终态 |
 
-要改图的构成（加节点、改标题、调顺序）不必打它，一句话说给模型，那是 [loo0ng-graph](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-graph.md) 的事。不知道下一个办哪个，问 [ask-loo0ng](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/ask-loo0ng.md)。
+要改图的构成（加节点、改标题、调顺序）不必打它，一句话说给模型，那是 [loo0ng-graph](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-graph.md) 的事。不知道下一个办哪个，问 [ask-loo0ng](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/ask-loo0ng.md)。
 
 ## Prerequisites
 
 - 会话当前目录是案件工作区（有 `图.json`），也就是先起过手。
 - 领域目录的绝对路径在工作区根的 `AGENTS.md` 里，起手落下的。
-- 转换器要一个能 `import docx` 的解释器；没配过 python 不阻断出件，怎么弄到一个解释器见 [loo0ng-to-docx](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-to-docx.md)。
+- 转换器要一个能 `import docx` 的解释器；没配过 python 不阻断出件，怎么弄到一个解释器见 [loo0ng-to-docx](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-to-docx.md)。
 
 ## 出一版是一条死顺序
 
@@ -56,4 +56,4 @@
 
 ## Where it fits
 
-`loo0ng-doit` 是主线的第 2 到第 4 步：起手之后，每个节点一个对话，出一版、读审查报告、拍板，再开新对话办下一个。它自己没有脚本，四件事都经别人的 CLI 落盘：图经 [loo0ng-graph](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-graph.md)，归档与陈述经 [loo0ng-filing](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-filing.md)，转换与门禁经 [loo0ng-to-docx](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-to-docx.md)。起手是 [loo0ng-setup-case](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-setup-case.md)。整套 skill 的路由是 [ask-loo0ng](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/ask-loo0ng.md)。
+`loo0ng-doit` 是主线的第 2 到第 4 步：起手之后，每个节点一个对话，出一版、读审查报告、拍板，再开新对话办下一个。它自己没有脚本，四件事都经别人的 CLI 落盘：图经 [loo0ng-graph](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-graph.md)，归档与陈述经 [loo0ng-filing](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-filing.md)，转换与门禁经 [loo0ng-to-docx](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-to-docx.md)。起手是 [loo0ng-setup-case](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-setup-case.md)。整套 skill 的路由是 [ask-loo0ng](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/ask-loo0ng.md)。

@@ -11,12 +11,12 @@
 | 你想 | 用什么 |
 | --- | --- |
 | 知道我在哪、接下来做什么、下一句打什么 | `ask-loo0ng` |
-| 真的去办某个节点 | [loo0ng-doit](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-doit.md) |
-| 改图的构成 | 一句话说给模型，它调用 [loo0ng-graph](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-graph.md) |
+| 真的去办某个节点 | [loo0ng-doit](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-doit.md) |
+| 改图的构成 | 一句话说给模型，它调用 [loo0ng-graph](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-graph.md) |
 
 ## Prerequisites
 
-会话当前目录是案件工作区（有 `图.json`）。没有它就说没有；还没起手先打 [loo0ng-setup-case](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-setup-case.md)。
+会话当前目录是案件工作区（有 `图.json`）。没有它就说没有；还没起手先打 [loo0ng-setup-case](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-setup-case.md)。
 
 ## 五问有序决策树
 
@@ -53,4 +53,4 @@
 
 ## Where it fits
 
-`ask-loo0ng` 是整套 skill 的**路由**，一个随时可用的只读入口，永远不是流程里的一步。它把你送到 [loo0ng-setup-case](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-setup-case.md)（起手）或 [loo0ng-doit](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-doit.md)（办节点）这两个入口，自己不动任何东西。图的字段与状态的权威是 [loo0ng-graph](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-graph.md)。
+`ask-loo0ng` 是整套 skill 的**路由**，一个随时可用的只读入口，永远不是流程里的一步。它把你送到 [loo0ng-setup-case](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-setup-case.md)（起手）或 [loo0ng-doit](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-doit.md)（办节点）这两个入口，自己不动任何东西。图的字段与状态的权威是 [loo0ng-graph](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-graph.md)。

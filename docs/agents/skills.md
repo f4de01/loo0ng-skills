@@ -14,13 +14,12 @@ skills/<bucket>/<name>/       # 桶照上游五个：engineering、productivity�
 └── assets/               # 只有 loo0ng-domain 有：assets/<领域>/ 下领域图、模板/ 官方模板原件、指引手册/ 指引手册原文（ADR-0004）。这份是出厂种子，随包升级被换掉；律师那台机上的活图在 ~/.loo0ng/领域/<领域>/，由 sketch.py home 首次起手时拷出（ADR-0019）
 ```
 
-分桶照上游（ADR-0009 的 2026-09-13 附注）：`skills/` 下五个桶，每桶一份 `README.md` 逐件列出、名字链接到 `./<name>/SKILL.md`；promoted 桶（`engineering/`、`productivity/`）里的每件进 `.claude-plugin/plugin.json` 与根 `README.md`（名字链接到 `SKILL.md`），并有一页 `docs/<bucket>/<name>.md`（固定段：What it does、When to reach for it、Common questions、It's working if、Where it fits，页内链接一律绝对）；`misc/`、`in-progress/`、`deprecated/` 里的不进这三处。七件都在 `productivity/`，另外四桶目前只有 README。草稿放分支不放目录，要公开试用的才进 `in-progress/`。分发清单：`.claude-plugin/plugin.json` 的 `skills` 数组逐件列路径（Claude Code 插件）；`.codex-plugin/plugin.json` 的 `skills` 是单一路径 `./skills/`（Codex 递归扫描，无需逐件登记；五桶里只有 `productivity/` 有 `SKILL.md`，所以它装到的仍是这七件，哪天往 `in-progress/` 或 `misc/` 放了东西这条路会一并装上，上游 ADR-0002 描述的就是这个，到那时再定）；`.claude-plugin/marketplace.json` 让仓库自成单插件市场。
+分桶照上游（ADR-0009 的 2026-09-13 附注）：`skills/` 下五个桶，每桶一份 `README.md` 逐件列出、名字链接到 `./<name>/SKILL.md`；promoted 桶（`engineering/`、`productivity/`）里的每件进 `.claude-plugin/plugin.json` 与根 `README.md`（名字链接到 `SKILL.md`），并有一页 `docs/<bucket>/<name>.md`（固定段：What it does、When to reach for it、Common questions、It's working if、Where it fits，页内链接一律绝对）；`misc/`、`in-progress/`、`deprecated/` 里的不进这三处。七件都在 `productivity/`，另外四桶目前只有 README。草稿放分支不放目录，要公开试用的才进 `in-progress/`。分发清单只有一份：`.claude-plugin/plugin.json` 的 `skills` 数组逐件列路径（Claude Code 插件）；`.claude-plugin/marketplace.json` 让仓库自成单插件市场。不发 Codex 原生插件，Codex 及其他 harness 经 skills.sh 装编辑副本（ADR-0021，与上游 ADR-0002 同一个理由：Codex 清单只收单一路径，分桶后会把 `in-progress/` 一并装出去）。
 
 ## 命名与编码
 
 - `name` 只用小写字母、数字、连字符，前缀 `loo0ng-` 写进 name 本身；路由是 `ask-loo0ng`。理由：skills.sh 分发链把非 ASCII 名装成 `unnamed-skill`，Codex `$` 提及只认 ASCII；两平台本身不拦（#18 项 1）。目录名与 `name` 一致。
-- `metadata.display-name` 必须等于 `name`（生成器校验）：Codex 的 `$` 补全列表显示的是它，律师按 `loo0ng-` 名字找，中文显示名反而找不到（#29 真实触发时发现，ADR-0009 附注）。中文短描述只写在 `metadata.short-description`（Codex 也读，Claude Code 当自由映射不动作）；`agents/openai.yaml` 的 `interface.display_name` / `interface.short_description` 由生成器从这两处抄出，不手写。`name`、`description`、`short-description` 之外的中文不进别处。
-- `agents/openai.yaml` 由 `python scripts/gen-openai-yaml.py` 机械生成（ADR-0009；#26 随首件 skill 建立）：字段只有上面两个，编排 skill 与路由按 frontmatter 的 `disable-model-invocation: true` 推出 `policy.allow_implicit_invocation: false`。`--check` 只比对不写，任一份不同步即退出码 1。
+- `agents/openai.yaml` 手写，照上游（ADR-0021）：`interface.display_name` 等于 `name`（Codex 的 `$` 补全列表显示的是它，律师按 `loo0ng-` 名字找，中文显示名反而找不到，#29），`interface.short_description` 写中文短描述。frontmatter 只用上游那四个键（`name`、`description`、`disable-model-invocation`、`argument-hint`），不再有 `metadata` 块。
 - `SKILL.md`、`agents/openai.yaml` 与所有 PowerShell 以外的文本文件不带 BOM：带 BOM 的 `SKILL.md` 会让 Codex 静默跳过整个根目录（#20）。PowerShell 5.1 脚本必须带 UTF-8 BOM，否则中文注释按 ANSI 读会撕坏语法（#18）。
 - 随包分发的脚本（`skills/*/*/scripts/*.py`）与种子回放（`evals/种子/*/回放.py`）跑得动 python 3.9：律师那台 mac 的 `/usr/bin/python3` 是 3.9.6，图引擎一处 3.10 的 `Path.write_text(newline=)` 就让每一次写图全炸（#61）。`tests/python-floor/` 机械守着这条：按 3.9 的 feature_version 解析，外加认得出形状的 3.10 API。`scripts/` 与 `tests/` 下的开发侧脚本不受这条约束（ADR-0015：它们只在开发机上跑）。
 - 全仓禁破折号（U+2014）。连接号 U+2013 用于数字区间，不在此列。
@@ -40,12 +39,12 @@ skills/<bucket>/<name>/       # 桶照上游五个：engineering、productivity�
 | 编排 skill、路由 | `disable-model-invocation: true` | `policy.allow_implicit_invocation: false` |
 | 参考 skill | 不写 | 不写 `policy` |
 
-两平台各读各的旗，互不认对方的（#18 项 3）：`SKILL.md` 的旗是源，`openai.yaml` 的 `policy` 由生成器推出，重跑生成器即同步。
+两平台各读各的旗，互不认对方的（#18 项 3）：两处都手写，`bash scripts/check-skill.sh .` 守两端一致：`disable-model-invocation: true` 与 `policy.allow_implicit_invocation: false` 要么都有要么都没有。
 
 ## 登记步骤（新增、改名、删除都走一遍）
 
 1. `skills/<bucket>/<name>/` 落目录（七件在 `productivity/`），按上面的布局与命名、编码规则；所在桶的 `README.md` 加（或改、删）一行，名字链接到 `./<name>/SKILL.md`。
-2. 双旗按类型写齐：`SKILL.md` 里写旗与 `metadata.display-name` / `short-description`，再跑 `python scripts/gen-openai-yaml.py` 生成 `agents/openai.yaml`。
+2. 双旗按类型写齐：`SKILL.md` 里写旗，手写 `agents/openai.yaml`（`display_name` 等于 `name`）。
 3. `.claude-plugin/plugin.json` 的 `skills` 数组加（或改、删）`./skills/<bucket>/<name>`。
 4. `README.md` 的 User-invoked 或 Model-invoked 组加（或改、删）一行，名字链接到 `./skills/<bucket>/<name>/SKILL.md`；再建（或改名、删）`docs/<bucket>/<name>.md`。
 5. 动到任一入口（`loo0ng-setup-case`、`loo0ng-doit`、`ask-loo0ng`）时，改 `ask-loo0ng` 自持的入口表（ADR-0005）。
@@ -75,11 +74,14 @@ git ls-files -z | grep -z -v '\.ps1$' | xargs -0 grep -l -I $'^\xEF\xBB\xBF'
 # BOM：每个 .ps1 首三字节须为 ef bb bf
 for f in scripts/*.ps1; do printf '%s ' "$f"; head -c 3 "$f" | od -An -tx1; done
 
-# 版本一致：两份插件清单与 package-lock.json 跟上 package.json
+# 版本一致：.claude-plugin/plugin.json 跟上 package.json（package-lock 不同步，照上游）
 npm run check-plugin-version
 
-# agents/openai.yaml 与 SKILL.md frontmatter 同步，期望退出码 0
-python scripts/gen-openai-yaml.py --check
+# 结构与接线（照上游约定的四个检查，提交前必跑；Windows 上用 Git Bash 跑）
+bash scripts/check-skill.sh .              # 每件 skill：name、description 引号、openai.yaml、双旗一致
+bash scripts/check-wiring.sh .             # promoted 四处都在、非 promoted 四处都不在、plugin.json 路径真实
+bash scripts/check-stale.sh . <旧名>       # 改名或删除之后：旧名字一处不留
+bash scripts/check-release.sh .            # 发版前：changesets 配置、同步脚本、workflow、版本一致
 ```
 
 ## 测试命令
@@ -183,24 +185,22 @@ MSYS_NO_PATHCONV=1 CLAUDECODE= CLAUDE_CODE_ENTRYPOINT= \
 
 ## 发布
 
-改名、改功能都是一次发布，只在开发者维护时做（ADR-0009）。`npm run changeset` 写条目，**结算走 `.github/workflows/release.yml`**（#96）：Actions -> release -> Run workflow，先按默认的干跑跑一次、读 job summary 里结算出来的那一节 `CHANGELOG`，读顺了再在 `main` 上关掉 `dry_run` 跑一次真发。真发那次做的是 `npm run version`（合成 `CHANGELOG.md`、升 `package.json` 并同步两份插件清单与 `package-lock.json` 的版本）、提交、打 tag、发 Release 并附离线兜底包。
+改名、改功能都是一次发布，只在开发者维护时做（ADR-0009）。发布链照上游（ADR-0021）：
 
-两道闸门卡在结算前后：`python scripts/release.py preflight` / `postflight`，上面「其他检查」里的 `gen-openai-yaml.py --check` 与 `check-plugin-version` 就在它们里面，跑挂即停（测试在 `tests/release/`）。手工路、攒几份再结算的手艺与要读什么，都在 `.changeset/README.md`。
+1. 每次会让律师感知的修改，写一张 changeset（`npm run changeset`，或手写 `.changeset/<slug>.md`：frontmatter 是 `"loo0ng-skills": patch|minor`，正文是给律师看的一段话，会原样进 `CHANGELOG.md`）。改文档、脚本、测试不写。
+2. 推到 `main`。`.github/workflows/release.yml` 里的 changesets/action 发现有待消费的 changeset，跑 `npm run version`（`changeset version` 结算版本与 `CHANGELOG.md`，再 `node scripts/sync-plugin-version.mjs` 把版本抄进 `.claude-plugin/plugin.json`），开一个 "chore: version skills" 的 PR；后续再进 changeset 它自动更新。
+3. 读那个 PR 的 diff（就是 CHANGELOG 的预览），顺了就合并。合并后 action 再跑一次，这次没有 changeset 了，执行 `npx changeset tag` 打出 `v<version>`。
+4. `plugin.json` 的 version 变了，装了插件的机器才会收到更新；skills.sh 路线要律师自己 `npx skills update`。
 
-上 CI 的只有发布这一条路：ADR-0015 的 2026-09-12 附注把「全部本地不做 CI」的射程划回测试与门禁那一层，脚本层单测、两侧 eval、版式门禁仍然全部本地跑。
+级别照上游用法：patch 是修 bug、措辞、单件行为微调；minor 是新增或毕业 skill、改名（正文以 **Breaking:** 开头，说明无别名需重装）；major 上游没用过。
 
-离线兜底包也可以随时单打（`docs/交付/现场清单.md` 段 0 P2 要的就是它）：
+本地也能跑同一条链（`npm run version` → 提交 → `npx changeset tag`），但 CI 是常态。仓库设置里 Actions 的 "Allow GitHub Actions to create and approve pull requests" 必须勾上，否则开不了 PR。
 
-```bash
-python scripts/pack-offline.py --dir ~/交付包/skills-兜底     # 目录，目录须不存在或为空
-python scripts/pack-offline.py --zip ~/交付包/skills.zip      # zip，内以 skills/ 为根
-```
-
-名单取自 `.claude-plugin/plugin.json` 的 `skills` 数组（登记清单只此一份），文本一律转 LF，任一文件带 BOM 即停（#20）。
+上 CI 的只有发布这一条路：ADR-0015 的 2026-09-12 附注把「全部本地不做 CI」的射程划回测试与门禁那一层，脚本层单测、两侧 eval、版式门禁仍然全部本地跑。离线兜底包不再随 Release 附带（ADR-0021）；要给断网的律师机装，直接拷 `skills/productivity/` 下的目录。
 
 ## 分发事实（#18，2026-09-05 实测）
 
-- junction 路线：两个 harness 都扫到；Claude Code 会话内热加载；Codex 从 junction 解析出真实路径后向上找到 `.codex-plugin/plugin.json`，把名字显示成 `loo0ng-skills:<name>`。
+- junction 路线：两个 harness 都扫到；Claude Code 会话内热加载；Codex 显示裸名 `<name>`（仓库不再带 `.codex-plugin/plugin.json`，ADR-0021）。
 - 插件路线：`claude plugin marketplace add` 与 `codex plugin marketplace add … --ref` 对私有仓库都吃本机凭据，缓存是整仓库拷贝。**这条只在开发机上成立**，别当分发口径，见下面「安装源必须是公开仓库」。
 - 本机验证插件路线不必推分支：`claude plugin marketplace add <本仓库绝对路径>` 再 `claude plugin install loo0ng-skills@loo0ng-marketplace`，`claude -p "/loo0ng-skills:<name>"` 可触发；验完 `claude plugin uninstall` 与 `claude plugin marketplace remove loo0ng-marketplace`（#24）。
 - skills.sh：`npx skills@latest add owner/repo` 只取默认分支，分支名含 `/` 时解析失败。
@@ -213,5 +213,5 @@ python scripts/pack-offline.py --zip ~/交付包/skills.zip      # zip，内以 
 这是一条约束，不是一处笔误：它把将来任何「把主仓库转私有」的设想框住了。真要藏开发内容，就得拆出一个公开的分发仓库，而那要付三样代价：
 
 1. **两仓同步**：`skills/` 与两份插件清单得有一条机械的搬运，人手搬迟早漏。
-2. **登记不变量跨仓库**：`AGENTS.md` 结构不变量 1 的三处登记（`skills/<name>/`、`.claude-plugin/plugin.json`、`README.md`）会落在两个仓库里，上面那三条校验命令不再是在一个工作副本上跑得完的。
-3. **入口显示名可能从裸名变成带前缀**：Codex 显示裸名还是 `loo0ng-skills:<名>`，取决于装到 `~/.agents/skills/` 的那个目录上面找不找得到 `.codex-plugin/plugin.json`（`docs/交付/现场清单.md` 1.5 的实测）。律师那台机器走的是路 A，直接拷目录，现在看见的是**裸名**；拆出分发仓库之后若改走那个仓库的插件市场装，同一件 skill 就显示成 `loo0ng-skills:<名>`，`ask-loo0ng` 的入口表、打法段与教律师打的那一串跟着都要改。
+2. **登记不变量跨仓库**：`AGENTS.md` 结构不变量 1 的几处登记（`skills/<bucket>/<name>/`、桶 README、`.claude-plugin/plugin.json`、根 `README.md`、docs 页）会落在两个仓库里，上面的校验命令不再是在一个工作副本上跑得完的。
+3. **入口显示名可能从裸名变成带前缀**：Codex 显示裸名还是 `loo0ng-skills:<名>`，取决于装到 `~/.agents/skills/` 的那个目录上面找不找得到一份 Codex 插件清单（本仓库已不带，ADR-0021）（`docs/交付/现场清单.md` 1.5 的实测）。律师那台机器走的是路 A，直接拷目录，现在看见的是**裸名**；拆出分发仓库之后若改走那个仓库的插件市场装，同一件 skill 就显示成 `loo0ng-skills:<名>`，`ask-loo0ng` 的入口表、打法段与教律师打的那一串跟着都要改。

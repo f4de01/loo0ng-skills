@@ -15,7 +15,7 @@
 | 新案子，全新领域，活图与种子都还没有 | `/loo0ng-setup-case 空图 <一个此前没有的领域名>` |
 | 开发者交付的定制图 | 把定制图的路径写进那句话 |
 
-已经起手的案子要改图的构成（加节点、改标题），不是重新起手，一句话说给模型，它调用 [loo0ng-graph](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-graph.md)。要办某个节点，用 [loo0ng-doit](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-doit.md)。
+已经起手的案子要改图的构成（加节点、改标题），不是重新起手，一句话说给模型，它调用 [loo0ng-graph](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-graph.md)。要办某个节点，用 [loo0ng-doit](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-doit.md)。
 
 ## Prerequisites
 
@@ -35,7 +35,7 @@
 0.1.0 现场报过的洞，已经堵上：正文现在要求领域名只能由律师给，问起手图那一次连领域一起问。再遇到就是它没照正文做，把那句话原样拿去问模型为什么没问领域。
 
 **0.1.0 起手的工作区，升级之后怎么办？**
-本版不迁移。那时落进工作区 `AGENTS.md` 的领域目录路径指着 skill 包内的种子，要手改同一行：把「领域目录」那一行换成 `sketch.py home --name <领域名>` 回显的活图路径，图与六格一个字不动。此前已确认的节点不会自动补进活图，补法见 [loo0ng-domain](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-domain.md)。
+本版不迁移。那时落进工作区 `AGENTS.md` 的领域目录路径指着 skill 包内的种子，要手改同一行：把「领域目录」那一行换成 `sketch.py home --name <领域名>` 回显的活图路径，图与六格一个字不动。此前已确认的节点不会自动补进活图，补法见 [loo0ng-domain](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-domain.md)。
 
 **起手清单里的「既有成品」登记之后算确认了吗？**
 不算。它只是「已生成、来源记律师」，审查报告里照实写着工作台没参与写作、没跑门禁。要确认，得读过报告后在办节点的对话里说一句「确认」。
@@ -53,4 +53,4 @@
 
 ## Where it fits
 
-`loo0ng-setup-case` 是**一案一次的起手**，主线的第 1 步：起手，然后开新对话用 [loo0ng-doit](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-doit.md) 一个节点一个对话地办下去。它自己不出件、不确认。收件箱归档与从指南长雏形它只是调用者，机制的主人分别是 [loo0ng-filing](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-filing.md) 与 [loo0ng-domain](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-domain.md)。起手之后不知道先办哪个，问 [ask-loo0ng](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/ask-loo0ng.md)，它是整套 skill 的路由。
+`loo0ng-setup-case` 是**一案一次的起手**，主线的第 1 步：起手，然后开新对话用 [loo0ng-doit](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-doit.md) 一个节点一个对话地办下去。它自己不出件、不确认。收件箱归档与从指南长雏形它只是调用者，机制的主人分别是 [loo0ng-filing](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-filing.md) 与 [loo0ng-domain](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-domain.md)。起手之后不知道先办哪个，问 [ask-loo0ng](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/ask-loo0ng.md)，它是整套 skill 的路由。

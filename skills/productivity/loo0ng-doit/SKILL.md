@@ -2,9 +2,6 @@
 name: loo0ng-doit
 description: "在案件工作区里办一个节点：一句自由文本说动作加节点，出一版文书、登记律师兜底自写的那份、或落一条确认与不适用；一个对话一个节点，拍板也在这个对话里说。起手是 skill \"loo0ng-setup-case\"，问在哪、下一步做什么是 skill \"ask-loo0ng\"。"
 disable-model-invocation: true
-metadata:
-  display-name: "loo0ng-doit"
-  short-description: "办节点：出一版、兜底登记、确认、不适用，一个对话一个节点"
 ---
 
 # 办节点

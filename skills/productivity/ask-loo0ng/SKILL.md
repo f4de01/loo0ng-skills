@@ -2,9 +2,6 @@
 name: ask-loo0ng
 description: "问案件到哪了、接下来做什么、下一句该打什么：读案件图与领域图，答当前节点、上一完成、下一任务，指出该打哪个入口并把整串给你。只读的地图，不触发任何 skill、不写图、不替律师按下去。起手是 skill \"loo0ng-setup-case\"，办节点是 skill \"loo0ng-doit\"。"
 disable-model-invocation: true
-metadata:
-  display-name: "ask-loo0ng"
-  short-description: "问路：当前节点、上一完成、下一任务、下一句该打什么"
 ---
 
 # 问路

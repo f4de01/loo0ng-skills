@@ -5,15 +5,16 @@
   "description": "律师工作台 3.0：破产业务先行的法律工作台，以 skill 形态构建",
   "repository": {
     "type": "git",
-    "url": "https://github.com/f4de01/lawyer-workbench-v3.git"
+    "url": "https://github.com/f4de01/loo0ng-skills"
   },
   "license": "MIT",
   "scripts": {
     "changeset": "changeset",
-    "version": "changeset version && python scripts/sync-plugin-version.py",
-    "check-plugin-version": "python scripts/sync-plugin-version.py --check"
+    "version": "changeset version && node scripts/sync-plugin-version.mjs",
+    "check-plugin-version": "node scripts/sync-plugin-version.mjs --check"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.31.1"
+    "@changesets/cli": "^2.31.1",
+    "@changesets/changelog-github": "^0.7.0"
   }
 }

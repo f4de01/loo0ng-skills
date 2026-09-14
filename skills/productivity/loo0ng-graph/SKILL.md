@@ -1,9 +1,6 @@
 ---
 name: loo0ng-graph
 description: "律师一句话要改图的构成时用：新增节点、改标题、调顺序、跨模块移动、改空白模板、新增或改名模块、删空模块、某节点或整个模块不适用；编排 skill 要往案件图追加生成或确认条目时也用。它持有图引擎 CLI，是 图.json 的唯一写入口，落盘后回显。出一版文书与拍板由 skill \"loo0ng-doit\" 驱动，再调本 skill 落条目；律师陈述与收件箱归档归 skill \"loo0ng-filing\"；领域目录与雏形归 skill \"loo0ng-domain\"；问在哪、下一步做什么是 skill \"ask-loo0ng\"。它不出 HTML、不做可视化；律师手改 图.json 不受支持。"
-metadata:
-  display-name: "loo0ng-graph"
-  short-description: "改图的构成、追加条目、重算图视图"
 ---
 
 # 图引擎

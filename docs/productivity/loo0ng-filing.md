@@ -6,7 +6,7 @@
 
 ## When to reach for it
 
-你一句话说「把收件箱里的某文件归到材料」「记一句」「我确认这个日期」「按第二种办」，模型自行调用它。起手末尾与出一版开场，[loo0ng-setup-case](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-setup-case.md) 与 [loo0ng-doit](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-doit.md) 也先调它清收件箱。
+你一句话说「把收件箱里的某文件归到材料」「记一句」「我确认这个日期」「按第二种办」，模型自行调用它。起手末尾与出一版开场，[loo0ng-setup-case](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-setup-case.md) 与 [loo0ng-doit](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-doit.md) 也先调它清收件箱。
 
 | 这件东西是 | 去向 |
 | --- | --- |
@@ -16,7 +16,7 @@
 | 自己或所里做的空白件 | `模板/生成` |
 | 三格都无正向证据 | 留在收件箱，回显时说一句为什么拿不准 |
 
-确认与不适用不是陈述，是图里的条目，归 [loo0ng-graph](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-graph.md)。
+确认与不适用不是陈述，是图里的条目，归 [loo0ng-graph](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-graph.md)。
 
 ## Prerequisites
 
@@ -52,4 +52,4 @@
 
 ## Where it fits
 
-`loo0ng-filing` 是参考层，三个进入点：起手末尾、出一版开场、你的一句话。它只保证陈述文件可引；审查报告引用它的格式住在 [loo0ng-to-docx](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-to-docx.md)；归档之后 `指南/` 非空，从指南长雏形是 [loo0ng-domain](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-domain.md) 的事。整套 skill 的路由是 [ask-loo0ng](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/ask-loo0ng.md)。
+`loo0ng-filing` 是参考层，三个进入点：起手末尾、出一版开场、你的一句话。它只保证陈述文件可引；审查报告引用它的格式住在 [loo0ng-to-docx](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-to-docx.md)；归档之后 `指南/` 非空，从指南长雏形是 [loo0ng-domain](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/loo0ng-domain.md) 的事。整套 skill 的路由是 [ask-loo0ng](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/ask-loo0ng.md)。

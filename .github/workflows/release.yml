@@ -1,150 +1,37 @@
-# 发一版：结算 changeset、对齐三处版本、打 tag、发 Release 并附离线兜底包。
-#
-# 只跑发布，不跑测试与门禁：那两层的「全部本地、不做 CI」（ADR-0015）理由是 Word COM
-# 与两个 harness 的本机登录态，发布一样都不要，只要 node 加 changesets（见 ADR-0015
-# 2026-09-12 的附注）。判断全在 scripts/release.py 与 scripts/pack-offline.py 里，
-# 有 tests/release/ 与 tests/pack-offline/ 守着；这份 YAML 只管 checkout、git 与 gh。
-#
-# 怎么用（结算手艺仍以 .changeset/README.md 为准）：
-#   1. 先干跑一次（默认就是干跑）：Actions -> release -> Run workflow。
-#   2. 读 job summary 里结算出来的那一节 CHANGELOG。顺序不对、锚点查不到，就回去改
-#      changeset 再干跑一次；别手改 CHANGELOG.md。
-#   3. 读顺了，再在 main 上跑一次、把 dry_run 关掉。
-name: release
+name: Release
 
 on:
-  workflow_dispatch:
-    inputs:
-      dry_run:
-        description: 干跑：结算、打包、留产物，但不提交、不打 tag、不发 Release
-        type: boolean
-        default: true
-  # 发布机器自己改了的时候，在那个 PR 上干跑一次，免得攒到真发版才发现它坏了
-  pull_request:
-    paths:
-      - .github/workflows/release.yml
-      - scripts/release.py
-      - scripts/pack-offline.py
-      - scripts/sync-plugin-version.py
-      - package.json
+  push:
+    branches:
+      - main
 
-permissions:
-  contents: write
-
-concurrency:
-  group: release
-  cancel-in-progress: false
+concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
   release:
+    name: Version
     runs-on: ubuntu-latest
-    env:
-      # 只有在 main 上手动跑且把 dry_run 关掉，才真发一版；别的一律干跑
-      DRY_RUN: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run }}
-      # 产物落在仓库外：结算之后那次 git add -A 不能把 zip 一起提交了
-      OUT: /tmp/release-out
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          fetch-depth: 0
+          node-version: 22
 
-      - uses: actions/setup-node@v7
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create Version Pull Request
+        uses: changesets/action@v1
         with:
-          node-version: '24'
-          cache: npm
-
-      - uses: actions/setup-python@v7
-        with:
-          python-version: '3.12'
-
-      - name: 真发版只许在 main 上
-        if: env.DRY_RUN != 'true' && github.ref != 'refs/heads/main'
-        run: |
-          echo "::error::真发一版只能在 main 上跑，这次的 ref 是 ${{ github.ref }}"
-          exit 1
-
-      - run: npm ci
-
-      # 干跑那次多带一个 --allow-no-changeset：刚发完版 .changeset 空着的时候，改发布脚本的
-      # PR 不该红在「没什么可发的」这个与它无关的理由上；真发版那次照旧硬拦。
-      - name: 结算前闸门
-        run: python scripts/release.py preflight ${{ env.DRY_RUN == 'true' && '--allow-no-changeset' || '' }}
-
-      - name: 干跑时手头没有 changeset 就临时造一份（只活在 runner 上）
-        if: env.DRY_RUN == 'true'
-        run: |
-          if [ "$(python scripts/release.py pending)" = "0" ]; then
-            {
-              echo '---'
-              echo '"loo0ng-skills": patch'
-              echo '---'
-              echo
-              echo '干跑自检用的临时 changeset，不入库。'
-            } > .changeset/干跑自检.md
-            echo "手头没有待结算的 changeset，临时造了一份，好让结算那一步照样走一遍"
-          fi
-
-      - name: 记下结算前的版本
-        id: before
-        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
-
-      - name: 结算（changeset version + 三处版本同步）
-        run: npm run version
-
-      - name: 记下结算后的版本
-        id: after
-        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
-
-      - name: 结算后闸门
-        run: python scripts/release.py postflight --previous "${{ steps.before.outputs.version }}"
-
-      - name: 抽发布说明
-        run: python scripts/release.py notes --out "$OUT/发布说明.md"
-
-      - name: 打离线兜底包
-        run: python scripts/pack-offline.py --zip "$OUT/skills-offline-v${{ steps.after.outputs.version }}.zip"
-
-      - name: 把结算出来的那一节摆进 job summary
-        run: |
-          cp CHANGELOG.md "$OUT/CHANGELOG.md"
-          {
-            echo "## v${{ steps.after.outputs.version }}（干跑：$DRY_RUN）"
-            echo
-            echo '```'
-            git --no-pager diff --stat
-            echo '```'
-            echo
-            cat "$OUT/发布说明.md"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: 产物留一份（干跑时读的就是它）
-        uses: actions/upload-artifact@v7
-        with:
-          name: release-v${{ steps.after.outputs.version }}
-          path: ${{ env.OUT }}
-
-      - name: 干跑到此为止
-        if: env.DRY_RUN == 'true'
-        run: echo "干跑：结算与打包都跑通了，没提交、没打 tag、没发 Release。读完上面那一节再关掉 dry_run 跑一次。"
-
-      - name: 提交、打 tag、推上去
-        if: env.DRY_RUN != 'true'
+          version: npm run version
+          publish: npx changeset tag
+          commit: "chore: version skills"
+          title: "chore: version skills"
         env:
-          V: ${{ steps.after.outputs.version }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "发一版 $V：changeset 结算进 CHANGELOG，三处版本对齐（release workflow run ${{ github.run_id }}）"
-          git tag -a "v$V" -m "v$V"
-          git push origin "HEAD:main"
-          git push origin "v$V"
-
-      - name: 发 Release，附离线兜底包
-        if: env.DRY_RUN != 'true'
-        env:
-          V: ${{ steps.after.outputs.version }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release create "v$V" --title "v$V" --notes-file "$OUT/发布说明.md" \
-            "$OUT/skills-offline-v$V.zip#离线兜底包（登记清单上的全部 skill，LF、无 BOM）"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
