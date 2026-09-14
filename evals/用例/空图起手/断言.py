@@ -31,7 +31,7 @@ def check_没有待确认也没有上一完成(workspace, reply):
 
 def check_下一句是领域图里最早的那个节点(workspace, reply):
     for 前缀 in ("/", "$"):
-        串 = "%sloo0ng-doit 出一版 %s" % (前缀, 节点)
+        串 = "%sdoit 出一版 %s" % (前缀, 节点)
         assert 串 in reply, "回复里没有可原样打的整串「%s」：\n%s" % (串, reply)
 
 

@@ -9,12 +9,12 @@ import re
 import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-SKILL_DIR = REPO / "skills" / "productivity" / "ask-loo0ng"
+SKILL_DIR = REPO / "skills" / "engineering" / "ask-loo0ng"
 SKILL = SKILL_DIR / "SKILL.md"
 YAML = SKILL_DIR / "agents" / "openai.yaml"
 # 律师面对的三个入口：两个编排 skill 加路由本身（ADR-0005、ADR-0008、ADR-0010）。
-入口 = ("loo0ng-setup-case", "loo0ng-doit", "ask-loo0ng")
-显示名 = {"loo0ng-setup-case": "起手", "loo0ng-doit": "办节点", "ask-loo0ng": "问路"}
+入口 = ("setup-case", "doit", "ask-loo0ng")
+显示名 = {"setup-case": "起手", "doit": "办节点", "ask-loo0ng": "问路"}
 
 
 def 正文():
@@ -37,21 +37,21 @@ class 入口表Test(unittest.TestCase):
 
     def test_每个入口的名字都真有这件skill(self):
         for name in 表里的行():
-            skill = REPO / "skills" / "productivity" / name / "SKILL.md"
+            skill = REPO / "skills" / "engineering" / name / "SKILL.md"
             self.assertTrue(skill.is_file(), "入口表指向不存在的 skill：%s" % name)
             front = skill.read_text(encoding="utf-8")
             self.assertIn('name: %s\n' % name, front, "%s 的 frontmatter name 与目录名不一致" % name)
 
     def test_显示名是中文且与工作区指针块一致(self):
-        指针块 = (REPO / "skills" / "productivity" / "loo0ng-setup-case" / "references" / "工作区AGENTS.md").read_text(encoding="utf-8")
+        指针块 = (REPO / "skills" / "engineering" / "setup-case" / "references" / "工作区AGENTS.md").read_text(encoding="utf-8")
         for name, 名 in 表里的行().items():
             self.assertEqual(显示名[name], 名, "%s 的显示名变了" % name)
             self.assertIn("%s（%s）" % (name, 名), 指针块, "%s 的显示名与工作区指针块对不上" % name)
 
     def test_登记进了插件与README(self):
         skills = json.loads((REPO / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))["skills"]
-        self.assertIn("./skills/productivity/ask-loo0ng", skills)
-        self.assertIn("[ask-loo0ng](./skills/productivity/ask-loo0ng/SKILL.md)**（问路）", (REPO / "README.md").read_text(encoding="utf-8"))
+        self.assertIn("./skills/engineering/ask-loo0ng", skills)
+        self.assertIn("[ask-loo0ng](./skills/engineering/ask-loo0ng/SKILL.md)**（问路）", (REPO / "README.md").read_text(encoding="utf-8"))
 
 
 class 双旗Test(unittest.TestCase):
@@ -71,7 +71,7 @@ class 打法Test(unittest.TestCase):
 
     def test_美元符号后面只跟裸名(self):
         for 名 in re.findall(r"\$([A-Za-z0-9:<>_-]+)", 正文()):
-            if 名.startswith("<"):  # 样例里的 $<插件名>:loo0ng-doit 正是反面教材，正文写明「不是」
+            if 名.startswith("<"):  # 样例里的 $<插件名>:doit 正是反面教材，正文写明「不是」
                 continue
             self.assertIn(名, 入口, "`$%s` 不是裸的入口名" % 名)
 

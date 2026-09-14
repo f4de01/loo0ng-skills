@@ -1,7 +1,7 @@
 """种子「兜底」：在种子「在办中」的工作区之上，收件箱里放一份律师自己写好的 DOCX。
 
 用法：python 回放.py <工作区>    （由 scripts/skill-eval.py 调，也可手跑）
-先跑「在办中」的回放（真的起手 CLI 加图引擎、陈述落档），再用 skill "loo0ng-to-docx" 的转换器
+先跑「在办中」的回放（真的起手 CLI 加图引擎、陈述落档），再用 skill "to-docx" 的转换器
 以官方模板 1-2 出一份过得了门禁的 docx，放进 收件箱/。它冒充律师自己写好的那一版：
 工作台没参与写作，办节点时只归档、跑一次只披露不阻断的门禁、登记为已生成来源律师。
 「在办中」的 材料/ 由那个种子的目录带着，这里照种子接口自己拷一遍。
@@ -16,7 +16,7 @@ import sys
 REPO = pathlib.Path(__file__).resolve().parents[3]
 SEED_DIR = pathlib.Path(__file__).resolve().parent
 在办中 = SEED_DIR.parent / "在办中"
-MD2DOCX = REPO / "skills" / "productivity" / "loo0ng-to-docx" / "scripts" / "md2docx.py"
+MD2DOCX = REPO / "skills" / "productivity" / "to-docx" / "scripts" / "md2docx.py"
 TEMPLATE_NAME = "1-2.关于管理人印章备案的报告.docx"
 成品 = "印章备案-我自己写的.docx"
 

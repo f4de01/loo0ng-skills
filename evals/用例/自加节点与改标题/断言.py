@@ -23,7 +23,7 @@ def check_命中问1(workspace, reply):
 
 def check_下一句用现在的标题(workspace, reply):
     for 前缀 in ("/", "$"):
-        串 = "%sloo0ng-doit 确认 %s" % (前缀, 现在的标题)
+        串 = "%sdoit 确认 %s" % (前缀, 现在的标题)
         assert 串 in reply, "回复里没有可原样打的整串「%s」：\n%s" % (串, reply)
     assert "确认 %s" % 改之前的标题 not in reply, \
         "标题已被律师改过，整串该用现在的标题「%s」：\n%s" % (现在的标题, reply)

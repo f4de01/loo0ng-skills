@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # check-stale.sh <repo-root> <old-skill-name>
 # 改名或退役一个 skill 之后，找出仓库里所有仍然提到旧名字的地方。
-# 允许出现旧名字的文件：CHANGELOG.md、.changeset/*.md（它们本来就该记录旧名）、.git、node_modules。
+# 允许出现旧名字的文件：CHANGELOG.md、.changeset/*.md（它们本来就该记录旧名）、.git、node_modules、__pycache__。
 # 其余任何地方（README、bucket README、plugin.json、docs、router skill、CLAUDE.md、其他 SKILL.md）出现即失败。
 # 用法：& "C:\Program Files\Git\bin\bash.exe" assets/check-stale.sh <repo-root> summarise-diff
 set -u
@@ -11,7 +11,7 @@ OLD="${2:-}"
 cd "$ROOT" || exit 2
 
 echo "在 $ROOT 里查找旧名字 \"$OLD\"（排除 CHANGELOG.md、.changeset/、.git、node_modules）"
-hits="$(grep -rn --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=.changeset --exclude=CHANGELOG.md -F "$OLD" . 2>/dev/null || true)"
+hits="$(grep -rn --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=__pycache__ --exclude-dir=.changeset --exclude=CHANGELOG.md -F "$OLD" . 2>/dev/null || true)"
 if [ -d "skills" ] && find skills -type d -name "$OLD" | grep -q .; then
   printf '  \033[31m✘\033[0m 目录仍然存在: %s\n' "$(find skills -type d -name "$OLD")"
   dir_hit=1

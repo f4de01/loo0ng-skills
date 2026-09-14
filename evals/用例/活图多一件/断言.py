@@ -16,7 +16,7 @@ from 基线 import 文件 as 三份图文件  # noqa: E402  只读基线看的�
 活图独有的时限 = "自职工债权表公示之日起 15 日内提请法院裁定确认（活图，律师补）"
 上一完成 = "裁定补充确认债权的申请"
 出厂种子那条路会答的 = "管理人承诺书及团队人员"  # 读种子则问 3 落空、掉到问 4，领域图顺序最早的就是它
-包内种子 = pathlib.Path("skills") / "loo0ng-domain" / "assets"
+包内种子 = pathlib.Path("skills") / "domain" / "assets"
 
 
 def 领域目录(workspace) -> pathlib.Path:
@@ -50,7 +50,7 @@ def check_命中问3(workspace, reply):
 
 def check_下一句是活图上那一件(workspace, reply):
     for 前缀 in ("/", "$"):
-        串 = "%sloo0ng-doit 出一版 %s" % (前缀, 活图独有)
+        串 = "%sdoit 出一版 %s" % (前缀, 活图独有)
         assert 串 in reply, \
             "回复里没有可原样打的整串「%s」：领域图要从 AGENTS.md 指的活图取，不是包内的出厂种子（ADR-0019）：\n%s" % (串, reply)
 

@@ -14,12 +14,12 @@
     "workbench"
   ],
   "skills": [
-    "./skills/productivity/ask-loo0ng",
-    "./skills/productivity/loo0ng-doit",
-    "./skills/productivity/loo0ng-domain",
-    "./skills/productivity/loo0ng-filing",
-    "./skills/productivity/loo0ng-graph",
-    "./skills/productivity/loo0ng-setup-case",
-    "./skills/productivity/loo0ng-to-docx"
+    "./skills/engineering/ask-loo0ng",
+    "./skills/engineering/doit",
+    "./skills/engineering/domain",
+    "./skills/engineering/filing",
+    "./skills/engineering/graph",
+    "./skills/engineering/setup-case",
+    "./skills/productivity/to-docx"
   ]
 }

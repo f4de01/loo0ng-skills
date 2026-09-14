@@ -42,7 +42,7 @@ def check_提案照样回显(workspace, reply):
 
 
 def check_照实转告了为什么写不进去(workspace, reply):
-    """引擎拒了就照实转告，别绕（loo0ng-doit 正文）。律师要能从这段话里看出下一步。"""
+    """引擎拒了就照实转告，别绕（doit 正文）。律师要能从这段话里看出下一步。"""
     assert "活图" in reply, "没告诉律师领域图该住哪儿（活图）：\n%s" % reply[:600]
     assert any(片 in reply for 片 in ("AGENTS.md", "领域目录", "指针")), \
         "没告诉律师要换的是工作区里「领域目录」那一行：\n%s" % reply[:600]

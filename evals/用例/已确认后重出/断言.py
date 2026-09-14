@@ -33,7 +33,7 @@ def check_上一完成不再是重出过的那个(workspace, reply):
 
 def check_下一句是确认重出的那一版(workspace, reply):
     for 前缀 in ("/", "$"):
-        串 = "%sloo0ng-doit 确认 %s" % (前缀, 重出的)
+        串 = "%sdoit 确认 %s" % (前缀, 重出的)
         assert 串 in reply, "回复里没有可原样打的整串「%s」：\n%s" % (串, reply)
 
 

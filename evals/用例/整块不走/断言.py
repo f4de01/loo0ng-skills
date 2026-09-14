@@ -21,7 +21,7 @@ def check_命中问4(workspace, reply):
 
 def check_下一句是领域图里最早没做的(workspace, reply):
     for 前缀 in ("/", "$"):
-        串 = "%sloo0ng-doit 出一版 %s" % (前缀, 要生成的)
+        串 = "%sdoit 出一版 %s" % (前缀, 要生成的)
         assert 串 in reply, "回复里没有可原样打的整串「%s」：\n%s" % (串, reply)
 
 
@@ -35,5 +35,5 @@ def check_不把不适用的节点排进往下的路(workspace, reply):
         s = 段(reply, 段名)
         for 节点 in 不走的节点:
             assert 节点 not in s, "「%s」已宣告不适用，「%s」里不该再排它：\n%s" % (节点, 段名, s)
-    for 串 in re.findall(r"[/$]loo0ng-doit[^\n`]*", reply):
+    for 串 in re.findall(r"[/$]doit[^\n`]*", reply):
         assert "和解" not in 串, "不该给出打不适用节点的整串：%s" % 串
