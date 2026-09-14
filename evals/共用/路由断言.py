@@ -105,7 +105,7 @@ def check_认出自己处境(workspace, reply):
 
 # 本项目自己加的一条（ADR-0005 B7）：只指向表里真存在的三个入口，不编、不带命名空间前缀。
 def check_只指向表里的三个入口(workspace, reply):
-    # 前面紧挨着字母、数字、点、斜杠、冒号的不算：那是路径里的一段（如 skills/loo0ng-domain/…），不是打给谁的。
+    # 前面紧挨着字母、数字、点、斜杠、冒号的不算：那是路径里的一段（如 skills/productivity/loo0ng-domain/…），不是打给谁的。
     for 前缀, 名 in re.findall(r"(?<![\w./\\:-])([/$])([A-Za-z][A-Za-z0-9:_-]*)", reply):
         if 前缀 == "$" and not re.fullmatch(入口, 名):
             raise AssertionError("`$%s` 不是表里的入口（`$` 打裸名，不带命名空间前缀）：\n%s" % (名, reply))

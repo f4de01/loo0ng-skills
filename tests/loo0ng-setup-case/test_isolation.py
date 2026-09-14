@@ -8,7 +8,7 @@ import sys
 import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-SKILL = REPO / "skills" / "loo0ng-setup-case"
+SKILL = REPO / "skills" / "productivity" / "loo0ng-setup-case"
 SCRIPT = SKILL / "scripts" / "setup.py"
 
 

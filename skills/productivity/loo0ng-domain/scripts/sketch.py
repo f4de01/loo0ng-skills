@@ -707,7 +707,7 @@ def cmd_intake(args) -> int:
     if not in_repo(seeds):
         raise Rejected("入库只在本仓库里做（ADR-0020）：种子根 %s 的祖先里没有 .git，"
                        "你手上这份是装好的 skill 包，写进去下一次升级就被整个换掉。"
-                       "克隆仓库、在仓库里的 skills/loo0ng-domain/scripts/sketch.py 上跑这一条。" % seeds.as_posix())
+                       "克隆仓库、在仓库里的 skills/productivity/loo0ng-domain/scripts/sketch.py 上跑这一条。" % seeds.as_posix())
     if not live_graph.is_file():
         raise Rejected("找不到活图那份领域图 %s：入库的起点是开发者自己的活图（先 home，"
                        "新领域用 home --empty）。" % live_graph.as_posix())

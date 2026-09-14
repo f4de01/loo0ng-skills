@@ -1,4 +1,4 @@
-"""skills/loo0ng-to-docx/scripts/gate.py 的脚本层单测（unittest）。
+"""skills/productivity/loo0ng-to-docx/scripts/gate.py 的脚本层单测（unittest）。
 
 运行：python -m unittest tests/loo0ng-to-docx/test_gate.py
 

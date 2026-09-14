@@ -1,4 +1,4 @@
-"""skills/loo0ng-filing/scripts/statement.py 的脚本层单测（unittest，标准库零依赖）。
+"""skills/productivity/loo0ng-filing/scripts/statement.py 的脚本层单测（unittest，标准库零依赖）。
 
 运行：python -m unittest tests/loo0ng-filing/test_statement.py
 
@@ -17,7 +17,7 @@ import tempfile
 import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-SCRIPT = REPO / "skills" / "loo0ng-filing" / "scripts" / "statement.py"
+SCRIPT = REPO / "skills" / "productivity" / "loo0ng-filing" / "scripts" / "statement.py"
 
 spec = importlib.util.spec_from_file_location("loo0ng_statement", SCRIPT)
 statement = importlib.util.module_from_spec(spec)

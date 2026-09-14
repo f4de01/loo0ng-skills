@@ -21,7 +21,7 @@ import tempfile
 import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-SCRIPT = REPO / "skills" / "loo0ng-domain" / "scripts" / "sketch.py"
+SCRIPT = REPO / "skills" / "productivity" / "loo0ng-domain" / "scripts" / "sketch.py"
 菜园 = REPO / "evals" / "领域" / "菜园"
 
 spec = importlib.util.spec_from_file_location("loo0ng_sketch", SCRIPT)
@@ -141,7 +141,7 @@ class 新领域从空图起手(Base):
     def test_起出来的空领域图引擎认(self):
         """它是接下来逐节点回流要写的那一份：引擎读不动就白起了。"""
         self.home("果园", "--empty")
-        engine = REPO / "skills" / "loo0ng-graph" / "scripts" / "graph.py"
+        engine = REPO / "skills" / "productivity" / "loo0ng-graph" / "scripts" / "graph.py"
         r = subprocess.run([sys.executable, str(engine), "--graph",
                             str(self.live_root / "果园" / "领域图.json"), "--kind", "domain", "validate"],
                            capture_output=True, text=True, encoding="utf-8")
@@ -243,7 +243,7 @@ class 活图根怎么算(Base):
 
     def test_种子根默认是本skill的assets(self):
         self.assertEqual(sketch.seed_root(),
-                         (REPO / "skills" / "loo0ng-domain" / "assets").resolve())
+                         (REPO / "skills" / "productivity" / "loo0ng-domain" / "assets").resolve())
 
 
 class 真的破产种子(Base):
@@ -253,7 +253,7 @@ class 真的破产种子(Base):
         r = self.cli("home", "--name", "破产", "--live-root", str(self.live_root))
         self.assertEqual(r.code, 0, r)
         live = self.live_root / "破产"
-        self.assertEqual(指纹(live), 指纹(REPO / "skills" / "loo0ng-domain" / "assets" / "破产"),
+        self.assertEqual(指纹(live), 指纹(REPO / "skills" / "productivity" / "loo0ng-domain" / "assets" / "破产"),
                          "活图该是出厂种子的逐字副本")
         self.assertEqual(sorted(p.name for p in live.iterdir()), ["指引手册", "模板", "领域图.json"])
 

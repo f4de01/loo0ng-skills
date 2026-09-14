@@ -5,7 +5,7 @@
 ## 目录布局
 
 ```
-skills/<name>/
+skills/<bucket>/<name>/       # 桶照上游五个：engineering、productivity、misc、in-progress、deprecated；七件都在 productivity/
 ├── SKILL.md              # frontmatter：name、description；编排 skill 与路由另加 disable-model-invocation: true
 ├── agents/openai.yaml    # Codex 侧外观：interface.display_name（= name）、interface.short_description（中文进这里）；编排 skill 与路由另加 policy.allow_implicit_invocation: false
 ├── references/           # 正文按需指向的长材料
@@ -14,7 +14,7 @@ skills/<name>/
 └── assets/               # 只有 loo0ng-domain 有：assets/<领域>/ 下领域图、模板/ 官方模板原件、指引手册/ 指引手册原文（ADR-0004）。这份是出厂种子，随包升级被换掉；律师那台机上的活图在 ~/.loo0ng/领域/<领域>/，由 sketch.py home 首次起手时拷出（ADR-0019）
 ```
 
-七件平铺在 `skills/` 下，不分桶；草稿放分支不放目录。分发清单：`.claude-plugin/plugin.json` 的 `skills` 数组逐件列路径（Claude Code 插件）；`.codex-plugin/plugin.json` 的 `skills` 是单一路径 `./skills/`（Codex 递归扫描，无需逐件登记）；`.claude-plugin/marketplace.json` 让仓库自成单插件市场。
+分桶照上游（ADR-0009 的 2026-09-13 附注）：`skills/` 下五个桶，每桶一份 `README.md` 逐件列出、名字链接到 `./<name>/SKILL.md`；promoted 桶（`engineering/`、`productivity/`）里的每件进 `.claude-plugin/plugin.json` 与根 `README.md`（名字链接到 `SKILL.md`），并有一页 `docs/<bucket>/<name>.md`（固定段：What it does、When to reach for it、Common questions、It's working if、Where it fits，页内链接一律绝对）；`misc/`、`in-progress/`、`deprecated/` 里的不进这三处。七件都在 `productivity/`，另外四桶目前只有 README。草稿放分支不放目录，要公开试用的才进 `in-progress/`。分发清单：`.claude-plugin/plugin.json` 的 `skills` 数组逐件列路径（Claude Code 插件）；`.codex-plugin/plugin.json` 的 `skills` 是单一路径 `./skills/`（Codex 递归扫描，无需逐件登记；五桶里只有 `productivity/` 有 `SKILL.md`，所以它装到的仍是这七件，哪天往 `in-progress/` 或 `misc/` 放了东西这条路会一并装上，上游 ADR-0002 描述的就是这个，到那时再定）；`.claude-plugin/marketplace.json` 让仓库自成单插件市场。
 
 ## 命名与编码
 
@@ -22,7 +22,7 @@ skills/<name>/
 - `metadata.display-name` 必须等于 `name`（生成器校验）：Codex 的 `$` 补全列表显示的是它，律师按 `loo0ng-` 名字找，中文显示名反而找不到（#29 真实触发时发现，ADR-0009 附注）。中文短描述只写在 `metadata.short-description`（Codex 也读，Claude Code 当自由映射不动作）；`agents/openai.yaml` 的 `interface.display_name` / `interface.short_description` 由生成器从这两处抄出，不手写。`name`、`description`、`short-description` 之外的中文不进别处。
 - `agents/openai.yaml` 由 `python scripts/gen-openai-yaml.py` 机械生成（ADR-0009；#26 随首件 skill 建立）：字段只有上面两个，编排 skill 与路由按 frontmatter 的 `disable-model-invocation: true` 推出 `policy.allow_implicit_invocation: false`。`--check` 只比对不写，任一份不同步即退出码 1。
 - `SKILL.md`、`agents/openai.yaml` 与所有 PowerShell 以外的文本文件不带 BOM：带 BOM 的 `SKILL.md` 会让 Codex 静默跳过整个根目录（#20）。PowerShell 5.1 脚本必须带 UTF-8 BOM，否则中文注释按 ANSI 读会撕坏语法（#18）。
-- 随包分发的脚本（`skills/*/scripts/*.py`）与种子回放（`evals/种子/*/回放.py`）跑得动 python 3.9：律师那台 mac 的 `/usr/bin/python3` 是 3.9.6，图引擎一处 3.10 的 `Path.write_text(newline=)` 就让每一次写图全炸（#61）。`tests/python-floor/` 机械守着这条：按 3.9 的 feature_version 解析，外加认得出形状的 3.10 API。`scripts/` 与 `tests/` 下的开发侧脚本不受这条约束（ADR-0015：它们只在开发机上跑）。
+- 随包分发的脚本（`skills/*/*/scripts/*.py`）与种子回放（`evals/种子/*/回放.py`）跑得动 python 3.9：律师那台 mac 的 `/usr/bin/python3` 是 3.9.6，图引擎一处 3.10 的 `Path.write_text(newline=)` 就让每一次写图全炸（#61）。`tests/python-floor/` 机械守着这条：按 3.9 的 feature_version 解析，外加认得出形状的 3.10 API。`scripts/` 与 `tests/` 下的开发侧脚本不受这条约束（ADR-0015：它们只在开发机上跑）。
 - 全仓禁破折号（U+2014）。连接号 U+2013 用于数字区间，不在此列。
 - frontmatter 的 `description` 加双引号：不加引号时 ` #` 起 YAML 注释，两平台都把其后的字截掉（#24 空壳验证时发现）。
 
@@ -44,10 +44,10 @@ skills/<name>/
 
 ## 登记步骤（新增、改名、删除都走一遍）
 
-1. `skills/<name>/` 落目录，按上面的布局与命名、编码规则。
+1. `skills/<bucket>/<name>/` 落目录（七件在 `productivity/`），按上面的布局与命名、编码规则；所在桶的 `README.md` 加（或改、删）一行，名字链接到 `./<name>/SKILL.md`。
 2. 双旗按类型写齐：`SKILL.md` 里写旗与 `metadata.display-name` / `short-description`，再跑 `python scripts/gen-openai-yaml.py` 生成 `agents/openai.yaml`。
-3. `.claude-plugin/plugin.json` 的 `skills` 数组加（或改、删）`./skills/<name>`。
-4. `README.md` 的 User-invoked 或 Model-invoked 组加（或改、删）一行。
+3. `.claude-plugin/plugin.json` 的 `skills` 数组加（或改、删）`./skills/<bucket>/<name>`。
+4. `README.md` 的 User-invoked 或 Model-invoked 组加（或改、删）一行，名字链接到 `./skills/<bucket>/<name>/SKILL.md`；再建（或改名、删）`docs/<bucket>/<name>.md`。
 5. 动到任一入口（`loo0ng-setup-case`、`loo0ng-doit`、`ask-loo0ng`）时，改 `ask-loo0ng` 自持的入口表（ADR-0005）。
 6. 重跑 relink：`powershell -NoProfile -ExecutionPolicy Bypass -File scripts/link-skills.ps1`。改内容不用重跑，只有改名、增删要。
 7. `npm run changeset` 写一条 changeset。

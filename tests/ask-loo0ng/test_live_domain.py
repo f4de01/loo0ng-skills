@@ -18,7 +18,7 @@ import pathlib
 import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-SKILL_DIR = REPO / "skills" / "ask-loo0ng"
+SKILL_DIR = REPO / "skills" / "productivity" / "ask-loo0ng"
 SKILL = SKILL_DIR / "SKILL.md"
 正文文件 = (SKILL, SKILL_DIR / "references" / "下一任务.md")
 # 包内路径的几种写法。路由一处都不该出现：它拿到的路径只有 AGENTS.md 那一行给的。

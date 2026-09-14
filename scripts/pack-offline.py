@@ -43,8 +43,10 @@ class 打不了(Exception):
 
 
 def 登记的名单(根):
+    """[(skill 名, 仓库内目录)]：plugin.json 里的路径是 ./skills/<bucket>/<name>（Matt 分桶），
+    名字取最后一段；包内仍平铺成 skills/<name>/，律师机上 ~/.agents/skills/ 认的是名字不是桶。"""
     清单 = json.loads((根 / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
-    return [p.rstrip("/").rsplit("/", 1)[-1] for p in 清单["skills"]]
+    return [(p.rstrip("/").rsplit("/", 1)[-1], 根 / p.rstrip("/").lstrip("./")) for p in 清单["skills"]]
 
 
 def 是文本(f):
@@ -54,12 +56,11 @@ def 是文本(f):
 
 def 收条目(根, 名单):
     """列出要进包的文件，相对路径以 <skill 名>/ 开头；名单里的目录缺一件就整个不打。"""
-    缺 = [n for n in 名单 if not (根 / "skills" / n).is_dir()]
+    缺 = [n for n, 底 in 名单 if not 底.is_dir()]
     if 缺:
-        raise 打不了("登记清单上的 " + "、".join(缺) + " 在 skills/ 下找不到")
+        raise 打不了("登记清单上的 " + "、".join(缺) + " 在 plugin.json 指的路径下找不到")
     条目 = []
-    for n in 名单:
-        底 = 根 / "skills" / n
+    for n, 底 in 名单:
         for f in sorted(底.rglob("*")):
             if not f.is_file():
                 continue
@@ -156,7 +157,7 @@ def main(argv=None):
         写zip(z, 内容)
         print("打好 " + str(z) + "：" + str(len(名单)) + " 件 skill，" + str(len(内容)) + " 个文件，"
               + str(z.stat().st_size // 1024) + " KB")
-    print("行尾转成 LF 的有 " + str(转了) + " 个文件；名单取自 .claude-plugin/plugin.json：" + "、".join(名单))
+    print("行尾转成 LF 的有 " + str(转了) + " 个文件；名单取自 .claude-plugin/plugin.json：" + "、".join(n for n, _ in 名单))
     return 0
 
 

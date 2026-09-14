@@ -69,3 +69,9 @@ date: 2026-09-05
 「清单八件」的那个数作废，实际是**七件**：编排层两个入口加路由，参考层四个，正文第 12 行列的就是这七个。当时另留的两个槽后来各自关掉（图存档由 ADR-0011、隐私钩子由 ADR-0014，见上面两条附注），七加二的加号没了，八这个数也就没了对应物。本文标题与正文照 ADR 惯例不改，凡在别处读到「八件」都按七件读。
 
 活文档三处（`README.md` 的 Skill 清单段、`docs/agents/skills.md` 的目录布局段、`skills/README.md`）随 #82 已改成七件，机械口径以 `skills/` 下的目录数与 `.claude-plugin/plugin.json` 的 `skills` 数组为准，两者都是七条。
+
+## 附注（2026-09-13，分桶）
+
+「仓库结构照 Matt 但不分桶」与「不照抄 aihero 站点的文档页与分桶」两条作废，改为**严格照上游布局**：`skills/` 下五个桶（engineering、productivity、misc、in-progress、deprecated），七件全部住 `productivity/`（上游 CLAUDE.md 对它的定义是「daily non-code workflow tools」，办案正是），另外四桶只有 `README.md`；每桶一份 `README.md` 逐件列出、名字链接到 `SKILL.md`；根 `README.md` 的条目同样链接到 `SKILL.md`（上游明文规则，此前漏了）；promoted 的每件另有一页 `docs/<bucket>/<name>.md`，段序照上游 `.agents/writing-docs.md`。`skills/README.md` 随之删除（上游没有它，桶 README 顶替）。
+
+当初不分桶的依据（Codex 清单只接单一路径）不再成立：`.codex-plugin/plugin.json` 仍指 `./skills/` 递归扫描，五桶里只有 `productivity/` 有 `SKILL.md`，装到的仍是这七件。代价照实写：哪天往 `in-progress/` 或 `misc/` 放了东西，Codex 插件路线会一并装上，那正是上游 ADR-0002 描述的问题，到那时再定。离线兜底包与 `link-skills.ps1` 的链接名仍只取 `<name>`，律师机上 `~/.agents/skills/<name>` 的形状不变。本次不动发布链（`scripts/release.py` 加 `workflow_dispatch` 那套）与路由的覆盖面。

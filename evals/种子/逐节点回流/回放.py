@@ -27,9 +27,9 @@ import sys
 REPO = pathlib.Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "evals" / "共用"))
 import 活图断言 as 助手  # noqa: E402  节点名与「指纹」只有一份，用例的断言与本回放读同一处
-SETUP = REPO / "skills" / "loo0ng-setup-case" / "scripts" / "setup.py"
-ENGINE = REPO / "skills" / "loo0ng-graph" / "scripts" / "graph.py"
-SKETCH = REPO / "skills" / "loo0ng-domain" / "scripts" / "sketch.py"
+SETUP = REPO / "skills" / "productivity" / "loo0ng-setup-case" / "scripts" / "setup.py"
+ENGINE = REPO / "skills" / "productivity" / "loo0ng-graph" / "scripts" / "graph.py"
+SKETCH = REPO / "skills" / "productivity" / "loo0ng-domain" / "scripts" / "sketch.py"
 种子根 = REPO / "evals" / "领域"          # 合成小领域「菜园」在这里，当出厂种子用
 LIVE_HOME_ENV = "LOO0NG_HOME"             # 活图的「家」，与 sketch.py、跑器同一个名字
 领域名 = 助手.领域名

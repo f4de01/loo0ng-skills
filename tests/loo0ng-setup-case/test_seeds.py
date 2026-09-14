@@ -70,7 +70,7 @@ class 空目录(SeedCase):
 
     def test_既有成品对得上领域图里的一个节点(self):
         ws = self.replay("空目录")
-        domain = json.loads((REPO / "skills" / "loo0ng-domain" / "assets" / "破产" / "领域图.json")
+        domain = json.loads((REPO / "skills" / "productivity" / "loo0ng-domain" / "assets" / "破产" / "领域图.json")
                             .read_text(encoding="utf-8"))
         titles = {n["标题"]: n["id"] for m in domain["模块"] for n in m["节点"]}
         self.assertEqual(titles.get("管理人承诺书及团队人员"), "n-chengnuoshu",
@@ -89,7 +89,7 @@ class 在办中(SeedCase):
         self.assertEqual((self.ws / "CLAUDE.md").read_text(encoding="utf-8"), "@AGENTS.md\n")
 
     def test_整份领域图起手(self):
-        domain = json.loads((REPO / "skills" / "loo0ng-domain" / "assets" / "破产" / "领域图.json")
+        domain = json.loads((REPO / "skills" / "productivity" / "loo0ng-domain" / "assets" / "破产" / "领域图.json")
                             .read_text(encoding="utf-8"))
         data = self.graph(self.ws)
         self.assertEqual(len(data["模块"]), len(domain["模块"]))

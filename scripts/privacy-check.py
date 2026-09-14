@@ -35,7 +35,7 @@ OFFICE_EXTS = (".docx", ".xlsx", ".pptx", ".docm", ".xlsm", ".pptm", ".dotx", ".
 # main 上守的两处路径（ADR-0014）。领域图与案件图同格式（JSON），住在 loo0ng-domain 的 assets 下；
 # 同目录下的官方模板原件与指引手册按定义不含案件内容，不守。
 GUARDED_PREFIXES = ("knowledge/",)
-DOMAIN_GRAPH_PREFIX = "skills/loo0ng-domain/assets/"
+DOMAIN_GRAPH_PREFIX = "skills/productivity/loo0ng-domain/assets/"
 DOMAIN_GRAPH_SUFFIX = ".json"
 GUARDED_BRANCH = "main"
 

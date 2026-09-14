@@ -37,8 +37,9 @@ def run_link(repo, dests):
     )
 
 
-def make_skill(repo, name):
-    d = repo / "skills" / name
+def make_skill(repo, name, bucket="productivity"):
+    """skills/<bucket>/<name>/SKILL.md，桶照上游；链接名只取 <name>。"""
+    d = repo / "skills" / bucket / name
     d.mkdir(parents=True, exist_ok=True)
     (d / "SKILL.md").write_text("---\nname: %s\ndescription: test\n---\n" % name, encoding="utf-8")
     return d
@@ -123,6 +124,17 @@ class LinkSkillsTest(unittest.TestCase):
         self.assertTrue((foreign_dir / "SKILL.md").is_file())
         self.assertTrue(is_reparse(self.dests[0] / "foreign-link"))
         self.assertIn("loo0ng-alpha", self.links_in(self.dests[0]))
+
+    def test_skips_deprecated_and_misc_buckets_like_upstream(self):
+        make_skill(self.repo, "loo0ng-alpha", "productivity")
+        make_skill(self.repo, "loo0ng-beta", "in-progress")
+        make_skill(self.repo, "loo0ng-old", "deprecated")
+        make_skill(self.repo, "loo0ng-rare", "misc")
+        r = run_link(self.repo, self.dests)
+        self.assert_ok(r)
+        for d in self.dests:
+            self.assertEqual(self.links_in(d), ["loo0ng-alpha", "loo0ng-beta"],
+                             "照上游 link-skills.sh：deprecated/ 与 misc/ 不挂，in-progress/ 照挂")
 
     def test_readme_only_skills_dir_links_nothing(self):
         (self.repo / "skills" / "README.md").write_text("x", encoding="utf-8")

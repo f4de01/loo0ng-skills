@@ -26,7 +26,7 @@ SOFTWARE.
 
 上面的 MIT 许可覆盖的是**本仓库自己的作品**：skill 正文、脚本、文档与测试。
 
-`skills/loo0ng-domain/assets/<领域>/` 下两个目录里的 .docx 是**第三方文件，不是本仓库的作品**，随包分发只为让工作台照官方版式出件、按原文整读：
+`skills/productivity/loo0ng-domain/assets/<领域>/` 下两个目录里的 .docx 是**第三方文件，不是本仓库的作品**，随包分发只为让工作台照官方版式出件、按原文整读：
 
 - `模板/`：官方模板原件
 - `指引手册/`：指引手册原文
@@ -36,7 +36,7 @@ SOFTWARE.
 介于两者之间的只有同目录下的 `领域图.json`：图这个文件是本仓库的作品，其中的节点标题取自上述第三方原件的名目，本仓库不对这些名目本身主张权利。
 
 The MIT license above covers this repository's own work only. The .docx files
-under `skills/loo0ng-domain/assets/<domain>/模板/` (official document templates)
+under `skills/productivity/loo0ng-domain/assets/<domain>/模板/` (official document templates)
 and `.../指引手册/` (practice handbooks) are third-party files, are not works of
 this repository, and are NOT licensed under the terms above; each remains
 subject to the terms of its own source.

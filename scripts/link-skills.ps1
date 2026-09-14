@@ -1,8 +1,9 @@
-﻿# 开发者本机用：把仓库 skills/<name>/ 逐条以 junction 挂到两个 harness 的用户级 skill 目录。
+﻿# 开发者本机用：把仓库 skills/<bucket>/<name>/ 逐条以 junction 挂到两个 harness 的用户级 skill 目录（Matt 分桶，链接名只取 <name>）。
 #   ~/.claude/skills/<name>  Claude Code
 #   ~/.agents/skills/<name>  Codex 及其他 Agent Skills 兼容 harness
 # junction 不需要管理员权限或开发者模式。junction 指向目录，改 skill 内容即时生效（Claude Code 热加载）；
 # 只在改名、增删 skill 后重跑。幂等：重跑结果一致；skills/ 里已不存在的 skill，其指向本仓库的 junction 随之删除。
+# 照上游 link-skills.sh：deprecated/ 与 misc/ 两个桶不挂（退役的与不推广的都不该进日常目录），in-progress/ 照挂。
 # 不是安装器；律师机器上的安装走插件或 skills.sh。
 # 本文件须带 UTF-8 BOM：Windows PowerShell 5.1 无 BOM 时按 ANSI 读，中文注释会撕坏语法。
 # -Repo 与 -Dests 只供测试指向临时目录（tests/link-skills/），日常直接跑不带参数。

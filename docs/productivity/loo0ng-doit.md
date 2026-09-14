@@ -1,0 +1,59 @@
+## What it does
+
+`loo0ng-doit` 在案件工作区里办一个节点：出一版文书、登记你自己写好的那份、或落一条确认与不适用。你一句自由文本说动作加节点，它把收件箱归档、整读本案的材料与指南、照该节点的官方模板出一份 DOCX，附一份审查报告，出件前过一道版式门禁。
+
+一个对话只服务一个节点。出件、补事实、要求重出、最后一句确认或不适用，都在这个对话里说；同一对话里第二次「出一版」指向另一个节点，它拒绝并把新对话的第一句给你。确认与不适用是你的专权：它从不从「看起来没问题」推断出一条确认。
+
+## When to reach for it
+
+你打 `/loo0ng-doit <动作> <节点>` 触发它，模型不会自己调它。
+
+| 你说 | 它做 |
+| --- | --- |
+| 「出一版 X」「X 重出一版」「按法院的意见改 X」 | 出一版：归档、整读、写稿、转换、门禁、落盘、追加条目 |
+| 「X 我自己写好了」「X 用我这份」 | 兜底登记：你的文书永不改动，只跑门禁取结论、写审查报告、登记为已生成 |
+| 「确认 X」「X 这份就这样」 | 落一条确认条目，原话原样存 |
+| 「X 不适用」「模块 Y 本案不办」 | 落不适用条目，是终态 |
+
+要改图的构成（加节点、改标题、调顺序）不必打它，一句话说给模型，那是 [loo0ng-graph](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-graph.md) 的事。不知道下一个办哪个，问 [ask-loo0ng](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/ask-loo0ng.md)。
+
+## Prerequisites
+
+- 会话当前目录是案件工作区（有 `图.json`），也就是先起过手。
+- 领域目录的绝对路径在工作区根的 `AGENTS.md` 里，起手落下的。
+- 转换器要一个能 `import docx` 的解释器；没配过 python 不阻断出件，怎么弄到一个解释器见 [loo0ng-to-docx](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-to-docx.md)。
+
+## 出一版是一条死顺序
+
+归档 → 复制你指的文件 → 换节点检查 → 惰性建节点 → 三样全无则只回缺什么 → 整读 → 写稿 → 转换 → 门禁 → 落盘 → 追加条目 → 回显。中间不停下来问：材料里没有的案号、日期、金额照出，缺项列进审查报告的「待律师裁定」，你读了报告在对话里答一句，它先落成陈述再据此重出一版。
+
+一次生成等于三件加一条条目：文书、Markdown 源、审查报告，与图上那一条带着相对路径的生成条目。单跑转换或门禁不算一次生成，产物不进 `文书/`。
+
+## Common questions
+
+**出一版为什么慢？**
+它不摘要、不抽样，整读 `材料/`、`指南/`、这个节点的空白模板与过往文书，一个对话只办一个节点、下一个对话重新读一遍。这是接受的代价；已经量过五段各花多少时间，改的余地只在往返次数与要写多少字，不在跳过整读。
+
+**门禁说「需人眼」，是失败了吗？**
+不是。结论三档：通过、需人眼、不通过。需人眼是门禁测不准（没有渲染器时三项几何判据只给区间），文书照样落盘，审查报告第一段是一份须目验清单，你在 WPS 或 Word 里打开看那几处。只有不通过才不落盘。
+
+**稿子是照模板重写的，不是照模板填的。**
+改稿只改字句，不删模板规定的正文结构（表、落款、附注）。门禁不通过项指着模板带来的几何（行高、表宽）时，改稿改不动它，直接判生成失败，不会把那张表改写成段落换一个通过。
+
+**确认之后它问我「归属」是什么意思？**
+你确认的节点领域图里没有时，它问一次这个节点该归领域图的哪个模块、标题怎么写，你一句话之后才写进你本机的活图。说「不用」就不写，不再问第二次。走熟一个领域之后这一问趋近于零。
+
+**同一句话里点了两个节点会怎样？**
+第一个照常办，第二个在换节点检查那一步被拒，两件事写在同一条回复里，被拒的那个带着新对话的第一句。
+
+## It's working if
+
+- 一个对话结束时 `文书/<节点标题>/` 下多出同一版本号的三件：`.docx`、`.md`、`-审查报告.md`。
+- `图视图.md` 里这个节点多一条条目，确认那条原样带着你说的那句话。
+- 你没说「确认」之前，节点一直是「已生成」。
+- 你在同一对话里换节点，它拒绝并给出 `loo0ng-doit 出一版 <另一个节点>` 这一串。
+- 门禁不通过时 `文书/` 里什么都没多，门禁输出原文在回复里。
+
+## Where it fits
+
+`loo0ng-doit` 是主线的第 2 到第 4 步：起手之后，每个节点一个对话，出一版、读审查报告、拍板，再开新对话办下一个。它自己没有脚本，四件事都经别人的 CLI 落盘：图经 [loo0ng-graph](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-graph.md)，归档与陈述经 [loo0ng-filing](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-filing.md)，转换与门禁经 [loo0ng-to-docx](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-to-docx.md)。起手是 [loo0ng-setup-case](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/loo0ng-setup-case.md)。整套 skill 的路由是 [ask-loo0ng](https://github.com/f4de01/lawyer-workbench-v3/blob/main/docs/productivity/ask-loo0ng.md)。

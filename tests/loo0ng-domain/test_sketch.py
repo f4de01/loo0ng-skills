@@ -1,4 +1,4 @@
-"""skills/loo0ng-domain/scripts/sketch.py 的脚本层单测（unittest，标准库零依赖）。
+"""skills/productivity/loo0ng-domain/scripts/sketch.py 的脚本层单测（unittest，标准库零依赖）。
 
 运行：python -m unittest tests/loo0ng-domain/test_sketch.py
 
@@ -18,8 +18,8 @@ import unittest
 import zipfile
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-SCRIPT = REPO / "skills" / "loo0ng-domain" / "scripts" / "sketch.py"
-ENGINE = REPO / "skills" / "loo0ng-graph" / "scripts" / "graph.py"
+SCRIPT = REPO / "skills" / "productivity" / "loo0ng-domain" / "scripts" / "sketch.py"
+ENGINE = REPO / "skills" / "productivity" / "loo0ng-graph" / "scripts" / "graph.py"
 DOMAIN_DIR = REPO / "evals" / "领域" / "菜园"
 
 spec = importlib.util.spec_from_file_location("loo0ng_sketch", SCRIPT)
@@ -510,7 +510,7 @@ class DocxTextTest(SketchCase):
         self.assertEqual(r.out, "种植指南\n\n节点 | 表格\n覆膜 | 覆膜记录\n清园应及时。\n")
 
     def test_real_handbooks_are_readable(self):
-        handbooks = sorted((REPO / "skills" / "loo0ng-domain" / "assets" / "破产" / "指引手册").glob("*.docx"))
+        handbooks = sorted((REPO / "skills" / "productivity" / "loo0ng-domain" / "assets" / "破产" / "指引手册").glob("*.docx"))
         self.assertEqual(len(handbooks), 2)
         for h in handbooks:
             r = self.cli("docx-text", h)

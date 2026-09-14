@@ -20,7 +20,7 @@ import tempfile
 import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-SCRIPT = REPO / "skills" / "loo0ng-domain" / "scripts" / "sketch.py"
+SCRIPT = REPO / "skills" / "productivity" / "loo0ng-domain" / "scripts" / "sketch.py"
 菜园 = REPO / "evals" / "领域" / "菜园"
 
 spec = importlib.util.spec_from_file_location("loo0ng_sketch_intake", SCRIPT)
@@ -41,7 +41,7 @@ class Base(unittest.TestCase):
         self.tmp = pathlib.Path(tempfile.mkdtemp(prefix="intake-test-"))
         self.addCleanup(shutil.rmtree, self.tmp, True)
         self.live_root = self.tmp / "活图家" / "领域"
-        self.seed_root = self.tmp / "假仓库" / "skills" / "loo0ng-domain" / "assets"
+        self.seed_root = self.tmp / "假仓库" / "skills" / "productivity" / "loo0ng-domain" / "assets"
         (self.tmp / "假仓库" / ".git").mkdir(parents=True)   # 「在仓库里」的判据
         self.seed_root.mkdir(parents=True)
         self.live = self.live_root / "菜园"

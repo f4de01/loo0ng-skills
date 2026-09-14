@@ -9,7 +9,7 @@ import sys
 import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-SCRIPTS = REPO / "skills" / "loo0ng-to-docx" / "scripts"
+SCRIPTS = REPO / "skills" / "productivity" / "loo0ng-to-docx" / "scripts"
 ALLOWED = {"md2docx.py": {"docx"}, "gate.py": {"pymupdf"}}
 # 模块顶层许出现的第三方 import。门禁这一格是空的：没装 PyMuPDF 的机器上，顶层 import 会让连静态检查
 # 都起不来，而主力环境恒定没有渲染器（#57、ADR-0017）。
