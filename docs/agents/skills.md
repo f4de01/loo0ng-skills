@@ -10,11 +10,11 @@ skills/<bucket>/<name>/       # 桶照上游五个：engineering、productivity�
 ├── agents/openai.yaml    # Codex 侧外观：interface.display_name（= name）、interface.short_description（中文进这里）；编排 skill 与路由另加 policy.allow_implicit_invocation: false
 ├── references/           # 正文按需指向的长材料
 ├── requirements.txt      # 只有 to-docx 有：填模板脚本后端的精确钉（python-docx==1.2.0，ADR-0018）。随包到律师机，agent 自备环境时按它装；仓库根上放到不了那里
-├── scripts/              # 标准库零依赖的 CLI；只有 to-docx 的 fill.py 例外（python-docx，ADR-0023），它的门禁本体也零依赖、PyMuPDF 只是可选的渲染加信（ADR-0017）。互不 import；跨 skill 一律以子进程互调、默认按兄弟目录找：要写图的（domain 的雏形、setup-case 的起手与既有成品登记）调 graph 的引擎，起手取活图路径（setup-case 的 init --domain-name）调 domain 的 sketch.py home（#97）
+├── scripts/              # 标准库零依赖的 CLI；只有 to-docx 的 fill.py 例外（python-docx，ADR-0023）。互不 import；跨 skill 一律以子进程互调、默认按兄弟目录找：要写图的（domain 的雏形、setup-case 的起手与既有成品登记）调 graph 的引擎，起手取活图路径（setup-case 的 init --domain-name）调 domain 的 sketch.py home（#97）
 └── assets/               # 只有 domain 有：assets/<领域>/ 下领域图、模板/ 官方模板原件、指引手册/ 指引手册原文（ADR-0004）。这份是出厂种子，随包升级被换掉；律师那台机上的活图在 ~/.loo0ng/领域/<领域>/，由 sketch.py home 首次起手时拷出（ADR-0019）
 ```
 
-**2026-09-14 起七件全部住 `in-progress/`，逐件改造后再毕业回 `engineering/` 或 `productivity/`（ADR-0022）；本段其余写的是毕业后的归属。** 分桶照上游（ADR-0009 的 2026-09-13 附注）：`skills/` 下五个桶，每桶一份 `README.md` 逐件列出、名字链接到 `./<name>/SKILL.md`；promoted 桶（`engineering/`、`productivity/`）里的每件进 `.claude-plugin/plugin.json` 与根 `README.md`（名字链接到 `SKILL.md`），并有一页 `docs/<bucket>/<name>.md`（固定段：What it does、When to reach for it、Common questions、It's working if、Where it fits，页内链接一律绝对）；`misc/`、`in-progress/`、`deprecated/` 里的不进这三处。上游 `engineering/` 装的是主线（daily code work），`productivity/` 装的是离了主线也能单独用的工具；对应到这里，办案主线六件（`ask-loo0ng`、`setup-case`、`doit`、`graph`、`domain`、`filing`，都只在有 `图.json` 的工作区里工作）在 `engineering/`，`to-docx`（清单与门禁都可对任意 DOCX 跑、施加差量默认写临时位置）在 `productivity/`；另外三桶目前只有 README。草稿放分支不放目录，要公开试用的才进 `in-progress/`（这一轮改的是全部七件、跨多次发布，分支装不下，所以七件都在那里）。分发清单只有一份：`.claude-plugin/plugin.json` 的 `skills` 数组逐件列路径（Claude Code 插件）；`.claude-plugin/marketplace.json` 让仓库自成单插件市场。不发 Codex 原生插件，Codex 及其他 harness 经 skills.sh 装编辑副本（ADR-0021，与上游 ADR-0002 同一个理由：Codex 清单只收单一路径，分桶后会把 `in-progress/` 一并装出去）。
+**2026-09-14 起七件全部住 `in-progress/`，逐件改造后再毕业回 `engineering/` 或 `productivity/`（ADR-0022）；本段其余写的是毕业后的归属。** 分桶照上游（ADR-0009 的 2026-09-13 附注）：`skills/` 下五个桶，每桶一份 `README.md` 逐件列出、名字链接到 `./<name>/SKILL.md`；promoted 桶（`engineering/`、`productivity/`）里的每件进 `.claude-plugin/plugin.json` 与根 `README.md`（名字链接到 `SKILL.md`），并有一页 `docs/<bucket>/<name>.md`（固定段：What it does、When to reach for it、Common questions、It's working if、Where it fits，页内链接一律绝对）；`misc/`、`in-progress/`、`deprecated/` 里的不进这三处。上游 `engineering/` 装的是主线（daily code work），`productivity/` 装的是离了主线也能单独用的工具；对应到这里，办案主线六件（`ask-loo0ng`、`setup-case`、`doit`、`graph`、`domain`、`filing`，都只在有 `图.json` 的工作区里工作）在 `engineering/`，`to-docx`（清单可对任意 DOCX 打、施加默认写临时位置）在 `productivity/`；另外三桶目前只有 README。草稿放分支不放目录，要公开试用的才进 `in-progress/`（这一轮改的是全部七件、跨多次发布，分支装不下，所以七件都在那里）。分发清单只有一份：`.claude-plugin/plugin.json` 的 `skills` 数组逐件列路径（Claude Code 插件）；`.claude-plugin/marketplace.json` 让仓库自成单插件市场。不发 Codex 原生插件，Codex 及其他 harness 经 skills.sh 装编辑副本（ADR-0021，与上游 ADR-0002 同一个理由：Codex 清单只收单一路径，分桶后会把 `in-progress/` 一并装出去）。
 
 ## 命名与编码
 
@@ -92,7 +92,7 @@ bash scripts/check-release.sh .            # 发版前：changesets 配置、同
 for d in tests/*/; do python -m unittest discover -s "$d" -p 'test_*.py' || exit 1; done
 ```
 
-`tests/to-docx/` 分两条跑道（ADR-0017 改了 ADR-0015 的口径）：**推算层那条不起 Word，在任何机器上必须全绿、不许 skip**（`test_layout_estimate.py` 全篇，加 `test_gate.py` 与 `test_templates.py` 的无渲染跑道，合起来十几秒）；**渲染层那条要 Word COM**（`NormalAndFaultPairsRendered`、`TemplatesRegressionRendered`），每件门禁起一次 Word 约 7 秒、合起来约六分钟，缺渲染通道时整类 skip 并打印一行说明，不静默。只在开发侧跑，不进 Codex 的 30 秒 shell。别在门禁测试跑的同时另起 Word 出件，两件门禁同时跑会互相关掉对方的实例。
+`tests/to-docx/` 只有一条跑道（ADR-0024 之后，版式门禁整件退场）：**不起 Word，在任何机器上必须全绿、不许 skip**，合起来半分钟上下。19 件官方模板逐件回归（`test_templates.py`）守的是施加前后 `tblPr`、`tblGrid`、`trPr`、`tcPr` 逐字节相同、槽外格式不变、元数据清掉：数据泄露与渲染格式两样保证从运行时的门禁挪进了测试，每次改 `fill.py` 都要过 19 件。
 
 **3.9 那条跑道**：随包脚本的底线是 python 3.9（律师那台 mac 的 `/usr/bin/python3` 是 3.9.6），`tests/python-floor/` 只按形状扫，真跑要自己起一次。装一份钉住的后端再跑全套：
 
@@ -101,7 +101,7 @@ uv pip install --python <3.9 解释器> --target <临时目录> -r skills/in-pro
 PYTHONPATH=<临时目录> <3.9 解释器> -m unittest discover -s tests/to-docx -p 'test_*.py'
 ```
 
-2026-09-14 在 cpython 3.9.25 上跑过一遍：97 件全绿，14 件 skip（那台临时环境里没装 PyMuPDF，渲染层整类 skip，与主力环境一致）。
+2026-09-14 在 cpython 3.9.25 上跑过一遍（门禁退场之后）：全绿、零 skip。
 
 skill 层 eval：一个跑器两个后端，用例与种子在 `evals/`（ADR-0015，#25）：
 
@@ -145,7 +145,7 @@ ADR-0015「目录名保持 ASCII」只指 `tests/`、`evals/` 两个顶层；其
 | `回合上限` | Claude Code 侧交给 `--max-turns`；Codex 侧数 JSONL 流里工具类 item（命令、改文件、MCP、搜索），超了杀进程树。默认 30 |
 | `超时秒` | 单次调用的墙钟上限，超了杀进程树。默认 300 |
 | `允许工具` | Claude Code 侧 `--allowedTools` 的列表（如 `["Bash(python *)"]`）；权限模式固定 acceptEdits。Codex 侧靠沙箱，不需要 |
-| `Codex沙箱` | Codex 侧 `codex exec -s` 的值：`workspace-write`（默认）或 `danger-full-access`。**本套用例全在默认值上**（#78 实测全绿）：沙箱里起不来 Word COM（0x80070520 登录会话不存在）、`python` 也敲不动（那两个目录就在 PATH 上，只是沙箱账户读不到），但两样都不阻断：门禁本体零第三方依赖（ADR-0017），转换器的环境由 agent 自备、经 uv 走得通（ADR-0018）。`danger-full-access` 是跑器的能力，不是任何用例的前提 |
+| `Codex沙箱` | Codex 侧 `codex exec -s` 的值：`workspace-write`（默认）或 `danger-full-access`。**本套用例全在默认值上**（#78 实测全绿）：沙箱里 `python` 敲不动（那两个目录就在 PATH 上，只是沙箱账户读不到），但不阻断：填模板脚本的环境由 agent 自备、经 uv 走得通（ADR-0018）。`danger-full-access` 是跑器的能力，不是任何用例的前提 |
 | `说明` | 一句话，含用例的局限；带 skill 时必填，写明替身提示词的局限 |
 
 每次运行：在 `%TEMP%` 下建临时工作区 → 回放种子 → 调 harness（cwd 即工作区）→ 回复正则 → 逐条断言 → 删工作区（超时、超回合、断言抛错都删）。断言报红时给出函数名与 assert 的消息。
@@ -205,7 +205,7 @@ MSYS_NO_PATHCONV=1 CLAUDECODE= CLAUDE_CODE_ENTRYPOINT= \
 
 本地也能跑同一条链（`npm run version` → 提交 → `npx changeset tag`），但 CI 是常态。仓库设置里 Actions 的 "Allow GitHub Actions to create and approve pull requests" 必须勾上，否则开不了 PR。
 
-上 CI 的只有发布这一条路：ADR-0015 的 2026-09-12 附注把「全部本地不做 CI」的射程划回测试与门禁那一层，脚本层单测、两侧 eval、版式门禁仍然全部本地跑。离线兜底包不再随 Release 附带（ADR-0021）；要给断网的律师机装，直接拷 `skills/in-progress/` 下的七个目录。
+上 CI 的只有发布这一条路：ADR-0015 的 2026-09-12 附注把「全部本地不做 CI」的射程划回测试那一层，脚本层单测、两侧 eval 仍然全部本地跑。离线兜底包不再随 Release 附带（ADR-0021）；要给断网的律师机装，直接拷 `skills/in-progress/` 下的七个目录。
 
 ## 分发事实（#18，2026-09-05 实测）
 

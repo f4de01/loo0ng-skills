@@ -1,8 +1,9 @@
-"""tests/to-docx 的公用件：定位仓库、模板目录与两个 CLI，跑子进程，读 DOCX 里的 XML。
+"""tests/to-docx 的公用件：定位仓库、模板目录与填模板 CLI，跑子进程，读 DOCX 里的 XML。
 
 模板目录：官方模板原件住领域目录 skills/in-progress/domain/assets/破产/模板/（ADR-0004、ADR-0009，#29）。找不到就直接报错，不 skip。
 
-两个 CLI（#13 起）：`fill.py` 打清单与施加差量（只依赖 python-docx），`gate.py` 门禁（本体零第三方依赖）。
+只有一个 CLI（#13 起，#22 之后）：`fill.py` 打清单与施加差量（只依赖 python-docx）。版式门禁按 ADR-0024 整件退场，
+这套测试不起 Word、任何机器上必须全绿、不许 skip。
 造件一律「官方模板 + 一份差量」：模板就是载体，填出来的件与律师手里那份同一个骨架；要故障件再在它上面做 XML 手术。
 `fill.py` 另按模块 import 一份（`填`），测试拿它算槽号、造差量、比几何与格式；那是库这一侧，不经命令行。
 """
@@ -19,7 +20,6 @@ import xml.etree.ElementTree as ET
 REPO = pathlib.Path(__file__).resolve().parents[2]
 SCRIPTS = REPO / "skills" / "in-progress" / "to-docx" / "scripts"
 FILL = SCRIPTS / "fill.py"
-GATE = SCRIPTS / "gate.py"
 FIXTURES = pathlib.Path(__file__).resolve().parent / "fixtures"
 PROBE_TEMPLATE = "1-2.关于管理人印章备案的报告.docx"
 W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
@@ -163,46 +163,6 @@ def _rpr_key(r) -> str:
     return rpr.xml
 
 
-# ---------------------------------------------------------------- 门禁
-
-def gate(docx: pathlib.Path, *extra) -> Run:
-    """跑门禁并解析 --json 的结果，挂在 Run.result 上；退出码 2（门禁跑不动、落盘被拒）时 result 为 None。
-
-    三档结论对应退出码 0 通过 / 3 需人眼 / 1 不通过（ADR-0017），三档都出 JSON。
-    """
-    r = run(GATE, docx, "--json", *extra)
-    r.result = json.loads(r.out) if r.out.strip().startswith("{") else None
-    return r
-
-
-def gate_no_render(docx: pathlib.Path, *extra) -> Run:
-    """无渲染跑道：只用门禁本体（推算层）。主力环境（mac + WPS）恒定走这条，任何机器上都跑得动。"""
-    return gate(docx, "--no-render", *extra)
-
-
-_RENDER_PROBE = {}
-
-
-def render_available() -> bool:
-    """本机有没有渲染通道。整个进程只探一次（一次门禁约 7 秒）。"""
-    if "ok" not in _RENDER_PROBE:
-        r = gate(templates_dir() / PROBE_TEMPLATE)
-        _RENDER_PROBE["ok"] = bool(r.result and r.result.get("渲染"))
-    return _RENDER_PROBE["ok"]
-
-
-def require_render(case) -> None:
-    """渲染层测试专用的门：拿不到渲染通道就 skip，且打印一行说明、不静默。
-
-    推算层是门禁本体、永远在，跑推算层的测试在任何机器上必须全绿、不许 skip；只有明确测「渲染器接上时
-    的行为」这几件许 skip（ADR-0017 改了 ADR-0015 的口径）。
-    """
-    if not render_available():
-        reason = "本机没有渲染通道（ADR-0017：这是主力环境的正常路径，不是故障），跳过渲染层这一件"
-        print("SKIP %s：%s" % (case.id(), reason))
-        case.skipTest(reason)
-
-
 # ---------------------------------------------------------------- 读 DOCX
 
 def read_xml(docx: pathlib.Path, member: str = "word/document.xml"):
@@ -223,6 +183,45 @@ def rewrite(src: pathlib.Path, dst: pathlib.Path, edits) -> pathlib.Path:
 
 def text_of(el) -> str:
     return "".join(t.text or "" for t in el.iter(W + "t"))
+
+
+def ending_with_a_table(src: pathlib.Path, dst: pathlib.Path):
+    """造一件正文以「最后一张表 + 一段 + sectPr」收尾的 docx：表之后只留第一段，其余段落删掉。
+    回 (路径, 那一段的段号)。守「表格直接接 sectPr」那条用。"""
+    doc = Document(str(src))
+    body = doc.element.body
+    tbls = body.findall(qn("w:tbl"))
+    assert tbls, "%s 里没有表" % src.name
+    kept = None
+    for el in list(tbls[-1].itersiblings()):
+        if el.tag == qn("w:p") and kept is None:
+            kept = el
+        elif el.tag in (qn("w:p"), qn("w:tbl")):
+            body.remove(el)
+    assert kept is not None, "%s 最后一张表之后没有段落" % src.name
+    doc.save(str(dst))
+    return dst, 填.paragraphs(doc).index(kept)
+
+
+def first_paragraph_after_last_table(src: pathlib.Path):
+    """正文最后一张表之后第一段的段号，连同表后有几段。"""
+    doc = Document(str(src))
+    tbl = doc.element.body.findall(qn("w:tbl"))[-1]
+    after = [el for el in tbl.itersiblings() if el.tag == qn("w:p")]
+    return 填.paragraphs(doc).index(after[0]), len(after)
+
+
+def metadata_leftovers(docx: pathlib.Path):
+    """收尾该清掉的元数据里还剩着的：作者、最后修改者、上次打印时间。全清了就是空表。"""
+    core = read_xml(docx, "docProps/core.xml")
+    left = []
+    for tag, 名 in ((DC + "creator", "作者"), (CP + "lastModifiedBy", "最后修改者")):
+        el = core.find(tag)
+        if el is not None and (el.text or "").strip():
+            left.append("%s没清" % 名)
+    if core.find(CP + "lastPrinted") is not None:
+        left.append("上次打印时间没清")
+    return left
 
 
 def body_blocks(docx: pathlib.Path):

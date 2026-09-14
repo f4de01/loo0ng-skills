@@ -6,7 +6,8 @@
 DOCX。造件一律拿官方模板当载体（模板就是出件时的载体），要故障件再在它上面做 XML 手术。
 
 断的是清单的形状（编号、表格坐标、槽、已高亮区间、说明段）、五种差量各自的效果、代码统一留黄、拒改的
-那几种（差量不合法、槽所在 run 含脚注引用 / 图片 / 域代码），以及「拒改就一个字都不写」。
+那几种（差量不合法、槽所在 run 含脚注引用 / 图片 / 域代码），以及「拒改就一个字都不写」。ADR-0024 搬进施加
+构造的三处也在这里：表格后末段的 delete 改清空、fill 空串按没填处理、--out 可覆盖而拒改时原件一字不动。
 """
 import json
 import pathlib
@@ -113,12 +114,6 @@ class SlotShapes(FillCase):
         加了 = listing(support.out_path(out), "--slot-pattern", r"〈[^〉]*〉")
         self.assertIn("〈本案金额〉⟧", 加了.out, "--slot-pattern 加的形状要进清单：%r" % 加了.out[:300])
 
-    def test_the_two_clis_carry_the_same_table(self):
-        """两个 CLI 互不 import，各自带一份占位表；两份必须逐字相同，不然门禁与清单会看见不同的槽。"""
-        import sys
-        sys.path.insert(0, str(support.SCRIPTS))
-        import gate
-        self.assertEqual(填.SLOT_SHAPES, gate.SLOT_SHAPES)
 
 
 class ApplyFive(FillCase):
@@ -165,6 +160,27 @@ class ApplyFive(FillCase):
         out = support.out_path(r)
         self.assertEqual(support.paragraph_count(out), before, "段数不变，只是那一段没字了")
         self.assertEqual(self.文字(out, idx), "")
+
+    def test_delete_of_the_last_paragraph_after_the_last_table_clears_it_instead(self):
+        """正文最后一张表之后只剩一段时，删了它表格就直接接 sectPr，Word 会报修复：这一种也改清空（ADR-0024）。"""
+        src, idx = support.ending_with_a_table(self.tpl, self.dir / "表后末段.docx")
+        before = support.paragraph_count(src)
+        r = self.ok([{"op": "delete", "at": "p%d" % idx}], "表后清空.docx", src)
+        self.assertIn("清空（不能整段删）", r.out)
+        out = support.out_path(r)
+        self.assertEqual(support.paragraph_count(out), before)
+        self.assertEqual(self.文字(out, idx), "")
+        last = support.body_blocks(out)[-1]
+        self.assertEqual(last.tag, W + "p", "表之后仍有一段，sectPr 不直接接表")
+
+    def test_delete_of_a_paragraph_after_a_table_that_is_not_the_last_still_removes_it(self):
+        """同一位置、后面还有别的段：照常删。守的只是「表直接接 sectPr」这一种，不是表后的每一段。"""
+        idx, 表后段数 = support.first_paragraph_after_last_table(self.tpl)
+        self.assertGreater(表后段数, 1, "这件模板表后要有不止一段，这条才成立")
+        before = support.paragraph_count(self.tpl)
+        r = self.ok([{"op": "delete", "at": "p%d" % idx}], "表后照删.docx")
+        self.assertIn("删段", r.out)
+        self.assertEqual(support.paragraph_count(support.out_path(r)), before - 1)
 
     def test_highlight_and_unhighlight(self):
         r = self.ok([{"op": "highlight", "at": "p10", "text": "特此报告"}])
@@ -221,7 +237,7 @@ class HighlightRest(FillCase):
 
 class ChangedParagraphs(FillCase):
     def test_changed_numbers_are_the_ones_in_the_file_that_was_written(self):
-        """删了段，后面的段号整体前移；回显的改动段号必须是写出来那件里的，门禁按它去查。"""
+        """删了段，后面的段号整体前移；回显的改动段号必须是写出来那件里的，模型照它抄进审查报告。"""
         r = self.ok([{"op": "delete", "at": "p10"}, {"op": "fill", "at": "p13#1", "text": "某乙"}], "飘.docx")
         self.assertEqual(r.changed, [12], r.out)
         out = support.out_path(r)
@@ -292,32 +308,73 @@ class Refusals(FillCase):
                 r = self.assert_refused([{"op": "fill", "at": "p2#2", "text": "某"}], 人话, "拒-%s.docx" % 人话, bad)
                 self.assertIn("拒改", r.err)
 
-    def test_emptying_a_spot_and_highlighting_it_is_refused(self):
-        """换成空串是把那一处删掉，删掉的东西没法标黄：与其把 highlight 悄悄吞掉，不如拒掉。"""
+    def test_replace_with_an_empty_string_removes_the_text_but_cannot_also_highlight(self):
+        """replace 空串是条件块取舍的正当用法，照旧删掉那一处；删掉的东西没法标黄，再带 highlight 就拒。"""
         self.assert_refused([{"op": "replace", "at": "p3", "old": "（如有）", "new": "", "highlight": True}],
                             "没有东西可标")
         r = self.ok([{"op": "replace", "at": "p3", "old": "（如有）", "new": ""}], "换成空.docx")
         self.assertNotIn("（如有）", 填.text_of(填.paragraphs(support.Document(str(support.out_path(r))))[3]))
 
-    def test_output_is_never_overwritten(self):
-        r = self.ok([{"op": "fill", "at": "p2#1", "text": "某"}], "占位.docx")
-        self.assertEqual(r.code, 0)
-        again = self.apply([{"op": "fill", "at": "p2#1", "text": "某"}], "占位.docx")
-        self.assertEqual(again.code, 1, again)
-        self.assertIn("不覆盖", again.err)
+
+class EmptyFill(FillCase):
+    """fill 空串按「没填」处理（ADR-0024）：槽留原占位、由收尾留黄，不删 run、不拒改。拒改是内容检查，
+    #141 的机理正是「检查占位 → 模型删槽过检」。"""
+
+    def test_fill_with_an_empty_string_leaves_the_placeholder_and_the_code_highlights_it(self):
+        r = self.ok([{"op": "fill", "at": "p2#1", "text": ""}], "空填.docx")
+        self.assertIn("按没填处理", r.out)
+        p = 填.paragraphs(support.Document(str(support.out_path(r))))[2]
+        self.assertEqual(填.text_of(p), 填.text_of(填.paragraphs(support.Document(str(self.tpl)))[2]), "文字一个字不动")
+        s, e, 原文 = 填.slots(p)[0]
+        self.assertEqual(原文, "XX年X月X日")
+        self.assertTrue(any(a <= s and e <= b for a, b in 填.highlight_ranges(p)), "没填的槽由收尾留黄")
+        self.assertEqual(r.changed, [], "什么都没改，不算改动段")
+
+    def test_fill_with_an_empty_string_and_highlight_is_not_refused_either(self):
+        r = self.ok([{"op": "fill", "at": "p2#1", "text": "", "highlight": True}], "空填带黄.docx")
+        self.assertIn("按没填处理", r.out)
+        p = 填.paragraphs(support.Document(str(support.out_path(r))))[2]
+        self.assertEqual(填.slots(p)[0][2], "XX年X月X日")
+
+
+class OutPath(FillCase):
+    """--out 可直接写 文书/ 下的路径并覆盖（重出覆盖同一份）；拒改一个字不写，靠构造成立（ADR-0024）。"""
+
+    def test_out_overwrites_an_existing_file(self):
+        self.ok([{"op": "fill", "at": "p2#1", "text": "第一次"}], "同一份.docx")
+        r = self.ok([{"op": "fill", "at": "p2#1", "text": "第二次"}], "同一份.docx")
+        text = 填.text_of(填.paragraphs(support.Document(str(self.dir / "同一份.docx")))[2])
+        self.assertIn("第二次", text)
+        self.assertNotIn("第一次", text)
+        self.assertEqual(r.changed, [2])
+
+    def test_reissue_may_write_over_its_own_carrier(self):
+        """重出时载体就是这个节点当前的文书，产物也落回同一路径。"""
+        first = self.ok([{"op": "fill", "at": "p2#1", "text": "某年某月某日"}], "当前.docx")
+        carrier = support.out_path(first)
+        # 载体换成当前文书后槽号重新数：上一次填掉了 #1，原来的 #3 现在是 #2
+        r = apply(carrier, [{"op": "fill", "at": "p2#2", "text": "一"}], carrier)
+        self.assertEqual(r.code, 0, r)
+        text = 填.text_of(填.paragraphs(support.Document(str(carrier)))[2])
+        self.assertIn("某年某月某日", text, "上一次填的还在")
+        self.assertIn("苏0591破一号", text, "这一次填的也在")
+
+    def test_a_refused_diff_leaves_the_existing_file_byte_for_byte(self):
+        self.ok([{"op": "fill", "at": "p2#1", "text": "某"}], "已有.docx")
+        before = (self.dir / "已有.docx").read_bytes()
+        r = self.apply([{"op": "fill", "at": "p2#99", "text": "某"}], "已有.docx")
+        self.assertEqual(r.code, 1, r)
+        self.assertEqual((self.dir / "已有.docx").read_bytes(), before, "拒改的件一个字都不写，已有的那份原样")
+        self.assertFalse((self.dir / "已有.docx.part").exists())
 
 
 class Metadata(FillCase):
     def test_metadata_is_cleared_on_the_way_out(self):
-        """官方模板原件带作者与上次打印时间；出件这一步照现有规则清掉（通用裁定台账 #10）。"""
+        """官方模板原件带作者与上次打印时间；apply 收尾无条件清掉，这是施加的构造、不是一条检查（ADR-0024）。"""
         core = read_xml(self.tpl, "docProps/core.xml")
         self.assertTrue((core.find(support.DC + "creator").text or "").strip(), "模板原件本来有作者")
         r = self.ok([{"op": "fill", "at": "p2#1", "text": "某"}], "元数据.docx")
-        out = support.out_path(r)
-        core = read_xml(out, "docProps/core.xml")
-        self.assertFalse((core.find(support.DC + "creator").text or "").strip())
-        self.assertFalse((core.find(support.CP + "lastModifiedBy").text or "").strip())
-        self.assertIsNone(core.find(support.CP + "lastPrinted"))
+        self.assertEqual(support.metadata_leftovers(support.out_path(r)), [])
 
 
 class TempOutput(FillCase):

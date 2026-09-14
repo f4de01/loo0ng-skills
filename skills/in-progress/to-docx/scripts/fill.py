@@ -8,8 +8,9 @@
   list   把正文打成清单：正文里全部 w:p 按文档顺序编 p0、p1…（单元格里的段落也在序列里，行前标表、行、格），
          一段里的槽按占位正则从左到右编 #1、#2…，清单里写成 ⟦1 XX年X月X日⟧；已高亮的区间写成 ⟪…⟫；
          「（注：…）」开头的段前标 [说明]。--plain 出同一份正文的纯文本（不带任何标记），指南整读用它。
-  apply  施加差量，写出一件新的 DOCX（不动输入那件）。改动一律落到「段落里的字符区间」上，不落到 run 序号上：
-         占位在官方模板里大多横跨 run。施加完后没被填也没高亮的槽由代码一律加黄，模型不必逐个写。
+  apply  施加差量，写出一件 DOCX。改动一律落到「段落里的字符区间」上，不落到 run 序号上：占位在官方模板里
+         大多横跨 run。施加完后没被填也没高亮的槽由代码一律加黄，模型不必逐个写；元数据收尾无条件清掉。
+         --out 可直接写 文书/ 下的路径并覆盖（重出覆盖同一份，载体与产物可以是同一路径）；不给就写临时位置。
 
 差量的形状（一个 JSON 数组，一条一个改动）：
 
@@ -20,11 +21,15 @@
    {"op":"highlight","at":"p3","text":"没把握的那句"},
    {"op":"unhighlight","at":"p7"}]
 
-  fill 只认槽号（p2#1）；replace 按原文换，`old` 在那一段里须唯一；delete 删整段；highlight / unhighlight
-  可写槽号、可写 text 指一段原文、都不写则整段。同一段里的改动按区间从后往前施加，偏移互不影响。
+  fill 只认槽号（p2#1），text 为空串按「没填」处理（槽留原占位、由收尾留黄，不删 run、不拒）；replace 按原文换，
+  `old` 在那一段里须唯一，new 为空串就是把那一处删掉（条件块取舍）；delete 删整段，单元格里唯一的段、带 sectPr
+  的段、正文最后一张表之后仅剩的末段这三种改成清空（删了会让表直接接 sectPr 或单元格空掉，Word 会报修复）；
+  highlight / unhighlight 可写槽号、可写 text 指一段原文、都不写则整段。同一段里的改动按区间从后往前施加，
+  偏移互不影响。
 
-拒改的两种（退出码 1，一个字都不写）：差量本身不合法（槽号越界、原文不唯一、两处改动区间重叠）；槽所在
-run 含脚注引用、图片或域代码（切开或换字会把它们跟着复制或丢掉）。
+拒改的两种（退出码 1，一个字都不写，--out 指的已有文件原样不动）：差量本身不合法（槽号越界、原文不唯一、
+两处改动区间重叠）；槽所在 run 含脚注引用、图片或域代码（切开或换字会把它们跟着复制或丢掉）。这是确定性规则的
+第二类（被检查的一方是模型自己，ADR-0024）；文书合不合格是判断，归模型与律师的眼睛，这里不查。
 
 用哪个解释器归 agent（ADR-0018）：约束的是后端版本而不是哪一个 python，装法与四条约束见 SKILL.md 的
 「跑得动脚本的环境」。版本对不上照常出件，只在回显里报出来。
@@ -63,8 +68,6 @@ HL_L, HL_R = "⟪", "⟫"          # 清单里已高亮的区间
 
 # 占位的形状。顺序即优先级（先匹配到的赢），所以长的写在前：不然「XX年X月X日」会被「XX」先吃掉一截。
 # **形状可加**：律师自己的空白模板换一套占位习惯时，往这张表里加一行；只对一次调用临时加则用 --slot-pattern。
-# 门禁那个 CLI 自持一份逐字相同的表（两个 CLI 互不 import），tests/to-docx 有一条断言守着两份在 19 件
-# 官方模板上给出同一组槽。
 SLOT_SHAPES = (
     ("日期", r"X+年X+月X*日?"),
     ("案号年份", r"（20X{1,2}）"),
@@ -209,12 +212,26 @@ def replace_range(p, start: int, end: int, new_text: Optional[str], highlight: O
             _set_hl(r, highlight)
 
 
+def _table_would_meet_sectpr(p) -> bool:
+    """删了这一段，正文最后一张表会不会直接接上 sectPr：往前数第一个段或表是表、往后再没有段或表。
+    书签、校对标记这类夹在中间的兄弟不算数。Word 打开那样的件会报修复（2.0 推断的风险，ADR-0024 搬进施加构造）。"""
+    if p.getparent().tag != qn("w:body"):
+        return False
+    blocks = (qn("w:p"), qn("w:tbl"))
+    prev = next((el for el in p.itersiblings(preceding=True) if el.tag in blocks), None)
+    if prev is None or prev.tag != qn("w:tbl"):
+        return False
+    return not any(el.tag in blocks for el in p.itersiblings())
+
+
 def _delete_paragraph(p) -> str:
-    """删整段。单元格里最后一段不能删（tc 至少要有一个 p），带 sectPr 的段不能删：这两种改成清空文字。"""
+    """删整段。三种不能删、改成清空文字：单元格里最后一段（tc 至少要有一个 p）、带 sectPr 的段、正文最后一张表
+    之后仅剩的末段（表直接接 sectPr）。"""
     ppr = p.find(qn("w:pPr"))
     parent = p.getparent()
     keep = (ppr is not None and ppr.find(qn("w:sectPr")) is not None) or \
-           (parent.tag == qn("w:tc") and len(parent.findall(qn("w:p"))) == 1)
+           (parent.tag == qn("w:tc") and len(parent.findall(qn("w:p"))) == 1) or \
+           _table_would_meet_sectpr(p)
     if keep:
         for r in list(p.iter(qn("w:r"))):
             r.getparent().remove(r)
@@ -281,11 +298,12 @@ def _parse_at(at: str) -> Tuple[int, Optional[int]]:
     return int(m.group(1)), (int(m.group(2)) if m.group(2) else None)
 
 
-def _planned(idx: int, p, plist: List[dict], pattern: "re.Pattern") -> List[Tuple[int, int, Optional[str], Optional[bool], str]]:
-    """把一段里的几条改动算成字符区间；一处都不施加，只算与查。"""
+def _planned(idx: int, p, plist: List[dict], pattern: "re.Pattern") -> Tuple[List[Tuple[int, int, Optional[str], Optional[bool], str]], List[str]]:
+    """把一段里的几条改动算成字符区间；一处都不施加，只算与查。回 (要施加的区间, 按没填处理的那几条的日志)。"""
     text = text_of(p)
     sl = slots(p, pattern)
     planned = []
+    skipped = []  # type: List[str]
     for op in plist:
         kind = op["op"]
         _, n = _parse_at(op["at"])
@@ -312,6 +330,10 @@ def _planned(idx: int, p, plist: List[dict], pattern: "re.Pattern") -> List[Tupl
             new = op.get("text")
             if new is None:
                 raise Rejected("p%d#%d 的 fill 缺 text" % (idx, n))
+            if new == "":
+                # 空串不是一个值：按「没填」处理，槽留原占位、由收尾留黄。不拒：拒改是内容检查，模型会学着删槽过检。
+                skipped.append("fill %s「%s」空串：按没填处理，槽留原占位" % (op["at"], old))
+                continue
         elif kind == "replace":
             new = op.get("new")
             if new is None:
@@ -326,14 +348,15 @@ def _planned(idx: int, p, plist: List[dict], pattern: "re.Pattern") -> List[Tupl
     for a in range(len(planned) - 1):
         if planned[a + 1][1] > planned[a][0]:
             raise Rejected("p%d 的两处改动区间重叠" % idx)
-    return planned
+    return planned, skipped
 
 
 def apply(doc, ops: List[dict], highlight_rest: bool = True,
           pattern: "re.Pattern" = PLACEHOLDER) -> Tuple[List[int], List[str], List[str]]:
     """施加差量，回 (改动过的段落号, 逐条日志, 留黄日志)。
 
-    段落号按**施加之后**的文档重新算：删了段，后面的段号整体前移，而门禁查的是写出来那件里的段。
+    段落号按**施加之后**的文档重新算：删了段，后面的段号整体前移，模型抄进审查报告的是写出来那件里的段。
+    按没填处理的 fill 不算改动，那一段没有别的改动就不进改动段。
     """
     ps = paragraphs(doc)
     by_para = {}   # type: Dict[int, List[dict]]
@@ -354,19 +377,21 @@ def apply(doc, ops: List[dict], highlight_rest: bool = True,
     # 先整篇算完、查完，再动第一处：拒改的件一个字都不改（fail-closed）
     plans = []
     for idx in sorted(by_para):
-        planned = _planned(idx, ps[idx], by_para[idx], pattern)
+        planned, skipped = _planned(idx, ps[idx], by_para[idx], pattern)
         for s, e, _, _, _ in planned:
             _guard(ps[idx], s, e, "p%d" % idx)
-        plans.append((idx, planned))
+        plans.append((idx, planned, skipped))
 
     log = []      # type: List[str]
     changed = []  # type: list
-    for idx, planned in plans:
+    for idx, planned, skipped in plans:
         p = ps[idx]
+        log.extend(skipped)
         for s, e, new, hl, note in planned:
             replace_range(p, s, e, new, hl)
             log.append(note)
-        changed.append(p)
+        if planned:
+            changed.append(p)
     for idx in sorted(set(deletes), reverse=True):
         p = ps[idx]
         head = text_of(p)[:20]
@@ -394,7 +419,8 @@ def apply(doc, ops: List[dict], highlight_rest: bool = True,
 # ---------------------------------------------------------------- 收尾：元数据
 
 def clear_metadata(doc) -> None:
-    """通用裁定台账 #10：作者与最后修改者置空、修订号置 1、删上次打印时间、创建与修改时间置为本次生成时间。"""
+    """收尾无条件清元数据（2.0 的真实事故，落进确定性规则第一类：施加的构造，不是一条检查，ADR-0024）：
+    作者与最后修改者置空、修订号置 1、删上次打印时间、创建与修改时间置为本次生成时间。"""
     cp = doc.core_properties
     now = _dt.datetime.now(_dt.timezone.utc)
     cp.author = ""
@@ -497,9 +523,10 @@ def build_parser() -> argparse.ArgumentParser:
     lst.add_argument("--slot-pattern", action="append", default=[], help="临时多认一种占位形状（正则，可重复）")
 
     app = sub.add_parser("apply", help="按差量施加，写出一件新的 DOCX")
-    app.add_argument("docx", help="载体：空白模板或这个节点当前的文书（.docx），本身不动")
+    app.add_argument("docx", help="载体：空白模板或这个节点当前的文书（.docx）；只有 --out 指到它时才被覆盖")
     app.add_argument("--diff", required=True, help="差量 JSON 的路径；写 - 从标准输入读")
-    app.add_argument("--out", help="输出路径；不给则写到 %%TEMP%%/to-docx/ 下并打印路径。已存在的文件不覆盖")
+    app.add_argument("--out", help="输出路径，可直接写 文书/ 下的路径，已存在就覆盖（重出覆盖同一份）；"
+                                   "不给则写到 %%TEMP%%/to-docx/ 下并打印路径")
     app.add_argument("--no-highlight-rest", action="store_true",
                      help="不给剩下的槽自动加黄（默认自动加，模型不必逐个写）")
     app.add_argument("--json", action="store_true", help="结果按 JSON 打印")
@@ -519,14 +546,13 @@ def cmd_apply(args) -> int:
     doc = open_docx(src)
     ops = read_diff(args.diff)
     out = pathlib.Path(args.out) if args.out else default_out_path(src)
-    if out.exists():
-        raise Rejected("输出已存在，不覆盖：%s" % out)
+    # 先整篇施加完、清完元数据，再落盘：拒改在这一行之前抛出，--out 指的已有文件（含载体本身）一个字都不动。
     changed, log, rest = apply(doc, ops, not args.no_highlight_rest, compile_slots(args.slot_pattern))
     clear_metadata(doc)
     out.parent.mkdir(parents=True, exist_ok=True)
     part = out.with_name(out.name + ".part")
     doc.save(str(part))
-    os.replace(str(part), str(out))
+    os.replace(str(part), str(out))   # 写完整件再换名：覆盖同一份时不会留下半成品
     if args.json:
         print(json.dumps({"产物": str(out), "出件环境": environment_line(), "改动段": changed,
                           "日志": log, "留黄": rest}, ensure_ascii=False, indent=2))
