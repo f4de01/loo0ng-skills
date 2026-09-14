@@ -108,9 +108,9 @@ class SlotShapes(FillCase):
         赞 = "〈本案金额〉"
         ops = [{"op": "replace", "at": "p10", "old": "特此报告", "new": "特此报告" + 赞}]
         out = self.ok(ops, "加形状.docx")
-        默认 = listing(out.out.splitlines()[0].split(" ", 1)[1])
+        默认 = listing(support.out_path(out))
         self.assertNotIn("⟦1 〈本案金额〉⟧", 默认.out, "默认形状不该认得这种占位")
-        加了 = listing(out.out.splitlines()[0].split(" ", 1)[1], "--slot-pattern", r"〈[^〉]*〉")
+        加了 = listing(support.out_path(out), "--slot-pattern", r"〈[^〉]*〉")
         self.assertIn("〈本案金额〉⟧", 加了.out, "--slot-pattern 加的形状要进清单：%r" % 加了.out[:300])
 
     def test_the_two_clis_carry_the_same_table(self):
@@ -129,13 +129,13 @@ class ApplyFive(FillCase):
 
     def test_fill_puts_the_text_in_the_slot(self):
         r = self.ok([{"op": "fill", "at": "p2#1", "text": "某年某月某日"}])
-        out = pathlib.Path(r.out.splitlines()[0].split(" ", 1)[1])
+        out = support.out_path(r)
         self.assertIn("于某年某月某日作出", self.文字(out, 2))
         self.assertEqual(r.changed, [2])
 
     def test_fill_with_highlight_keeps_the_new_text_yellow(self):
         r = self.ok([{"op": "fill", "at": "p2#1", "text": "某年某月某日", "highlight": True}])
-        out = pathlib.Path(r.out.splitlines()[0].split(" ", 1)[1])
+        out = support.out_path(r)
         p = 填.paragraphs(support.Document(str(out)))[2]
         text = 填.text_of(p)
         亮 = [text[a:b] for a, b in 填.highlight_ranges(p)]
@@ -143,7 +143,7 @@ class ApplyFive(FillCase):
 
     def test_replace_needs_the_old_text_to_be_unique(self):
         r = self.ok([{"op": "replace", "at": "p2", "old": "XX公司（债权人名称）", "new": "某甲公司"}])
-        out = pathlib.Path(r.out.splitlines()[0].split(" ", 1)[1])
+        out = support.out_path(r)
         self.assertIn("裁定受理某甲公司申请", self.文字(out, 2))
         bad = self.apply([{"op": "replace", "at": "p2", "old": "XX", "new": "某"}], "不唯一.docx")
         self.assertEqual(bad.code, 1, bad)
@@ -152,7 +152,7 @@ class ApplyFive(FillCase):
     def test_delete_removes_the_paragraph(self):
         before = support.paragraph_count(self.tpl)
         r = self.ok([{"op": "delete", "at": "p14"}])
-        out = pathlib.Path(r.out.splitlines()[0].split(" ", 1)[1])
+        out = support.out_path(r)
         self.assertEqual(support.paragraph_count(out), before - 1)
         self.assertNotIn("（盖章）", 填.plain_text(support.Document(str(out))))
 
@@ -162,13 +162,13 @@ class ApplyFive(FillCase):
         before = support.paragraph_count(self.tpl)
         r = self.ok([{"op": "delete", "at": "p%d" % idx}], "清空.docx")
         self.assertIn("清空（不能整段删）", r.out)
-        out = pathlib.Path(r.out.splitlines()[0].split(" ", 1)[1])
+        out = support.out_path(r)
         self.assertEqual(support.paragraph_count(out), before, "段数不变，只是那一段没字了")
         self.assertEqual(self.文字(out, idx), "")
 
     def test_highlight_and_unhighlight(self):
         r = self.ok([{"op": "highlight", "at": "p10", "text": "特此报告"}])
-        out = pathlib.Path(r.out.splitlines()[0].split(" ", 1)[1])
+        out = support.out_path(r)
         p = 填.paragraphs(support.Document(str(out)))[10]
         self.assertEqual([填.text_of(p)[a:b] for a, b in 填.highlight_ranges(p)], ["特此报告"])
 
@@ -184,7 +184,7 @@ class ApplyFive(FillCase):
                {"op": "fill", "at": "p2#11", "text": "某乙"},
                {"op": "replace", "at": "p2", "old": "XX公司（债权人名称）", "new": "某甲公司"}]
         r = self.ok(ops, "多处.docx")
-        text = self.文字(pathlib.Path(r.out.splitlines()[0].split(" ", 1)[1]), 2)
+        text = self.文字(support.out_path(r), 2)
         self.assertIn("于某年某月某日作出", text)
         self.assertIn("苏0591破一号裁定书", text)
         self.assertIn("裁定受理某甲公司申请", text)
@@ -194,7 +194,7 @@ class ApplyFive(FillCase):
 class HighlightRest(FillCase):
     def test_code_highlights_every_slot_nobody_touched(self):
         r = self.ok([{"op": "fill", "at": "p2#1", "text": "某年某月某日"}])
-        out = pathlib.Path(r.out.splitlines()[0].split(" ", 1)[1])
+        out = support.out_path(r)
         self.assertIn("代码留黄", r.out)
         doc = support.Document(str(out))
         for idx, p in enumerate(填.paragraphs(doc)):
@@ -205,7 +205,7 @@ class HighlightRest(FillCase):
 
     def test_filled_slots_are_not_highlighted_again(self):
         r = self.ok(fill_all_ops(self.tpl), "全填.docx")
-        out = pathlib.Path(r.out.splitlines()[0].split(" ", 1)[1])
+        out = support.out_path(r)
         self.assertIn("代码留黄 0 处", r.out)
         doc = support.Document(str(out))
         for p in 填.paragraphs(doc):
@@ -213,7 +213,7 @@ class HighlightRest(FillCase):
 
     def test_no_highlight_rest_leaves_them_alone(self):
         r = self.ok([{"op": "fill", "at": "p2#1", "text": "某年某月某日"}], "不留黄.docx", None, "--no-highlight-rest")
-        out = pathlib.Path(r.out.splitlines()[0].split(" ", 1)[1])
+        out = support.out_path(r)
         self.assertIn("代码留黄 0 处", r.out)
         p = 填.paragraphs(support.Document(str(out)))[2]
         self.assertEqual(填.highlight_ranges(p), [], "说了不留黄就一处都不加")
@@ -224,7 +224,7 @@ class ChangedParagraphs(FillCase):
         """删了段，后面的段号整体前移；回显的改动段号必须是写出来那件里的，门禁按它去查。"""
         r = self.ok([{"op": "delete", "at": "p10"}, {"op": "fill", "at": "p13#1", "text": "某乙"}], "飘.docx")
         self.assertEqual(r.changed, [12], r.out)
-        out = pathlib.Path(r.out.splitlines()[0].split(" ", 1)[1])
+        out = support.out_path(r)
         self.assertIn("某乙", 填.text_of(填.paragraphs(support.Document(str(out)))[12]))
 
     def test_only_the_paragraphs_the_model_touched_are_reported(self):
@@ -292,6 +292,13 @@ class Refusals(FillCase):
                 r = self.assert_refused([{"op": "fill", "at": "p2#2", "text": "某"}], 人话, "拒-%s.docx" % 人话, bad)
                 self.assertIn("拒改", r.err)
 
+    def test_emptying_a_spot_and_highlighting_it_is_refused(self):
+        """换成空串是把那一处删掉，删掉的东西没法标黄：与其把 highlight 悄悄吞掉，不如拒掉。"""
+        self.assert_refused([{"op": "replace", "at": "p3", "old": "（如有）", "new": "", "highlight": True}],
+                            "没有东西可标")
+        r = self.ok([{"op": "replace", "at": "p3", "old": "（如有）", "new": ""}], "换成空.docx")
+        self.assertNotIn("（如有）", 填.text_of(填.paragraphs(support.Document(str(support.out_path(r))))[3]))
+
     def test_output_is_never_overwritten(self):
         r = self.ok([{"op": "fill", "at": "p2#1", "text": "某"}], "占位.docx")
         self.assertEqual(r.code, 0)
@@ -306,7 +313,7 @@ class Metadata(FillCase):
         core = read_xml(self.tpl, "docProps/core.xml")
         self.assertTrue((core.find(support.DC + "creator").text or "").strip(), "模板原件本来有作者")
         r = self.ok([{"op": "fill", "at": "p2#1", "text": "某"}], "元数据.docx")
-        out = pathlib.Path(r.out.splitlines()[0].split(" ", 1)[1])
+        out = support.out_path(r)
         core = read_xml(out, "docProps/core.xml")
         self.assertFalse((core.find(support.DC + "creator").text or "").strip())
         self.assertFalse((core.find(support.CP + "lastModifiedBy").text or "").strip())
@@ -319,7 +326,7 @@ class TempOutput(FillCase):
         diff.write_text(json.dumps([{"op": "fill", "at": "p2#1", "text": "某"}], ensure_ascii=False), encoding="utf-8")
         r = support.run(support.FILL, "apply", self.tpl, "--diff", diff)
         self.assertEqual(r.code, 0, r)
-        out = pathlib.Path(r.out.splitlines()[0].split(" ", 1)[1])
+        out = support.out_path(r)
         self.addCleanup(lambda: out.exists() and out.unlink())
         self.assertTrue(out.is_file(), r.out)
         self.assertEqual(out.parent.name, "to-docx", "工作区里不建暂存目录，中间件落在 %TEMP%/to-docx/")

@@ -82,6 +82,13 @@ def apply(src: pathlib.Path, ops, out: pathlib.Path, *extra) -> Run:
     return r
 
 
+def out_path(r: Run) -> pathlib.Path:
+    """apply 回显第一行「已写出 <路径>」里的那个路径。"""
+    first = r.out.splitlines()[0]
+    assert first.startswith("已写出 "), "第一行不是产物路径：%r" % r.out
+    return pathlib.Path(first.split(" ", 1)[1])
+
+
 def changed_of(stdout: str):
     """回显里「改动段：2,3,13」那一行，解析成 [2, 3, 13]；「无」是空表。"""
     for line in stdout.splitlines():

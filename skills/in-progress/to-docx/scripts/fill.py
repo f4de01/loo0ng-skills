@@ -318,6 +318,9 @@ def _planned(idx: int, p, plist: List[dict], pattern: "re.Pattern") -> List[Tupl
                 raise Rejected("p%d 的 replace 缺 new" % idx)
         else:
             new = None
+        if new == "" and hl:
+            # 换成空串就是把那一处删掉，删掉的东西没法标黄。与其把 highlight 悄悄吞掉，不如拒掉整条差量。
+            raise Rejected("p%d 的 %s 把那一处换成空串又要标黄：删掉的东西没有东西可标" % (idx, kind))
         planned.append((s, e, new, hl, "%s %s「%s」→「%s」" % (kind, op["at"], old, new if new is not None else "")))
     planned.sort(key=lambda x: x[0], reverse=True)
     for a in range(len(planned) - 1):

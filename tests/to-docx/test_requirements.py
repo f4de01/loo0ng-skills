@@ -95,7 +95,7 @@ class FillerReportsTest(unittest.TestCase):
                              encoding="utf-8")
         self.out = self.dir / "出件.docx"
 
-    def convert(self, env=None):
+    def 施加一次(self, env=None):
         if self.out.exists():
             self.out.unlink()
         r = subprocess.run(
@@ -105,7 +105,7 @@ class FillerReportsTest(unittest.TestCase):
         return support.Run(r.returncode, r.stdout, r.stderr)
 
     def test_environment_line_is_always_printed_right_after_the_written_path(self):
-        r = self.convert()
+        r = self.施加一次()
         self.assertEqual(r.code, 0, r)
         lines = r.out.splitlines()
         self.assertTrue(lines[0].startswith("已写出 "), r.out)
@@ -128,7 +128,7 @@ class FillerReportsTest(unittest.TestCase):
         # 追加而不是覆盖：在 3.9 那条跑道上 docx 本身就是经 PYTHONPATH 给的，覆盖掉它这一件会变成
         # 「import docx 失败」而不是「版本对不上」，测的就不是它要测的东西了。
         env["PYTHONPATH"] = os.pathsep.join([str(shim)] + ([env["PYTHONPATH"]] if env.get("PYTHONPATH") else []))
-        r = self.convert(env=env)
+        r = self.施加一次(env=env)
         self.assertEqual(r.code, 0, "版本对不上照常出件，退出码不因此变成非零：%r" % r)
         self.assertTrue(self.out.is_file())
         line = env_line(r.out)
