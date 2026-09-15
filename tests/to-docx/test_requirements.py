@@ -28,7 +28,7 @@ import unittest
 import support
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-SKILL = REPO / "skills" / "in-progress" / "to-docx"
+SKILL = REPO / "skills" / "productivity" / "to-docx"
 MANIFEST = SKILL / "requirements.txt"
 # 散文里每一份版本号副本都归这条断言管：钉子的价值全在「没有第二个会静默掉队的数」，多写一处就多一个洞。
 # ADR 按编号 glob，不写死那个中文长文件名：ADR 改名时该红在断言上，不该红在读文件上。

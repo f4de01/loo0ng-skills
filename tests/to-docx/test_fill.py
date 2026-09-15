@@ -1,4 +1,4 @@
-"""skills/in-progress/to-docx/scripts/fill.py 的脚本层单测（unittest）。不需要 Word。
+"""skills/productivity/to-docx/scripts/fill.py 的脚本层单测（unittest）。不需要 Word。
 
 运行：python -m unittest tests/to-docx/test_fill.py
 

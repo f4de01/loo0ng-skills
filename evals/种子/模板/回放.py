@@ -1,7 +1,7 @@
 """种子「模板」：在种子「图引擎」的工作区之上，把一件官方模板放进 参考/模板/，供打清单的用例。
 
 用法：python 回放.py <工作区>    （由 scripts/skill-eval.py 调，也可手跑）
-官方模板原件住出厂预设图 skills/in-progress/domain/assets/预设图/破产/模板/，原位读、拷一件进工作区。
+官方模板原件住出厂预设图 skills/engineering/domain/assets/预设图/破产/模板/，原位读、拷一件进工作区。
 工作区里没有任何案件内容。
 """
 import importlib.util

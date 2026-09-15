@@ -1,6 +1,6 @@
 """tests/to-docx 的公用件：定位仓库、模板目录与填模板 CLI，跑子进程，读 DOCX 里的 XML。
 
-模板目录：官方模板原件住出厂预设图 skills/in-progress/domain/assets/预设图/破产/模板/（ADR-0023，#29）。找不到就直接报错，不 skip。
+模板目录：官方模板原件住出厂预设图 skills/engineering/domain/assets/预设图/破产/模板/（ADR-0023，#29）。找不到就直接报错，不 skip。
 
 只有一个 CLI（#13 起，#22 之后）：`fill.py` 打清单与施加差量（只依赖 python-docx）。版式门禁按 ADR-0024 整件退场，
 这套测试不起 Word、任何机器上必须全绿、不许 skip。
@@ -18,7 +18,7 @@ import zipfile
 import xml.etree.ElementTree as ET
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-SCRIPTS = REPO / "skills" / "in-progress" / "to-docx" / "scripts"
+SCRIPTS = REPO / "skills" / "productivity" / "to-docx" / "scripts"
 FILL = SCRIPTS / "fill.py"
 FIXTURES = pathlib.Path(__file__).resolve().parent / "fixtures"
 PROBE_TEMPLATE = "1-2.关于管理人印章备案的报告.docx"
@@ -35,7 +35,7 @@ from docx.oxml.ns import qn  # noqa: E402
 
 
 def templates_dir() -> pathlib.Path:
-    templates = REPO / "skills" / "in-progress" / "domain" / "assets" / "预设图" / "破产" / "模板"
+    templates = REPO / "skills" / "engineering" / "domain" / "assets" / "预设图" / "破产" / "模板"
     if (templates / PROBE_TEMPLATE).is_file():
         return templates
     raise AssertionError("找不到官方模板目录 %s" % templates)

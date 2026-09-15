@@ -23,7 +23,7 @@ import pathlib
 import zipfile
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-引擎脚本 = REPO / "skills" / "in-progress" / "graph" / "scripts" / "graph.py"
+引擎脚本 = REPO / "skills" / "engineering" / "graph" / "scripts" / "graph.py"
 
 _spec = importlib.util.spec_from_file_location("loo0ng_graph_for_tests", 引擎脚本)
 引擎 = importlib.util.module_from_spec(_spec)

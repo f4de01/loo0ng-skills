@@ -28,7 +28,7 @@ import 工作区 as 工  # noqa: E402
 
 graph = 工.引擎
 SCRIPT = 工.引擎脚本
-真包 = REPO / "skills" / "in-progress" / "domain" / "assets" / "预设图"
+真包 = REPO / "skills" / "engineering" / "domain" / "assets" / "预设图"
 
 
 def cli(*argv):

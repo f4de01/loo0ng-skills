@@ -1,4 +1,4 @@
-"""skills/in-progress/graph/scripts/graph.py 的起手与校验面（unittest，标准库零依赖）。
+"""skills/engineering/graph/scripts/graph.py 的起手与校验面（unittest，标准库零依赖）。
 
 运行：python -m unittest discover -s tests/graph -p 'test_*.py' -t .
 

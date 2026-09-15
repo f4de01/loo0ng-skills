@@ -35,7 +35,7 @@ OFFICE_EXTS = (".docx", ".xlsx", ".pptx", ".docm", ".xlsm", ".pptm", ".dotx", ".
 # main 上守的两处路径（ADR-0014，路径按 ADR-0023 换成预设图的形状）。出厂预设图与案件图同格式
 # （JSON），住在 domain 的 assets/预设图/ 下；同目录下的官方模板原件与指引手册按定义不含案件内容，不守。
 GUARDED_PREFIXES = ("knowledge/",)
-PRESET_GRAPH_PREFIX = "skills/in-progress/domain/assets/预设图/"
+PRESET_GRAPH_PREFIX = "skills/engineering/domain/assets/预设图/"
 PRESET_GRAPH_SUFFIX = ".json"
 GUARDED_BRANCH = "main"
 
