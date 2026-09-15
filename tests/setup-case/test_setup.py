@@ -149,13 +149,27 @@ class 目录形状(Base):
         self.assertEqual(r.code, 0, r)
         self.assertIn("一件模板没拷", r.out)
 
-    def test_参考模板下已有同名的不覆盖(self):
+    def test_原有的参考目录整个进待归档模板照拷(self):
+        """律师原本就有一个 参考/ 时它先整个进待归档，格是新建的空格，模板照样拷满。"""
         self.造个人预设图()
+        self.丢一件("参考/模板/播种登记.docx", "律师自己那一份")
+        r = self.cli("init", "--preset", "菜园", "--owner", "个人")
+        self.assertEqual(r.code, 0, r)
+        self.assertEqual((self.ws / "待归档" / "参考" / "模板" / "播种登记.docx")
+                         .read_text(encoding="utf-8"), "律师自己那一份")
+        self.assertEqual(sorted(p.name for p in (self.ws / "参考" / "模板").iterdir()),
+                         ["播种登记.docx", "施肥记录.docx"])
+
+    def test_参考目录挪不动时模板不覆盖同名(self):
+        """待归档里已经有同名的 参考/，根上那个就留在原处；它的 模板/ 里同名那件不被覆盖。"""
+        self.造个人预设图()
+        (self.ws / "待归档" / "参考").mkdir(parents=True)
         自己的 = self.丢一件("参考/模板/播种登记.docx", "律师自己那一份")
         r = self.cli("init", "--preset", "菜园", "--owner", "个人")
         self.assertEqual(r.code, 0, r)
         self.assertEqual(自己的.read_text(encoding="utf-8"), "律师自己那一份")
         self.assertIn("没覆盖", r.out)
+        self.assertTrue((self.ws / "参考" / "模板" / "施肥记录.docx").is_file(), "其余照拷")
 
 
 # ---------------------------------------------------------------- 目录非空与待归档
@@ -199,6 +213,25 @@ class 目录非空(Base):
         r = self.cli("init")
         self.assertEqual(r.code, 0, r)
         self.assertTrue((self.ws / "归档索引.md").is_file())
+
+    def test_原有的同名目录也进待归档(self):
+        """需求单：目录里已有的文件一律视为待归档。律师原本就有一个叫 材料/ 或 文书/ 的
+        目录时也不例外，不然建格一跳过，那些文件律师就再也看不见了。"""
+        self.丢一件("材料/律师自己放的.txt")
+        self.丢一件("文书/旧文书.md")
+        r = self.cli("init")
+        self.assertEqual(r.code, 0, r)
+        self.assertTrue((self.ws / "待归档" / "材料" / "律师自己放的.txt").is_file())
+        self.assertTrue((self.ws / "待归档" / "文书" / "旧文书.md").is_file())
+        self.assertEqual(list((self.ws / "材料").iterdir()), [], "格该是新建的空格")
+        self.assertEqual(list((self.ws / "文书").iterdir()), [])
+
+    def test_原有的待归档留在原处(self):
+        self.丢一件("待归档/合同.pdf")
+        r = self.cli("init")
+        self.assertEqual(r.code, 0, r)
+        self.assertTrue((self.ws / "待归档" / "合同.pdf").is_file())
+        self.assertFalse((self.ws / "待归档" / "待归档").exists(), "待归档不该套进自己里")
 
 
 # ---------------------------------------------------------------- 指针块
@@ -303,8 +336,7 @@ class 既有成品登记(Base):
         self.成品 = self.丢一件("待归档/旧的下种记录.md", "起手前就写好的那一份")
 
     def register(self, *argv):
-        return self.cli("register", "--node", "下种", "--file", "待归档/旧的下种记录.md",
-                        "--words", "第 3 条按建议登记", *argv)
+        return self.cli("register", "--node", "下种", "--file", "待归档/旧的下种记录.md", *argv)
 
     def test_登记为已生成来源律师(self):
         r = self.register()
@@ -321,14 +353,13 @@ class 既有成品登记(Base):
         self.assertFalse(self.成品.exists(), "原处该已经没有了")
         self.assertEqual(self.node("下种")["条目"][0]["文书"], "文书/播种/下种/下种.md")
 
-    def test_审查报告只有一行且说了律师自写(self):
+    def test_审查报告固定一行律师自写(self):
+        """CONTEXT.md「审查报告」与 skill "to-docx" 的 references/审查报告.md：律师兜底的那份
+        只写一行「律师自写」，一个字不多；重出读到它就知道当前文书里的黄全是律师自己加的。"""
         self.register()
         报告 = self.ws / "文书" / "播种" / "下种" / "下种-审查报告.md"
         self.assertTrue(报告.is_file())
-        行 = [line for line in 报告.read_text(encoding="utf-8").splitlines() if line.strip()]
-        self.assertEqual(len(行), 1, 行)
-        self.assertTrue(行[0].startswith("律师自写"), 行[0])
-        self.assertIn("第 3 条按建议登记", 行[0])
+        self.assertEqual(报告.read_text(encoding="utf-8"), "律师自写\n")
         self.assertEqual(self.node("下种")["条目"][0]["审查报告"],
                          "文书/播种/下种/下种-审查报告.md")
 
@@ -339,26 +370,24 @@ class 既有成品登记(Base):
         self.assertEqual(动作, ["生成"], "起手只该留下这一条生成条目")
 
     def test_按节点id也登记得上(self):
-        r = self.cli("register", "--node", "n-2-2", "--file", "待归档/旧的下种记录.md",
-                     "--words", "按建议")
+        r = self.cli("register", "--node", "n-2-2", "--file", "待归档/旧的下种记录.md")
         self.assertEqual(r.code, 0, r)
         self.assertTrue((self.ws / "文书" / "播种" / "下种" / "下种.md").is_file())
 
     def test_图里没这个节点就拒(self):
-        r = self.cli("register", "--node", "没有这个节点", "--file", "待归档/旧的下种记录.md",
-                     "--words", "按建议")
+        r = self.cli("register", "--node", "没有这个节点", "--file", "待归档/旧的下种记录.md")
         self.assertEqual(r.code, 1, r)
         self.assertIn("图里没有节点", r.err)
         self.assertTrue(self.成品.is_file(), "拒了就一个字不动")
 
     def test_找不到文件就拒(self):
-        r = self.cli("register", "--node", "下种", "--file", "待归档/不存在.md", "--words", "按建议")
+        r = self.cli("register", "--node", "下种", "--file", "待归档/不存在.md")
         self.assertEqual(r.code, 1, r)
         self.assertIn("找不到", r.err)
 
     def test_越界路径就拒(self):
         for 越界 in ("../外面.md", "C:/绝对.md", "待归档\\反斜杠.md"):
-            r = self.cli("register", "--node", "下种", "--file", 越界, "--words", "按建议")
+            r = self.cli("register", "--node", "下种", "--file", 越界)
             self.assertEqual(r.code, 1, (越界, r))
             self.assertIn("--file", r.err)
 
@@ -386,7 +415,7 @@ class 既有成品登记(Base):
         空的 = self.tmp / "不是工作区"
         空的.mkdir()
         r = self.cli("register", "--node", "下种", "--file", "待归档/旧的下种记录.md",
-                     "--words", "按建议", workspace=空的)
+                     workspace=空的)
         self.assertEqual(r.code, 1, r)
         self.assertIn("先起手", r.err)
 

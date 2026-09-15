@@ -8,7 +8,7 @@
 用法：
   python setup.py init [--preset <名> --owner 出厂|个人]
                        [--workspace <目录>] [--engine <graph.py>] [--preset-cli <preset.py>]
-  python setup.py register --node <节点标题或 id> --file <工作区内相对路径> --words "<律师那句话>"
+  python setup.py register --node <节点标题或 id> --file <工作区内相对路径>
                        [--workspace <目录>] [--engine <graph.py>]
 
 init 的前置只有一条：工作区里没有 图.json（起手一案一次，ADR-0007）。**目录非空不拒**：目录里
@@ -58,14 +58,15 @@ PRESET_CLI_RELATIVE = pathlib.Path("..") / ".." / "domain" / "scripts" / "preset
 REFERENCES = pathlib.Path(__file__).resolve().parent.parent / "references"
 AGENTS_TEMPLATE = REFERENCES / "工作区AGENTS.md"
 
-# 审查报告只有这一行（skill "to-docx" 的 references/审查报告.md「律师自写的」）：没有施加、
-# 没有高亮清单，下次重出读到它就知道当前文书里的黄全是律师自己加的，一处不动。
-REVIEW_LINE = "律师自写，未跑门禁。起手清单登记，律师原话「%s」。\n"
+# 审查报告只有这一行，一个字不多（CONTEXT.md「审查报告」，skill "to-docx" 的
+# references/审查报告.md「律师自写的」）：没有施加、没有高亮清单，下次重出读到它就知道
+# 当前文书里的黄全是律师自己加的，一处不动。律师那句话不进这里：生成条目不存原话（引擎里
+# 只有确认条目存），起手清单那一句留在对话与收尾里。
+REVIEW_LINE = "律师自写\n"
 REVIEW_SUFFIX = "-审查报告.md"
 
 # 起手自己落的那几样不挪进待归档；点开头的（.git、.codex 之类）也不动。
 KEEP_AT_ROOT = {GRAPH_FILENAME, VIEW_MD, VIEW_JSON, ARCHIVE_INDEX, AGENTS_FILENAME, CLAUDE_FILENAME}
-CELL_TOPS = {cell.split("/")[0] for cell in CELLS}
 
 
 class Rejected(Exception):
@@ -80,10 +81,15 @@ def resolve_tool(given: Optional[str], relative: pathlib.Path, what: str, flag: 
     return tool
 
 
+def run_tool(tool: pathlib.Path, args: List[str]) -> Tuple[int, str, str]:
+    """跨 skill 一律这一条路：子进程调它的 CLI，回（退出码, stdout, stderr）。"""
+    r = subprocess.run([sys.executable, str(tool), *args], capture_output=True, text=True,
+                       encoding="utf-8", errors="replace")
+    return r.returncode, (r.stdout or "").strip(), (r.stderr or "").strip()
+
+
 def run_engine(engine: pathlib.Path, graph_path: pathlib.Path, args: List[str]) -> Tuple[int, str, str]:
-    r = subprocess.run([sys.executable, str(engine), "--graph", str(graph_path), *args],
-                       capture_output=True, text=True, encoding="utf-8", errors="replace")
-    return r.returncode, r.stdout.strip(), r.stderr.strip()
+    return run_tool(engine, ["--graph", str(graph_path), *args])
 
 
 def read_json(path: pathlib.Path) -> dict:
@@ -111,12 +117,10 @@ def resolve_preset(preset_cli: pathlib.Path, name: str, owner: str) -> Tuple[pat
     与调图引擎是同一个形状：两处两归属归它管，本脚本既不自己算路径，也不把路径记进工作区。
     它发生在落图与建格之前：resolve 拒了这里跟着拒，一格不建、一个字不写。回显原样带回去。
     """
-    r = subprocess.run([sys.executable, str(preset_cli), "resolve", "--name", name, "--owner", owner],
-                       capture_output=True, text=True, encoding="utf-8", errors="replace")
-    lines = [line for line in (r.stdout or "").splitlines() if line.strip()]
-    if r.returncode != 0:
-        raise Rejected("解析不到%s预设图「%s」，工作区一格没建、一个字没写：%s"
-                       % (owner, name, (r.stderr or r.stdout).strip()))
+    code, out, err = run_tool(preset_cli, ["resolve", "--name", name, "--owner", owner])
+    lines = [line for line in out.splitlines() if line.strip()]
+    if code != 0:
+        raise Rejected("解析不到%s预设图「%s」，工作区一格没建、一个字没写：%s" % (owner, name, err or out))
     if not lines:
         raise Rejected("preset.py resolve 该回一行绝对路径，什么都没回")
     directory = pathlib.Path(lines[0].strip()).resolve()
@@ -133,14 +137,18 @@ def make_cells(ws: pathlib.Path) -> None:
 def sweep_to_pending(ws: pathlib.Path) -> List[str]:
     """目录里原有的一律挪进 待归档/：起手不判它们是什么，判去向是归档的事（调 skill "filing"）。
 
-    不动三类：起手自己落的那几样（图、两份视图、归档索引、两份指针块）、目录形状那几格、
-    点开头的（.git、.codex 之类工具自己的东西）。待归档里已经有同名的就留在原处并报一句。
+    **在建格之前跑**：律师原本就有一个叫 材料/ 或 文书/ 的目录时，那也是他自己堆的东西，
+    要一样进待归档让归档判去向；建完格再扫就会把它们当成格跳过，律师从此看不见它们。
+
+    不动两类：起手自己落的那几样（图、两份视图、归档索引、两份指针块）、点开头的
+    （.git、.codex 之类工具自己的东西）。待归档里已经有同名的就留在原处并报一句。
     """
     pending = ws / PENDING
+    pending.mkdir(parents=True, exist_ok=True)
     moved, dotted, clashed = [], [], []
     for entry in sorted(ws.iterdir(), key=lambda p: p.name):
         name = entry.name
-        if name in KEEP_AT_ROOT or name in CELL_TOPS:
+        if name in KEEP_AT_ROOT or name == PENDING:
             continue
         if name.startswith("."):
             dotted.append(name)
@@ -161,13 +169,13 @@ def sweep_to_pending(ws: pathlib.Path) -> List[str]:
     return notes
 
 
-def copy_preset_templates(ws: pathlib.Path, preset_dir: pathlib.Path) -> Tuple[int, List[str]]:
+def copy_preset_templates(ws: pathlib.Path, preset_dir: pathlib.Path) -> List[str]:
     """预设图的 模板/ 整份拷进 参考/模板/：不改名、不覆盖、子目录相对路径原样（ADR-0024 第一类）。"""
     source = preset_dir / PRESET_TEMPLATES_DIRNAME
     target = ws / WORKSPACE_TEMPLATES
     if not source.is_dir():
-        return 0, ["预设图 %s 下没有 %s/，一件模板没拷：挂着模板的节点出件前要补"
-                   % (preset_dir.as_posix(), PRESET_TEMPLATES_DIRNAME)]
+        return ["预设图 %s 下没有 %s/，一件模板没拷：挂着模板的节点出件前要补"
+                % (preset_dir.as_posix(), PRESET_TEMPLATES_DIRNAME)]
     copied, skipped = 0, []
     for src in sorted(p for p in source.rglob("*") if p.is_file()):
         dst = target / src.relative_to(source)
@@ -181,7 +189,7 @@ def copy_preset_templates(ws: pathlib.Path, preset_dir: pathlib.Path) -> Tuple[i
     if skipped:
         notes.append("这 %d 件 %s/ 下已经有同名的，没覆盖：%s"
                      % (len(skipped), WORKSPACE_TEMPLATES.as_posix(), "、".join(skipped)))
-    return copied, notes
+    return notes
 
 
 def read_utf8(path: pathlib.Path) -> Optional[str]:
@@ -191,46 +199,32 @@ def read_utf8(path: pathlib.Path) -> Optional[str]:
         return None
 
 
+def put_beside(path: pathlib.Path, block: str, marker: str, at_end: bool) -> str:
+    """把一块字写进 path：没有那份文件就新建，有就按 at_end 追加在末尾或加在开头，
+    **原有内容一字不动**；已经有 marker 就一个字不写。回一句给律师看的话。"""
+    if not path.is_file():
+        path.write_text(block, encoding="utf-8")
+        return "已写 %s" % path.name
+    old = read_utf8(path)
+    if old is None:
+        return "%s 读不出（不是 UTF-8），没往里写：手工把下面这一块加进去。\n%s" % (path.name, block)
+    if marker in old:
+        return "%s 里已经有「%s」，没有再写一遍" % (path.name, marker.strip())
+    path.write_text(old.rstrip("\n") + "\n\n" + block if at_end else block + old.lstrip("\n"),
+                    encoding="utf-8")
+    return "已把这一块%s已有的 %s，原有内容一字未动" % ("追加到" if at_end else "加在", path.name)
+
+
 def write_pointer_block(ws: pathlib.Path, preset_label: str) -> List[str]:
     """指针块只记四项，一条路径都不记（ADR-0023）：包一升级绝对路径就死，路径每次按名当场解析。
 
     AGENTS.md 给 Codex 读，CLAUDE.md 一行引它给 Claude Code 读。目录里原本就有这两份的（Codex
-    建的项目常有），**追加在末尾，原有内容一字不动**：那是律师或 Codex 自己写的项目说明。
+    建的项目常有），那是律师或 Codex 自己写的项目说明，原文一字不动。
     块由起手那一问机械推出，不加确认点；之后没有任何 skill 往里写。
     """
     block = AGENTS_TEMPLATE.read_text(encoding="utf-8").format(预设图=preset_label)
-    notes = []
-    agents = ws / AGENTS_FILENAME
-    if agents.is_file():
-        old = read_utf8(agents)
-        if old is None:
-            notes.append("%s 读不出（不是 UTF-8），指针块没写进去：手工把下面这一块加到它末尾。\n%s"
-                         % (AGENTS_FILENAME, block))
-        elif POINTER_HEADING in old:
-            notes.append("%s 里已经有「%s」那一块，没有再写一遍" % (AGENTS_FILENAME, POINTER_HEADING))
-        else:
-            agents.write_text(old.rstrip("\n") + "\n\n" + block, encoding="utf-8")
-            notes.append("指针块追加到了已有的 %s 末尾，原有内容一字未动" % AGENTS_FILENAME)
-    else:
-        agents.write_text(block, encoding="utf-8")
-        notes.append("已写工作区指针块 %s" % AGENTS_FILENAME)
-
-    claude = ws / CLAUDE_FILENAME
-    if claude.is_file():
-        old = read_utf8(claude)
-        if old is None:
-            notes.append("%s 读不出（不是 UTF-8），那一行没写进去：手工把 %s 加进它"
-                         % (CLAUDE_FILENAME, CLAUDE_MD_TEXT.strip()))
-        elif CLAUDE_MD_TEXT.strip() in old:
-            notes.append("%s 里已经引了 %s" % (CLAUDE_FILENAME, AGENTS_FILENAME))
-        else:
-            claude.write_text(CLAUDE_MD_TEXT + old.lstrip("\n"), encoding="utf-8")
-            notes.append("已在已有的 %s 开头加上一行 %s，原有内容一字未动"
-                         % (CLAUDE_FILENAME, CLAUDE_MD_TEXT.strip()))
-    else:
-        claude.write_text(CLAUDE_MD_TEXT, encoding="utf-8")
-        notes.append("已写一行 %s" % CLAUDE_FILENAME)
-    return notes
+    return [put_beside(ws / AGENTS_FILENAME, block, POINTER_HEADING, at_end=True),
+            put_beside(ws / CLAUDE_FILENAME, CLAUDE_MD_TEXT, CLAUDE_MD_TEXT.strip(), at_end=False)]
 
 
 def cmd_init(args) -> int:
@@ -257,11 +251,11 @@ def cmd_init(args) -> int:
         raise Rejected("图引擎没起手，工作区一格没建：%s" % (err or out))
 
     notes = preset_notes + ([out] if out else [])
+    notes += sweep_to_pending(ws)   # 先扫再建格：原有的 材料/、文书/ 也要进待归档
     make_cells(ws)
     notes.append("目录形状已建：%s" % "、".join(CELLS))
-    notes += sweep_to_pending(ws)
     if preset_dir is not None:
-        notes += copy_preset_templates(ws, preset_dir)[1]
+        notes += copy_preset_templates(ws, preset_dir)
     else:
         notes.append("空图起手，不拷模板：%s/ 先空着，律师自己的空白模板经归档放进来"
                      % WORKSPACE_TEMPLATES.as_posix())
@@ -332,7 +326,7 @@ def cmd_register(args) -> int:
     try:
         doc_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(source), str(doc_path))
-        review_path.write_text(REVIEW_LINE % args.words, encoding="utf-8")
+        review_path.write_text(REVIEW_LINE, encoding="utf-8")
     except OSError as e:
         undo_register(source, doc_path, review_path, made_dirs)
         raise Rejected("挪不进 %s：%s。节点标题做目录名用不了的字由引擎换成全角（ADR-0023），"
@@ -344,8 +338,8 @@ def cmd_register(args) -> int:
         undo_register(source, doc_path, review_path, made_dirs)
         raise Rejected("引擎没写条目，成品已挪回 %s、审查报告已撤回：%s" % (args.file, err or out))
     print(out or "已追加生成条目")
-    print("已把 %s 挪成 %s，并按固定一行写审查报告 %s：这一版是起手前已有的成品，"
-          "本工作台没有参与写作，也没跑门禁。" % (args.file, doc_rel, review_rel))
+    print("已把 %s 挪成 %s，并写审查报告 %s（固定一行「%s」）：这一版是起手前已有的成品，"
+          "本工作台没有参与写作。" % (args.file, doc_rel, review_rel, REVIEW_LINE.strip()))
     return 0
 
 
@@ -373,7 +367,6 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("register", parents=[common], help="把既有成品登记为已生成、来源律师")
     p.add_argument("--node", required=True, help="节点标题或 id")
     p.add_argument("--file", required=True, help="既有成品在工作区里的相对路径（如 待归档/某件.docx）")
-    p.add_argument("--words", required=True, help="律师拍板起手清单那句话，原样写进审查报告")
     return ap
 
 
