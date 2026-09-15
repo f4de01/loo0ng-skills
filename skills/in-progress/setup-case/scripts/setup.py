@@ -1,30 +1,29 @@
 #!/usr/bin/env python3
-"""起手 CLI：在当前目录建案件工作区的六格、起手图三选一、拷官方模板原件、写工作区指针块。
+"""起手 CLI：在当前目录长出案件工作区的目录形状、按预设图或空图起图、写只记名与归属的指针块。
 
 标准库零依赖，不 import 兄弟 skill：图的每一次写入都经 skill "graph" 的 scripts/graph.py 子进程，
-它仍是 图.json 的唯一写入口；--domain-name 的活图目录经 skill "domain" 的 scripts/sketch.py home
-子进程取，活图仍归它管。本脚本不含任何领域语义，六格与指针块的形状见 ../references/。
+它仍是 图.json 的唯一写入口；预设图的绝对路径经 skill "domain" 的 scripts/preset.py resolve
+子进程取，两处两归属仍归它管（ADR-0023）。本脚本不含任何领域语义。
 
 用法：
-  python setup.py init --empty | --full | --from <定制图>
-                       [--domain-name <领域名> | --domain <领域目录或其中的领域图.json>]
-                       [--name <领域名>] [--workspace <目录>] [--engine <graph.py>] [--sketch <sketch.py>]
-  python setup.py register --node <节点标题> --doc <工作区内相对路径> --words "<律师那句话>"
-                       [--domain <领域目录或领域图.json>] [--workspace <目录>] [--engine <graph.py>]
+  python setup.py init [--preset <名> --owner 出厂|个人]
+                       [--workspace <目录>] [--engine <graph.py>] [--preset-cli <preset.py>]
+  python setup.py register --node <节点标题或 id> --file <工作区内相对路径>
+                       [--workspace <目录>] [--engine <graph.py>]
 
-init 的前置是工作区里没有 图.json，有就拒绝：起手一案一次（ADR-0007）。领域目录两种传法二选一：
-律师侧给 --domain-name <领域名>（路径本脚本自己取，只打这一条命令），开发侧给 --domain <路径>
-（种子回放、开发者定制的领域目录）。顺序是先取活图、再落图、再建格：取不到活图或引擎拒了，
-都是一格不建、一个字不写。归档、雏形、起手清单不在这里，它们是别的 skill 与模型的事。
+init 的前置只有一条：工作区里没有 图.json（起手一案一次，ADR-0007）。**目录非空不拒**：目录里
+原有的文件与目录一律挪进 待归档/，等归档（调 skill "filing"）判去向。两条起手路二选一：不给
+--preset 就是空图；给 --preset <名> 加 --owner 出厂|个人 就整份拷入那份预设图，它的 模板/ 一并
+拷进 参考/模板/。顺序是先解析预设图、再落图、再建格：解析不到或引擎拒了，都是一格不建、一个字不写。
+归档、起手清单不在这里，它们是别的 skill 与模型的事。
 
-register 是起手清单里「既有成品登记为已生成、来源律师」那一条的机械落地：按固定模板写一份
-审查报告（每一版文书必有一份，CONTEXT.md「审查报告」），再经引擎追加一条来源为律师的生成条目。
-它只登记不确认：确认永不自动（ADR-0002）。
+register 是起手清单里「既有成品登记为已生成、来源律师」那一条的机械落地：把那份成品挪进它
+节点的文书目录、按固定一行写审查报告（每一版文书必有一份，skill "to-docx" 的 references/审查报告.md），
+再经引擎追加一条来源为律师的生成条目。它只登记不确认：确认永不自动（ADR-0002）。
 
-退出码：0 完成；1 拒绝（图已存在、三选一没选一个、取不到活图、引擎拒写、找不到文件、路径越界）；2 用法错误。
+退出码：0 完成；1 拒绝（图已存在、解析不到预设图、引擎拒写、找不到文件、路径越界、目标已被占）；2 用法错误。
 """
 import argparse
-import datetime as _dt
 import json
 import pathlib
 import shutil
@@ -35,128 +34,66 @@ from typing import List, Optional, Tuple
 GRAPH_FILENAME = "图.json"
 VIEW_MD = "图视图.md"
 VIEW_JSON = "图视图.json"
-DOMAIN_GRAPH_FILENAME = "领域图.json"
-DOMAIN_TEMPLATES_DIRNAME = "模板"
-SEED_ASSETS_DIRNAME = "assets"        # skill 包内的出厂种子（ADR-0019），不是活图
-SEED_SKILL_DIRNAME = "domain"
-SEED_ROOT_RELATIVE = pathlib.Path("..") / ".." / SEED_SKILL_DIRNAME / SEED_ASSETS_DIRNAME
+ARCHIVE_INDEX = "归档索引.md"
+AGENTS_FILENAME = "AGENTS.md"
+CLAUDE_FILENAME = "CLAUDE.md"
+CLAUDE_MD_TEXT = "@AGENTS.md\n"
+POINTER_HEADING = "# 案件工作区"
+
+# 目录形状（ADR-0023 第 2 节）。文书/<模块>/<节点>/ 出件时才建。
+CELLS = ("待归档", "材料", "参考/模板", "参考/指南", "文书")
+PENDING = "待归档"
+DOCS_CELL = "文书"
+WORKSPACE_TEMPLATES = pathlib.Path("参考") / "模板"
+PRESET_TEMPLATES_DIRNAME = "模板"
+
+OWNER_FACTORY, OWNER_PERSONAL = "出厂", "个人"
+OWNERS = (OWNER_FACTORY, OWNER_PERSONAL)
+EMPTY_LABEL = "无（空图起手）"
+
+# 跨 skill 一律子进程互调、按兄弟目录找（docs/agents/skills.md）。
 ENGINE_RELATIVE = pathlib.Path("..") / ".." / "graph" / "scripts" / "graph.py"
-SKETCH_RELATIVE = pathlib.Path("..") / ".." / SEED_SKILL_DIRNAME / "scripts" / "sketch.py"
-LIVE_PREFIX = "活图："   # sketch.py home 回显的第一行，路径跟在它后面
+PRESET_CLI_RELATIVE = pathlib.Path("..") / ".." / "domain" / "scripts" / "preset.py"
+
 REFERENCES = pathlib.Path(__file__).resolve().parent.parent / "references"
 AGENTS_TEMPLATE = REFERENCES / "工作区AGENTS.md"
-REVIEW_TEMPLATE = REFERENCES / "既有成品审查报告.md"
-CLAUDE_MD_TEXT = "@AGENTS.md\n"
-NO_DOMAIN_TEXT = "（无：起手时没有给领域目录。要前方、惰性带入与时限，让开发者把领域目录的绝对路径补进这一行）"
 
-# 六格（ADR-0007）。材料/ 由 材料/律师陈述 一并建出；文书/<节点标题>/ 出件时才建。
-CELLS = ("收件箱", "材料/律师陈述", "指南", "模板/官方", "模板/生成", "文书")
-OFFICIAL_TEMPLATES_CELL = "模板/官方"
+# 审查报告只有这一行，一个字不多（CONTEXT.md「审查报告」，skill "to-docx" 的
+# references/审查报告.md「律师自写的」）：没有施加、没有高亮清单，下次重出读到它就知道
+# 当前文书里的黄全是律师自己加的，一处不动。律师那句话不进这里：生成条目不存原话（引擎里
+# 只有确认条目存），起手清单那一句留在对话与收尾里。
+REVIEW_LINE = "律师自写\n"
+REVIEW_SUFFIX = "-审查报告.md"
+
+# 起手自己落的那几样不挪进待归档；点开头的（.git、.codex 之类）也不动。
+KEEP_AT_ROOT = {GRAPH_FILENAME, VIEW_MD, VIEW_JSON, ARCHIVE_INDEX, AGENTS_FILENAME, CLAUDE_FILENAME}
 
 
 class Rejected(Exception):
-    """拒绝：图已存在、三选一没选一个、引擎拒写、找不到文件、路径越界。"""
+    """拒绝：图已存在、解析不到预设图、引擎拒写、找不到文件、路径越界、目标已被占。"""
 
 
-def now() -> str:
-    return _dt.datetime.now().astimezone().isoformat(timespec="seconds")
+def resolve_tool(given: Optional[str], relative: pathlib.Path, what: str, flag: str) -> pathlib.Path:
+    tool = pathlib.Path(given).resolve() if given else (
+        pathlib.Path(__file__).resolve().parent / relative).resolve()
+    if not tool.is_file():
+        raise Rejected("找不到%s %s；用 %s 指向它" % (what, tool, flag))
+    return tool
 
 
-def default_engine() -> pathlib.Path:
-    return (pathlib.Path(__file__).resolve().parent / ENGINE_RELATIVE).resolve()
-
-
-def resolve_engine(given: Optional[str]) -> pathlib.Path:
-    engine = pathlib.Path(given).resolve() if given else default_engine()
-    if not engine.is_file():
-        raise Rejected("找不到图引擎 %s；用 --engine 指向 skill \"graph\" 的 scripts/graph.py" % engine)
-    return engine
-
-
-def default_sketch() -> pathlib.Path:
-    return (pathlib.Path(__file__).resolve().parent / SKETCH_RELATIVE).resolve()
-
-
-def resolve_sketch(given: Optional[str]) -> pathlib.Path:
-    sketch = pathlib.Path(given).resolve() if given else default_sketch()
-    if not sketch.is_file():
-        raise Rejected("找不到 %s；用 --sketch 指向 skill \"domain\" 的 scripts/sketch.py，"
-                       "或改用 --domain <领域目录> 直接给路径" % sketch)
-    return sketch
-
-
-def live_domain_dir(sketch: pathlib.Path, name: str) -> Tuple[pathlib.Path, List[str]]:
-    """--domain-name 走这条：子进程调 skill "domain" 的 sketch.py home 取活图目录（ADR-0019）。
-
-    与图引擎同一个形状：活图归 skill "domain" 管，本脚本只是调用者，不自己算活图在哪、
-    也不自己拷种子。它发生在建格与落图之前：home 拒了这里跟着拒，一格不建、一个字不写。
-    home 的回显原样带回去，首次起手拷了几件是律师该看见的。
-    """
-    r = subprocess.run([sys.executable, str(sketch), "home", "--name", name], capture_output=True,
-                       text=True, encoding="utf-8", errors="replace")
-    lines = [line for line in (r.stdout or "").splitlines() if line.strip()]
-    if r.returncode != 0:
-        raise Rejected("取不到领域「%s」的活图目录，工作区一格没建、一个字没写：%s"
-                       % (name, (r.stderr or r.stdout).strip()))
-    if not lines or not lines[0].startswith(LIVE_PREFIX):
-        raise Rejected("sketch.py home 的回显第一行该是「%s<绝对路径>」，收到 %r"
-                       % (LIVE_PREFIX, lines[0] if lines else ""))
-    return pathlib.Path(lines[0][len(LIVE_PREFIX):].strip()).resolve(), lines
-
-
-def resolve_domain_dir(given: Optional[str]) -> Optional[pathlib.Path]:
-    """--domain 收领域目录或其中的 领域图.json，指针块里记的一律是目录。"""
-    if not given:
-        return None
-    path = pathlib.Path(given).resolve()
-    return path.parent if path.suffix.lower() == ".json" else path
-
-
-def looks_like_seed(domain_dir: pathlib.Path) -> bool:
-    """两条判据取或：兄弟 skill 的 assets/ 下（按本脚本的位置算，装在哪儿都成立），
-    或者目录名摆成 <...>/domain/assets/<领域名>（别处拷来的一份包）。"""
-    sibling = (pathlib.Path(__file__).resolve().parent / SEED_ROOT_RELATIVE).resolve()
-    try:
-        domain_dir.relative_to(sibling)
-        return True
-    except ValueError:
-        pass
-    return (domain_dir.parent.name == SEED_ASSETS_DIRNAME
-            and domain_dir.parent.parent.name == SEED_SKILL_DIRNAME)
-
-
-def seed_path_note(domain_dir: Optional[pathlib.Path]) -> List[str]:
-    """--domain 指到 skill 包内的出厂种子上时说一句（ADR-0019）。只报不拒：起手是读，开发侧的种子回放
-    本来就直接对着种子起手；写那一刻另有引擎无条件拒着（ADR-0020），这里不必再拦一次。
-    错在律师起手上时，这一行是它唯一会露头的地方。"""
-    if domain_dir is None or not looks_like_seed(domain_dir):
-        return []
-    return ["注意：--domain 给的是 skill 包内的出厂种子，不是活图（ADR-0019）：包一升级它就被换掉，"
-            "律师累计的东西不在这里。律师起手改用 --domain-name <领域名>，活图路径由本脚本自己经 "
-            "skill \"domain\" 的 sketch.py home 取。"]
-
-
-def engine_base(graph_path: pathlib.Path, domain_dir: Optional[pathlib.Path]) -> List[str]:
-    base = ["--graph", str(graph_path)]
-    if domain_dir is not None:
-        base += ["--domain", str(domain_dir)]
-    return base
-
-
-def run_engine(engine: pathlib.Path, base: List[str], args: List[str]) -> Tuple[int, str, str]:
-    r = subprocess.run([sys.executable, str(engine), *base, *args], capture_output=True, text=True,
+def run_tool(tool: pathlib.Path, args: List[str]) -> Tuple[int, str, str]:
+    """跨 skill 一律这一条路：子进程调它的 CLI，回（退出码, stdout, stderr）。"""
+    r = subprocess.run([sys.executable, str(tool), *args], capture_output=True, text=True,
                        encoding="utf-8", errors="replace")
-    return r.returncode, r.stdout.strip(), r.stderr.strip()
+    return r.returncode, (r.stdout or "").strip(), (r.stderr or "").strip()
 
 
-def read_graph(graph_path: pathlib.Path) -> dict:
-    return json.loads(graph_path.read_text(encoding="utf-8"))
+def run_engine(engine: pathlib.Path, graph_path: pathlib.Path, args: List[str]) -> Tuple[int, str, str]:
+    return run_tool(engine, ["--graph", str(graph_path), *args])
 
 
-def nodes_of(data: dict):
-    for m in data.get("模块", []):
-        for n in m.get("节点", []):
-            yield n
+def read_json(path: pathlib.Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def check_workspace_relative(value: str, label: str) -> None:
@@ -174,47 +111,120 @@ def check_workspace_relative(value: str, label: str) -> None:
 
 # ---------------------------------------------------------------- init
 
+def resolve_preset(preset_cli: pathlib.Path, name: str, owner: str) -> Tuple[pathlib.Path, List[str]]:
+    """子进程调 skill "domain" 的 preset.py resolve 取那份预设图的绝对路径（ADR-0023）。
+
+    与调图引擎是同一个形状：两处两归属归它管，本脚本既不自己算路径，也不把路径记进工作区。
+    它发生在落图与建格之前：resolve 拒了这里跟着拒，一格不建、一个字不写。回显原样带回去。
+    """
+    code, out, err = run_tool(preset_cli, ["resolve", "--name", name, "--owner", owner])
+    lines = [line for line in out.splitlines() if line.strip()]
+    if code != 0:
+        raise Rejected("解析不到%s预设图「%s」，工作区一格没建、一个字没写：%s" % (owner, name, err or out))
+    if not lines:
+        raise Rejected("preset.py resolve 该回一行绝对路径，什么都没回")
+    directory = pathlib.Path(lines[0].strip()).resolve()
+    if not directory.is_dir():
+        raise Rejected("preset.py resolve 回的 %s 不是一个目录" % directory)
+    return directory, lines[1:]
+
+
 def make_cells(ws: pathlib.Path) -> None:
     for cell in CELLS:
         (ws / cell).mkdir(parents=True, exist_ok=True)
 
 
-def copy_official_templates(ws: pathlib.Path, data: dict, domain_dir: Optional[pathlib.Path]) -> List[str]:
-    """把起手图上挂到的官方模板原件从领域目录拷进 模板/官方/。惰性：图上没挂的不拷。
-    缺原件只报不拒：领域目录可以没有 模板/（合成小领域就没有）。"""
-    wanted = sorted({n["空白模板"]["文件"] for n in nodes_of(data)
-                     if isinstance(n.get("空白模板"), dict) and n["空白模板"].get("来源") == "官方"})
-    if not wanted:
-        return ["起手图上没有节点挂官方模板，%s/ 先空着。" % OFFICIAL_TEMPLATES_CELL]
-    if domain_dir is None:
-        return ["起手时没有给领域目录，起手图挂到的 %d 件官方模板原件没拷进来：%s" % (len(wanted), "、".join(wanted))]
-    src_dir = domain_dir / DOMAIN_TEMPLATES_DIRNAME
-    if not src_dir.is_dir():
-        return ["领域目录 %s 下没有 %s/，起手图挂到的 %d 件官方模板原件没拷进来：%s"
-                % (domain_dir.as_posix(), DOMAIN_TEMPLATES_DIRNAME, len(wanted), "、".join(wanted))]
-    copied, missing = [], []
-    for name in wanted:
-        src = src_dir / name
-        if src.is_file():
-            shutil.copy2(src, ws / OFFICIAL_TEMPLATES_CELL / name)
-            copied.append(name)
-        else:
-            missing.append(name)
-    notes = ["已从领域目录拷 %d 件官方模板原件进 %s/" % (len(copied), OFFICIAL_TEMPLATES_CELL)]
-    if missing:
-        notes.append("领域目录里找不到这 %d 件模板原件，挂着它们的节点出件前要补：%s"
-                     % (len(missing), "、".join(missing)))
+def sweep_to_pending(ws: pathlib.Path) -> List[str]:
+    """目录里原有的一律挪进 待归档/：起手不判它们是什么，判去向是归档的事（调 skill "filing"）。
+
+    **在建格之前跑**：律师原本就有一个叫 材料/ 或 文书/ 的目录时，那也是他自己堆的东西，
+    要一样进待归档让归档判去向；建完格再扫就会把它们当成格跳过，律师从此看不见它们。
+
+    不动两类：起手自己落的那几样（图、两份视图、归档索引、两份指针块）、点开头的
+    （.git、.codex 之类工具自己的东西）。待归档里已经有同名的就留在原处并报一句。
+    """
+    pending = ws / PENDING
+    pending.mkdir(parents=True, exist_ok=True)
+    moved, dotted, clashed = [], [], []
+    for entry in sorted(ws.iterdir(), key=lambda p: p.name):
+        name = entry.name
+        if name in KEEP_AT_ROOT or name == PENDING:
+            continue
+        if name.startswith("."):
+            dotted.append(name)
+            continue
+        target = pending / name
+        if target.exists():
+            clashed.append(name)
+            continue
+        shutil.move(str(entry), str(target))
+        moved.append(name)
+    notes = ["工作区根上原有的 %d 件已挪进 %s/：%s" % (len(moved), PENDING, "、".join(moved))
+             if moved else "工作区根上没有要挪进 %s/ 的东西" % PENDING]
+    if clashed:
+        notes.append("这 %d 件在 %s/ 下已经有同名的，留在工作区根没动：%s"
+                     % (len(clashed), PENDING, "、".join(clashed)))
+    if dotted:
+        notes.append("点开头的 %d 项没动（工具自己的东西）：%s" % (len(dotted), "、".join(dotted)))
     return notes
 
 
-def write_pointer_block(ws: pathlib.Path, data: dict, domain_dir: Optional[pathlib.Path]) -> List[str]:
-    """机制 B（ADR-0009）：AGENTS.md 给 Codex 读，CLAUDE.md 一行引它给 Claude Code 读。
-    块由起手图三选一机械推出，不加确认点；之后没有任何 skill 往里写。"""
-    text = AGENTS_TEMPLATE.read_text(encoding="utf-8").format(
-        领域=data["领域"], 领域目录=domain_dir.as_posix() if domain_dir else NO_DOMAIN_TEXT)
-    (ws / "AGENTS.md").write_text(text, encoding="utf-8")
-    (ws / "CLAUDE.md").write_text(CLAUDE_MD_TEXT, encoding="utf-8")
-    return ["已写工作区指针块 AGENTS.md 与一行 CLAUDE.md"]
+def copy_preset_templates(ws: pathlib.Path, preset_dir: pathlib.Path) -> List[str]:
+    """预设图的 模板/ 整份拷进 参考/模板/：不改名、不覆盖、子目录相对路径原样（ADR-0024 第一类）。"""
+    source = preset_dir / PRESET_TEMPLATES_DIRNAME
+    target = ws / WORKSPACE_TEMPLATES
+    if not source.is_dir():
+        return ["预设图 %s 下没有 %s/，一件模板没拷：挂着模板的节点出件前要补"
+                % (preset_dir.as_posix(), PRESET_TEMPLATES_DIRNAME)]
+    copied, skipped = 0, []
+    for src in sorted(p for p in source.rglob("*") if p.is_file()):
+        dst = target / src.relative_to(source)
+        if dst.exists():
+            skipped.append(src.relative_to(source).as_posix())
+            continue
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(str(src), str(dst))
+        copied += 1
+    notes = ["已从预设图拷 %d 件空白模板进 %s/" % (copied, WORKSPACE_TEMPLATES.as_posix())]
+    if skipped:
+        notes.append("这 %d 件 %s/ 下已经有同名的，没覆盖：%s"
+                     % (len(skipped), WORKSPACE_TEMPLATES.as_posix(), "、".join(skipped)))
+    return notes
+
+
+def read_utf8(path: pathlib.Path) -> Optional[str]:
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+
+
+def put_beside(path: pathlib.Path, block: str, marker: str, at_end: bool) -> str:
+    """把一块字写进 path：没有那份文件就新建，有就按 at_end 追加在末尾或加在开头，
+    **原有内容一字不动**；已经有 marker 就一个字不写。回一句给律师看的话。"""
+    if not path.is_file():
+        path.write_text(block, encoding="utf-8")
+        return "已写 %s" % path.name
+    old = read_utf8(path)
+    if old is None:
+        return "%s 读不出（不是 UTF-8），没往里写：手工把下面这一块加进去。\n%s" % (path.name, block)
+    if marker in old:
+        return "%s 里已经有「%s」，没有再写一遍" % (path.name, marker.strip())
+    path.write_text(old.rstrip("\n") + "\n\n" + block if at_end else block + old.lstrip("\n"),
+                    encoding="utf-8")
+    return "已把这一块%s已有的 %s，原有内容一字未动" % ("追加到" if at_end else "加在", path.name)
+
+
+def write_pointer_block(ws: pathlib.Path, preset_label: str) -> List[str]:
+    """指针块只记四项，一条路径都不记（ADR-0023）：包一升级绝对路径就死，路径每次按名当场解析。
+
+    AGENTS.md 给 Codex 读，CLAUDE.md 一行引它给 Claude Code 读。目录里原本就有这两份的（Codex
+    建的项目常有），那是律师或 Codex 自己写的项目说明，原文一字不动。
+    块由起手那一问机械推出，不加确认点；之后没有任何 skill 往里写。
+    """
+    block = AGENTS_TEMPLATE.read_text(encoding="utf-8").format(预设图=preset_label)
+    return [put_beside(ws / AGENTS_FILENAME, block, POINTER_HEADING, at_end=True),
+            put_beside(ws / CLAUDE_FILENAME, CLAUDE_MD_TEXT, CLAUDE_MD_TEXT.strip(), at_end=False)]
 
 
 def cmd_init(args) -> int:
@@ -222,48 +232,35 @@ def cmd_init(args) -> int:
     graph_path = ws / GRAPH_FILENAME
     if graph_path.exists():
         raise Rejected("%s 已经有 %s 了：起手一案一次。这个目录已经是案件工作区，要改图的构成调用 "
-                       "skill \"graph\"，要另起一案换一个空目录。" % (ws, GRAPH_FILENAME))
-    chosen = sum(bool(x) for x in (args.empty, args.full, args.from_path))
-    if chosen != 1:
-        raise Rejected("起手图三选一，恰好给一个：--empty（空图）、--full（整份领域图）、"
-                       "--from <定制图路径>（开发者交付的定制图）")
-    if args.domain and args.domain_name:
-        raise Rejected("--domain-name 与 --domain 二选一：律师侧给 --domain-name <领域名>，活图路径由本脚本"
-                       "自己取；开发侧给 --domain <路径>（种子回放、开发者定制图）。")
-    if args.domain_name and args.name:
-        raise Rejected("--domain-name 已经给了领域名，不要再给 --name：两个给成不一样的，指针块的「领域」"
-                       "与「领域目录」会各指一处。要另起一个领域名就改用 --domain <路径> 加 --name。")
-    if args.full and not (args.domain or args.domain_name):
-        raise Rejected("--full 要带 --domain-name <领域名>，或带 --domain 指向领域目录或其中的 %s"
-                       % DOMAIN_GRAPH_FILENAME)
-    engine = resolve_engine(args.engine)
-    if args.domain_name:
-        domain_dir, home_notes = live_domain_dir(resolve_sketch(args.sketch), args.domain_name)
-    else:
-        domain_dir, home_notes = resolve_domain_dir(args.domain), []
+                       "skill \"graph\"，要另起一案换一个目录。" % (ws, GRAPH_FILENAME))
+    if bool(args.preset) != bool(args.owner):
+        raise Rejected("--preset 与 --owner 同给同不给：不给就是空图起手，给就要两个都给"
+                       "（--preset <名> --owner 出厂|个人）。名与归属打 skill \"domain\" 的 "
+                       "preset.py list 看两组各有哪些。")
+    engine = resolve_tool(args.engine, ENGINE_RELATIVE, "图引擎", "--engine")
+    preset_dir, preset_notes = None, []
+    if args.preset:
+        preset_cli = resolve_tool(args.preset_cli, PRESET_CLI_RELATIVE,
+                                  "skill \"domain\" 的 preset.py", "--preset-cli")
+        preset_dir, preset_notes = resolve_preset(preset_cli, args.preset, args.owner)
 
     ws.mkdir(parents=True, exist_ok=True)
-    base = engine_base(graph_path, domain_dir)
-    init_args = ["init"]
-    if args.empty:
-        init_args.append("--empty")
-    elif args.full:
-        init_args.append("--full")
-    else:
-        init_args += ["--from", str(pathlib.Path(args.from_path).resolve())]
-    if args.name:
-        init_args += ["--name", args.name]
-    code, out, err = run_engine(engine, base, init_args)
+    init_args = ["init", "--empty"] if preset_dir is None else ["init", "--preset", str(preset_dir)]
+    code, out, err = run_engine(engine, graph_path, init_args)
     if code != 0:
         raise Rejected("图引擎没起手，工作区一格没建：%s" % (err or out))
 
-    notes = home_notes + ([out] if out else [])
+    notes = preset_notes + ([out] if out else [])
+    notes += sweep_to_pending(ws)   # 先扫再建格：原有的 材料/、文书/ 也要进待归档
     make_cells(ws)
-    notes.append("六格已建：%s" % "、".join(CELLS))
-    data = read_graph(graph_path)
-    notes += copy_official_templates(ws, data, domain_dir)
-    notes += write_pointer_block(ws, data, domain_dir)
-    notes += seed_path_note(domain_dir)
+    notes.append("目录形状已建：%s" % "、".join(CELLS))
+    if preset_dir is not None:
+        notes += copy_preset_templates(ws, preset_dir)
+    else:
+        notes.append("空图起手，不拷模板：%s/ 先空着，律师自己的空白模板经归档放进来"
+                     % WORKSPACE_TEMPLATES.as_posix())
+    label = EMPTY_LABEL if preset_dir is None else "%s（%s）" % (args.preset, args.owner)
+    notes += write_pointer_block(ws, label)
     notes.append("两份视图已随图落下：%s、%s" % (VIEW_MD, VIEW_JSON))
     for line in notes:
         print(line)
@@ -272,60 +269,77 @@ def cmd_init(args) -> int:
 
 # ---------------------------------------------------------------- register
 
-def generated_versions(graph_path: pathlib.Path, node_title: str) -> int:
-    """这个节点已经有几版：只读图数一遍生成条目。图里没有这个节点（要靠引擎按领域图带入）时算 0。
-
-    版本号的算法归引擎（graph.py 的 versions），这里照算一次只为拼审查报告的文件名，不写进图；
-    引擎哪天改了版本号的算法，这里的文件名会跟不上，`tests/setup-case/test_setup.py`
-    的 test_审查报告按固定模板落在文书目录下 会红。"""
+def locate_node(ws: pathlib.Path, key: str) -> Tuple[str, str, str]:
+    """回（模块目录名, 节点目录名, 节点标题）。目录名取 图视图.json 里引擎算好的那一份：
+    标题做目录名的转义规则只定一次，在引擎里（ADR-0023），本脚本不自己再实现一遍。"""
+    view_path = ws / VIEW_JSON
+    if not view_path.is_file():
+        raise Rejected("%s 里没有 %s：先起手（setup.py init），或调用 skill \"graph\" 重算视图"
+                       % (ws, VIEW_JSON))
     try:
-        data = read_graph(graph_path)
-    except (OSError, ValueError):
-        return 0
-    for n in nodes_of(data):
-        if n.get("标题") == node_title:
-            return sum(1 for e in n.get("条目", []) if e.get("动作") == "生成")
-    return 0
+        view = read_json(view_path)
+    except (OSError, ValueError) as e:
+        raise Rejected("%s 读不出：%s" % (VIEW_JSON, e)) from e
+    for m in view.get("模块", []):
+        for n in m.get("节点", []):
+            if key in (n.get("标题"), n.get("id")):
+                return m["目录名"], n["目录名"], n["标题"]
+    raise Rejected("图里没有节点「%s」：既有成品要登记到图上已有的节点，先调用 skill \"graph\" "
+                   "新增一个，再登记。" % key)
+
+
+def undo_register(source: pathlib.Path, doc_path: pathlib.Path,
+                  review_path: pathlib.Path, made_dirs: bool) -> None:
+    """引擎拒了就把这一次做过的两件事撤回去：成品挪回原处、审查报告删掉、空出来的目录收掉。"""
+    if review_path.exists():
+        review_path.unlink()
+    if doc_path.exists():
+        shutil.move(str(doc_path), str(source))
+    if made_dirs:
+        for d in (doc_path.parent, doc_path.parent.parent):
+            try:
+                d.rmdir()
+            except OSError:
+                break
 
 
 def cmd_register(args) -> int:
     ws = pathlib.Path(args.workspace).resolve()
-    graph_path = ws / GRAPH_FILENAME
-    if not graph_path.is_file():
+    if not (ws / GRAPH_FILENAME).is_file():
         raise Rejected("%s 里没有 %s：先起手（setup.py init）" % (ws, GRAPH_FILENAME))
-    title = args.node
-    if "/" in title or "\\" in title:
-        raise Rejected("节点标题里不能有斜杠：文书目录名就是节点标题（ADR-0007），收到 %r" % title)
-    check_workspace_relative(args.doc, "--doc")
-    if not (ws / args.doc).is_file():
-        raise Rejected("找不到文书 %s。既有成品先经归档进工作区（调用 skill \"filing\"），再登记。" % args.doc)
-    engine = resolve_engine(args.engine)
-    domain_dir = resolve_domain_dir(args.domain)
+    module_dir, node_dir, title = locate_node(ws, args.node)
+    check_workspace_relative(args.file, "--file")
+    source = ws / args.file
+    if not source.is_file():
+        raise Rejected("找不到 %s。既有成品要在工作区里，路径相对工作区根写。" % args.file)
 
-    version = generated_versions(graph_path, title) + 1
-    review_rel = "文书/%s/%s-v%d-审查报告.md" % (title, title, version)
-    review_path = ws / review_rel
-    made_dir = not review_path.parent.exists()
+    doc_dir = "%s/%s/%s" % (DOCS_CELL, module_dir, node_dir)
+    doc_rel = "%s/%s%s" % (doc_dir, node_dir, source.suffix)
+    review_rel = "%s/%s%s" % (doc_dir, node_dir, REVIEW_SUFFIX)
+    doc_path, review_path = ws / doc_rel, ws / review_rel
+    if doc_path.exists():
+        raise Rejected("%s 已经有了，登记不覆盖：那个节点已经有一份文书，要换一版调用 skill \"doit\"。"
+                       % doc_rel)
+    engine = resolve_tool(args.engine, ENGINE_RELATIVE, "图引擎", "--engine")
+
+    made_dirs = not doc_path.parent.exists()
     try:
-        review_path.parent.mkdir(parents=True, exist_ok=True)
-        review_path.write_text(REVIEW_TEMPLATE.read_text(encoding="utf-8").format(
-            节点=title, 版本=version, 文书=args.doc, 时间=now(), 原话=args.words), encoding="utf-8")
+        doc_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(source), str(doc_path))
+        review_path.write_text(REVIEW_LINE, encoding="utf-8")
     except OSError as e:
-        raise Rejected("写不了审查报告 %s：%s。文书目录名就是节点标题（ADR-0007），"
-                       "标题里有文件名用不了的字就先改标题（调用 skill \"graph\"）。" % (review_rel, e)) from e
+        undo_register(source, doc_path, review_path, made_dirs)
+        raise Rejected("挪不进 %s：%s。节点标题做目录名用不了的字由引擎换成全角（ADR-0023），"
+                       "仍不行就先改标题（调用 skill \"graph\"）。" % (doc_dir, e)) from e
 
-    code, out, err = run_engine(engine, engine_base(graph_path, domain_dir), [
-        "generate", "--node", title, "--doc", args.doc, "--review", review_rel, "--lawyer-written"])
+    code, out, err = run_engine(engine, ws / GRAPH_FILENAME, [
+        "generate", "--node", title, "--doc", doc_rel, "--review", review_rel, "--lawyer-written"])
     if code != 0:
-        review_path.unlink()
-        if made_dir:
-            try:
-                review_path.parent.rmdir()
-            except OSError:
-                pass
-        raise Rejected("引擎没写条目，审查报告已撤回：%s" % (err or out))
+        undo_register(source, doc_path, review_path, made_dirs)
+        raise Rejected("引擎没写条目，成品已挪回 %s、审查报告已撤回：%s" % (args.file, err or out))
     print(out or "已追加生成条目")
-    print("已按固定模板写审查报告 %s：这一版是起手前已有的成品，本工作台没有参与写作，也没跑门禁。" % review_rel)
+    print("已把 %s 挪成 %s，并写审查报告 %s（固定一行「%s」）：这一版是起手前已有的成品，"
+          "本工作台没有参与写作。" % (args.file, doc_rel, review_rel, REVIEW_LINE.strip()))
     return 0
 
 
@@ -340,26 +354,19 @@ def build_parser() -> argparse.ArgumentParser:
     common.add_argument("--workspace", default=".", help="案件工作区，默认当前目录")
     common.add_argument("--engine", default=None,
                         help="图引擎 graph.py 的路径，默认取兄弟 skill graph 里的")
-    common.add_argument("--domain", default=None,
-                        help="领域目录或其中的 %s；开发侧那一条（种子回放、开发者定制图）。"
-                             "律师侧用 --domain-name，别给包内 assets/ 下的出厂种子" % DOMAIN_GRAPH_FILENAME)
 
-    p = sub.add_parser("init", parents=[common], help="建六格、起手图三选一、拷官方模板、写指针块")
-    p.add_argument("--empty", action="store_true", help="空图起手")
-    p.add_argument("--full", action="store_true", help="整份领域图起手（人的选择，不受惰性约束）")
-    p.add_argument("--from", dest="from_path", default=None, help="开发者交付的定制图")
-    p.add_argument("--domain-name", dest="domain_name", default=None,
-                   help="领域名；活图目录由本脚本经 skill \"domain\" 的 sketch.py home 自己取。"
-                        "律师侧用这一个，与 --domain 二选一")
-    p.add_argument("--sketch", default=None,
-                   help="sketch.py 的路径，默认取兄弟 skill domain 里的")
-    p.add_argument("--name", default=None,
-                   help="领域名；空图起手又没有 --domain / --domain-name 时必填。与 --domain-name 不并存")
+    p = sub.add_parser("init", parents=[common],
+                       help="建目录形状、起图（空图或整份拷入预设图）、拷模板、挪待归档、写指针块")
+    p.add_argument("--preset", default=None,
+                   help="预设图的名；不给就是空图起手。与 --owner 同给同不给")
+    p.add_argument("--owner", default=None, choices=OWNERS,
+                   help="预设图的归属：出厂（包内）或 个人（本机）")
+    p.add_argument("--preset-cli", dest="preset_cli", default=None,
+                   help="skill \"domain\" 的 preset.py 路径，默认取兄弟目录里的")
 
     p = sub.add_parser("register", parents=[common], help="把既有成品登记为已生成、来源律师")
-    p.add_argument("--node", required=True, help="节点标题")
-    p.add_argument("--doc", required=True, help="文书相对工作区根的路径（归档后的位置）")
-    p.add_argument("--words", required=True, help="律师拍板起手清单那句话，原样写进审查报告")
+    p.add_argument("--node", required=True, help="节点标题或 id")
+    p.add_argument("--file", required=True, help="既有成品在工作区里的相对路径（如 待归档/某件.docx）")
     return ap
 
 

@@ -12,7 +12,7 @@ npx skills@latest add f4de01/loo0ng-skills --skill=<name>
 
 只有律师打名字才触发（Claude Code：`disable-model-invocation: true`；Codex：`agents/openai.yaml` 里 `policy.allow_implicit_invocation: false`）。
 
-- **[setup-case](./setup-case/SKILL.md)**: 起手。在一个空目录里长出案件工作区，一案一次：六格、起手图三选一、归档收件箱、起手清单等律师一句话拍板。
+- **[setup-case](./setup-case/SKILL.md)**: 起手。把当前目录长成案件工作区，一案一次：一问二选（空图还是哪份预设图）、落目录形状与图、目录里已有的挪进待归档，起手清单等律师一句话拍板。
 - **[doit](./doit/SKILL.md)**: 办节点。一个对话办一个节点：出一版、兜底登记、确认、不适用，拍板也在这个对话里说。
 - **[ask-loo0ng](./ask-loo0ng/SKILL.md)**: 问路。只读的地图：答当前节点、上一完成、下一任务，把下一句该打的整串给你，不触发任何 skill、不写图。
 
