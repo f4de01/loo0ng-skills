@@ -78,7 +78,7 @@ for f in scripts/*.ps1; do printf '%s ' "$f"; head -c 3 "$f" | od -An -tx1; done
 npm run check-plugin-version
 
 # 结构与接线（照上游约定的四个检查，提交前必跑；Windows 上用 Git Bash 跑）
-bash scripts/check-skill.sh .              # 每件 skill：name、description 引号、openai.yaml、双旗一致
+bash scripts/check-skill.sh .              # 每件 skill：name、description 引号、openai.yaml、双旗一致、正文随包自足
 bash scripts/check-wiring.sh .             # promoted 四处都在、非 promoted 四处都不在、plugin.json 路径真实
 bash scripts/check-stale.sh . <旧名>       # 改名或删除之后：旧名字一处不留
 bash scripts/check-release.sh .            # 发版前：changesets 配置、同步脚本、workflow、版本一致
@@ -117,6 +117,8 @@ python scripts/skill-eval.py --harness claude --case 出一版留黄 --model opu
 ```
 
 Codex 侧提示词经 stdin 送入（`PROMPT` 位置是 `-`）：PATH 上的 `codex` 是 npm 的 `.cmd` 垫片，cmd.exe 会把参数里第一个换行之后的字吞掉，多行提示词（如带一段稿子的「出一版」用例）只剩第一行（#28）。其他参数：`--max-turns N`、`--timeout 秒` 覆盖用例里的值；`--keep` 跑完不删工作区，只为排障；`--model` 与 `--effort` 透传给各自的 CLI（Claude Code 侧 `--model`/`--effort`，Codex 侧 `-m` 加一条 `-c model_reasoning_effort=...`），两个都不给时走 CLI 自己的默认（Codex 读 `~/.codex/config.toml`），这是既有跑法的兼容线；这次用的是哪个，跑器回显第一行报出来，跨跑比较才读得出结果是哪个模型跑的。退出码 0 全绿、1 有红、2 用法或用例配置错。结果只打印不进仓库。从 Claude Code 会话内跑 `--harness claude` 不用自己去环境变量：跑器已去掉 `CLAUDECODE` 两项并带上 `MSYS_NO_PATHCONV=1`。
+
+**正文随包自足（ADR-0025）**：`SKILL.md` 与 `references/*.md` 里不出现 ADR 号、issue 号、版本号，也不指向本 skill 目录之外的仓库文件（`CONTEXT.md`、`AGENTS.md`、`docs/`、`tests/`）——`npx skills add` 与 `claude plugin install` 装过去的只有 `skills/<bucket>/<name>/` 这一个目录，别的都读不到。历史对比句（「以前 X 现在 Y」）与出处标注一并不写；会改变模型判断的内容留下来，改写成判据本身（写「不许 X」，不写「因为当年 Y 所以不许 X」）。`check-skill.sh` 逐件扫，白名单放行清单坐标（`p2#1`）、指向本目录的链接与 `references/` 路径、钉住的后端版本号（`python-docx==1.2.0`、`python 3.9.6`）。
 
 ### `evals/` 目录
 

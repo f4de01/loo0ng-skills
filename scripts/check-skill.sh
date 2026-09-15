@@ -6,6 +6,8 @@
 #   - description 非空、<=1024 字符、含 ": " 时必须加引号（上游 #907 的坑）
 #   - agents/openai.yaml 存在，含 interface.display_name / short_description
 #   - user-invoked 两端一致：disable-model-invocation: true <=> policy.allow_implicit_invocation: false
+#   - 正文随包自足：SKILL.md 与 references/*.md 里不出现 ADR 号、issue 号、版本号，
+#     也不指向本 skill 目录之外的仓库文件（装到用户机上的 skill 读不到那些东西）
 # 用法示例：bash assets/check-skill.sh ~/my-skills
 set -u
 ROOT="${1:-.}"
@@ -23,6 +25,9 @@ if [ ! -d "$ROOT/skills" ]; then
   echo "找不到 $ROOT/skills 目录。skill 仓库的根下应有 skills/<bucket>/<name>/SKILL.md"
   exit 1
 fi
+
+# 正文随包自足要拦下的东西：ADR 号、`#` 加数字形的 issue 号、版本号、包外仓库文件与只在仓库里成立的约定名。
+SELF_CONTAINED_BAN='ADR-?[0-9]|(^|[^A-Za-z0-9])#[0-9]|[0-9]+\.[0-9]+\.[0-9]+|CONTEXT\.md|CHANGELOG|\.changeset|(^|[^A-Za-z0-9_./-])(docs|tests|skills)/|结构不变量|硬边界'
 
 fm_get() { printf '%s\n' "$FM" | grep -m1 -E "^$1:" | sed -E "s/^$1:[[:space:]]*//"; }
 unquote() { printf '%s' "$1" | sed -E 's/^"(.*)"$/\1/; s/^'"'"'(.*)'"'"'$/\1/'; }
@@ -89,6 +94,29 @@ while IFS= read -r -d '' skill_md; do
     elif [ "$dmi" = "true" ]; then bad "Claude 侧是 user-invoked，但 openai.yaml 缺 policy.allow_implicit_invocation: false"
     else bad "openai.yaml 是 user-invoked，但 SKILL.md 缺 disable-model-invocation: true"; fi
   fi
+
+  # 正文随包自足：装到用户机上的每一件 skill 自己说完该说的，不指向它读不到的东西。
+  # 先剥白名单再扫：清单坐标（p2#1）、指向本 skill 目录内的链接与 references 路径、钉住的后端版本号。
+  self_hits=""
+  for doc in "$skill_md" "$dir"/references/*.md; do
+    [ -f "$doc" ] || continue
+    h="$(sed -E \
+           -e 's/p[0-9]+#[0-9]+//g' \
+           -e 's#\]\(references/[^)]*\)#]#g' \
+           -e 's#\]\([A-Za-z0-9._-]+\)#]#g' \
+           -e 's#references/[^ )"]+##g' \
+           -e 's/python-docx[ =]*[0-9]+(\.[0-9]+)+//g' \
+           -e 's/python ?[0-9]+(\.[0-9]+)+//g' \
+           "$doc" \
+         | grep -nE "$SELF_CONTAINED_BAN" | head -3)"
+    [ -n "$h" ] && self_hits="$self_hits $(basename "$doc"):$(printf '%s' "$h" | cut -d: -f1 | tr '\n' ',')"
+  done
+  if [ -n "$self_hits" ]; then
+    bad "正文不随包自足：还留着 ADR 号、issue 号、版本号或包外仓库引用（文件:行）$self_hits"
+  else
+    ok "正文随包自足"
+  fi
+
 done < <(find "$ROOT/skills" -iname SKILL.md -not -path '*/node_modules/*' -print0 | sort -z)
 
 [ "$found" = 1 ] || { echo "skills/ 下没有任何 SKILL.md"; exit 1; }
