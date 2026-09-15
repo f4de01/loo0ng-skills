@@ -1,5 +1,5 @@
 interface:
   display_name: "ask-loo0ng"
-  short_description: "问路：当前节点、上一完成、下一任务、下一句该打什么"
+  short_description: "问路：待拍板的、当前节点、上一完成、下一任务、下一句该打什么"
 policy:
   allow_implicit_invocation: false
