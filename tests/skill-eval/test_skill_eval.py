@@ -192,6 +192,21 @@ class PromptAndCommandTest(unittest.TestCase):
         self.assertEqual(skill_eval.build_prompt("claude", case), "/loo0ng-skills:setup-case 帮我起手")
         self.assertEqual(skill_eval.build_prompt("claude", case, ""), "/setup-case 帮我起手")
 
+    def test_claude_plugin_follows_whether_the_plugin_is_installed(self):
+        """照上游一个 harness 只装一条路：装了插件带命名空间，改造期走 junction 就是裸名（ADR-0022）；
+        与 scripts/link-skills.ps1 认同一个文件。显式给了 --claude-plugin 以它为准。"""
+        installed = self.root / "installed_plugins.json"
+        原 = skill_eval.INSTALLED_PLUGINS
+        skill_eval.INSTALLED_PLUGINS = installed
+        self.addCleanup(setattr, skill_eval, "INSTALLED_PLUGINS", 原)
+        self.assertEqual(skill_eval.parse_args(["--harness", "claude"]).claude_plugin, "", "文件不在：裸名")
+        installed.write_text('{"plugins": {"loo0ng-skills@loo0ng-marketplace": {}}}', encoding="utf-8")
+        self.assertEqual(skill_eval.parse_args(["--harness", "claude"]).claude_plugin, "loo0ng-skills")
+        installed.write_text('{"plugins": {"other@x": {}}}', encoding="utf-8")
+        self.assertEqual(skill_eval.parse_args(["--harness", "claude"]).claude_plugin, "")
+        self.assertEqual(skill_eval.parse_args(["--harness", "claude", "--claude-plugin", "mine"]).claude_plugin, "mine")
+        self.assertEqual(skill_eval.parse_args(["--harness", "claude", "--claude-plugin", ""]).claude_plugin, "")
+
     def test_claude_command(self):
         ws = self.root / "ws"
         cmd = skill_eval.build_command("claude", ["claude.exe"], "提示", ws, max_turns=7,
@@ -351,28 +366,28 @@ class RunCaseLifecycleTest(unittest.TestCase):
         ws = seen[0][0]
         self.assertTrue(ws.exists())
         shutil.rmtree(ws)
-        for 家 in pathlib.Path(tempfile.gettempdir()).glob("skill-eval-留-活图家-*"):
+        for 家 in pathlib.Path(tempfile.gettempdir()).glob("skill-eval-留-家-*"):
             shutil.rmtree(家, ignore_errors=True)
 
-    def test_每次运行给一个临时活图家(self):
-        """活图本来住 ~/.loo0ng/领域/（ADR-0019）；eval 不往律师的主目录里拷东西，也不吃上一次跑剩下的活图。"""
-        case = skill_eval.load_case(make_case(self.root, "活图家"))
+    def test_每次运行给一个临时的家(self):
+        """个人预设图本来住 ~/.loo0ng/预设图/（ADR-0023）；eval 不往律师的主目录里写东西，也不吃上一次跑剩下的预设图。"""
+        case = skill_eval.load_case(make_case(self.root, "家"))
         家 = []
 
         def 记下(harness, c, workspace, prompt, max_turns, timeout, model=None, effort=None):
-            家.append(os.environ.get(skill_eval.LIVE_HOME_ENV))
+            家.append(os.environ.get(skill_eval.HOME_ENV))
             return skill_eval.Invocation(status="ok", reply="", turns=1, detail="")
 
-        旧 = os.environ.pop(skill_eval.LIVE_HOME_ENV, None)
-        self.addCleanup(lambda: os.environ.__setitem__(skill_eval.LIVE_HOME_ENV, 旧)
+        旧 = os.environ.pop(skill_eval.HOME_ENV, None)
+        self.addCleanup(lambda: os.environ.__setitem__(skill_eval.HOME_ENV, 旧)
                         if 旧 is not None else None)
         skill_eval.run_case(case, self.opts(argv=["--runs", "2"]), invoke=记下)
         self.assertEqual(len(家), 2)
-        self.assertTrue(all(家), "每次运行都要经 %s 给一个活图家：%s" % (skill_eval.LIVE_HOME_ENV, 家))
-        self.assertEqual(len(set(家)), 2, "两次运行不该共用一个活图家：%s" % 家)
+        self.assertTrue(all(家), "每次运行都要经 %s 给一个家：%s" % (skill_eval.HOME_ENV, 家))
+        self.assertEqual(len(set(家)), 2, "两次运行不该共用一个家：%s" % 家)
         for 路径 in 家:
-            self.assertFalse(pathlib.Path(路径).exists(), "跑完要连活图家一起删（只生不存）")
-        self.assertIsNone(os.environ.get(skill_eval.LIVE_HOME_ENV), "跑完要把环境变量还原")
+            self.assertFalse(pathlib.Path(路径).exists(), "跑完要连家一起删（只生不存）")
+        self.assertIsNone(os.environ.get(skill_eval.HOME_ENV), "跑完要把环境变量还原")
 
     def test_runs_n_uses_a_new_workspace_each_time(self):
         case = skill_eval.load_case(make_case(self.root, "多跑"))
@@ -625,24 +640,24 @@ class MaterializeTest(unittest.TestCase):
         self.assertEqual((ws / "回放留下的.txt").read_text(encoding="utf-8"), "ok")
         self.assertFalse((ws / "状态.md").exists(), "种子的元文件不进工作区")
 
-    def test_活图在工作区里的种子回显出要设的活图家(self):
-        """回放自己兜底管不到 harness 里的模型：它跑 sketch.py home 时没有这个变量就写真的 ~/.loo0ng（#105）。"""
-        种子 = self.tmp / "evals" / "种子" / "带活图的"
+    def test_家在工作区里的种子回显出要设的家(self):
+        """回放自己兜底管不到 harness 里的模型：它调 preset.py 时没有这个变量就读写真的 ~/.loo0ng（#105）。"""
+        种子 = self.tmp / "evals" / "种子" / "带个人预设图的"
         种子.mkdir(parents=True)
         write(种子, "回放.py", textwrap.dedent('''
             import pathlib, sys
-            (pathlib.Path(sys.argv[1]) / ".活图家" / "领域" / "菜园").mkdir(parents=True)
+            (pathlib.Path(sys.argv[1]) / ".预设图家" / "预设图" / "菜园").mkdir(parents=True)
         '''))
-        code, 输出 = self.跑(["--materialize", "带活图的", "--evals", str(self.用例根)])
+        code, 输出 = self.跑(["--materialize", "带个人预设图的", "--evals", str(self.用例根)])
         self.assertEqual(code, 0, 输出)
         ws = self.生出的[0]
-        self.assertIn("%s=%s" % (skill_eval.LIVE_HOME_ENV, ws / skill_eval.WS_LIVE_HOME), 输出,
-                      "该回显触发之前要设的活图家：\n%s" % 输出)
+        self.assertIn("%s=%s" % (skill_eval.HOME_ENV, ws / skill_eval.WS_HOME), 输出,
+                      "该回显触发之前要设的家：\n%s" % 输出)
 
-    def test_活图不在工作区里的种子不多回显一行(self):
+    def test_家不在工作区里的种子不多回显一行(self):
         code, 输出 = self.跑(["--materialize", "小种子", "--evals", str(self.用例根)])
         self.assertEqual(code, 0, 输出)
-        self.assertNotIn(skill_eval.LIVE_HOME_ENV, 输出, "没有活图的种子照旧只打印一行路径")
+        self.assertNotIn(skill_eval.HOME_ENV, 输出, "没有个人预设图的种子照旧只打印一行路径")
 
     def test_工作区不被删掉(self):
         code, 输出 = self.跑(["--materialize", "小种子", "--evals", str(self.用例根)])

@@ -1,8 +1,9 @@
-"""八个路由用例共用的断言：ask-matt 那五条验收项，加本项目自己的一条（#33 验收）。
+"""路由用例共用的断言：ask-matt 那五条验收项，加本项目自己的几条（#33 验收，#19、#20 重定）。
 
 五条的出处是 `docs/research/ask-matt-路由写法解析.md` §3.3（原文可直接当测试）；
-第六条是 ADR-0005 的「只指向表里真存在的入口」。八个用例各 import 这六条，
-再加自己那一段情形的断言。签名与用例里的断言一样，(workspace: Path, reply: str)。
+第六条是 ADR-0005 的「只指向表里真存在的入口」；再加只读基线、五段按序、待拍板行（#19：路由第一行
+先说哪几份文书黄色已清、还等确认）。每个路由用例各 import 这几条，再加自己那一段情形的断言。
+签名与用例里的断言一样，(workspace: Path, reply: str)。
 
 第 4 条（断言行为前先读对方 `SKILL.md`）在一次调用里只能验到回复里的注明那一半：
 跑器拿到的只有最后一条回复，看不到追踪，「真的去读了」由人工实测与关票那一次覆盖。
@@ -47,9 +48,30 @@ def 段(reply: str, 标题: str) -> str:
     return 尾 if 下一段 is None else 尾[:下一段]
 
 
+def 第一行(reply: str) -> str:
+    """回复里第一个非空行：SKILL.md 说它必须是待拍板行。"""
+    for line in reply.splitlines():
+        if line.strip():
+            return line.strip()
+    return ""
+
+
 def 节点标题(workspace) -> list:
     图 = json.loads((pathlib.Path(workspace) / "图.json").read_text(encoding="utf-8"))
     return [n["标题"] for m in 图["模块"] for n in m["节点"]]
+
+
+def 视图节点(workspace) -> list:
+    p = pathlib.Path(workspace) / "图视图.json"
+    # 路由只读：这份文件跑完必须还在。不在就是路由动了它，这里给一条读得懂的红，
+    # 而不是让断言模块抛 FileNotFoundError（那看不出是谁删的）。
+    assert p.is_file(), "跑完 图视图.json 不在了：路由只读，它不该删或改这份文件"
+    return [n for m in json.loads(p.read_text(encoding="utf-8"))["模块"] for n in m["节点"]]
+
+
+def 待拍板的(workspace) -> list:
+    """引擎算出来的待拍板：已生成、未确认、高亮已清。路由第一行该点的就是它们。"""
+    return [n["标题"] for n in 视图节点(workspace) if n["状态"] == "已生成" and n["高亮"] == "已清"]
 
 
 # 1. 结尾点名该打什么，然后停，不自己开工。
@@ -92,7 +114,7 @@ def check_断言以对方SKILL为准(workspace, reply):
 def check_认出自己处境(workspace, reply):
     s = 段(reply, "你在哪")
     assert s.strip(), "回复里没有「你在哪」这一段：\n%s" % reply
-    assert re.search(r"主线第\s*[1-4]\s*步|无事可做|终点", s), \
+    assert re.search(r"主线第\s*[1-5]\s*步|无事可做|终点|空图", s), \
         "「你在哪」没落到主线的某一步上：\n%s" % s
     标题 = 节点标题(workspace)
     if 标题:
@@ -112,9 +134,11 @@ def check_只指向表里的三个入口(workspace, reply):
         if 前缀 == "/" and "loo0ng" in 名 and not re.fullmatch(入口, 名):
             raise AssertionError("`/%s` 不是表里的入口：\n%s" % (名, reply))
 
+
 # 只读：跑完三份图文件一个字节都不变（ADR-0005；#33 验收）。判据由种子的回放写在工作区里。
 def check_只读没写图(workspace, reply):
     校验基线(workspace)
+
 
 # 段序：五段按这个顺序出现（SKILL.md「固定五段，段序不变」）。
 def check_五段按序(workspace, reply):
@@ -125,3 +149,22 @@ def check_五段按序(workspace, reply):
         位置.append((m.start(), 名))
     乱 = [名 for (a, 名), (b, _) in zip(位置, 位置[1:]) if a >= b]
     assert not 乱, "五段的顺序不对（%s 排到了后一段之后）：%s" % ("、".join(乱), [名 for _, 名 in sorted(位置)])
+
+
+# 第一行是待拍板行（SKILL.md「回复长什么样」，#19）：黄色已清、还没确认的逐个点名；一个没有就说无。
+def check_第一行是待拍板行(workspace, reply):
+    行 = 第一行(reply)
+    assert 行.startswith("待拍板") or re.match(r"[*#\s]*待拍板", 行), \
+        "回复的第一行该是「待拍板：…」，实际是：%r" % 行
+    该点的 = 待拍板的(workspace)
+    for 标题 in 该点的:
+        assert 标题 in 行, "「%s」黄色已清、还没确认，待拍板行该点它：%r" % (标题, 行)
+    # 整串只要求第一个那一份（SKILL.md：「后面接一句……与第一个那一串」），多份时其余只点名。
+    if 该点的:
+        assert re.search(r"确认\s*(?:%s)" % "|".join(re.escape(t) for t in 该点的), 行), \
+            "待拍板行该给出第一个那一串「确认 %s」：%r" % (该点的[0], 行)
+    if not 该点的:
+        assert re.search(r"待拍板[：:]\s*无", 行), "没有黄色已清的文书时该写「待拍板：无」：%r" % 行
+    for n in 视图节点(workspace):
+        if n["状态"] == "已生成" and n["高亮"] != "已清":
+            assert n["标题"] not in 行, "「%s」黄色未清，不算待拍板，不该出现在第一行：%r" % (n["标题"], 行)

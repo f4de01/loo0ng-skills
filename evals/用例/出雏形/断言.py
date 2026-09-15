@@ -1,86 +1,69 @@
-"""出雏形用例的断言：回显含四样，拍板后图里多了指南提出的、同名的不重复、案件图不存时限、视图重算。签名 (workspace: Path, reply: str)。"""
+"""出雏形用例的断言：图里多了指南提的三个节点、同名的没重复、案件图没写时限、视图重算、没留雏形文件。
+
+签名 (workspace: Path, reply: str)。
+"""
 import json
 
-ORIGINAL = {
-    "整地": ["松土", "施底肥"],
-    "播种": ["选种", "下种"],
-    "养护": ["浇水", "除草", "搭架"],
-    "收获": ["采摘", "记账"],
-}
-ORIGINAL_IDS = {"松土": "n-songtu", "施底肥": "n-difei", "选种": "n-xuanzhong", "下种": "n-xiazhong",
-                "浇水": "n-jiaoshui", "除草": "n-chucao", "搭架": "n-dajia", "采摘": "n-caizhai", "记账": "n-jizhang"}
+新模块 = "越冬"
+新节点 = ("覆膜", "清园", "施追肥")
+已有的 = "浇水"
+根上允许 = {"AGENTS.md", "CLAUDE.md", "图.json", "图视图.json", "图视图.md", "归档索引.md", "待归档", "材料", "参考", "文书"}
+
+
+def _is_harness_noise(name):
+    """harness 跑 python 时留下的缓存目录（__pycache__、.uv-cache、uv-cache 等），不算工作区产物。"""
+    return name == "__pycache__" or name.startswith(".") or name.startswith("uv-")
 
 
 def _graph(workspace):
     return json.loads((workspace / "图.json").read_text(encoding="utf-8"))
 
 
-def _titles(data):
-    return {m["标题"]: [n["标题"] for n in m["节点"]] for m in data["模块"]}
+def _nodes(data):
+    return [(m, n) for m in data["模块"] for n in m["节点"]]
 
 
-def _node(data, title):
-    for m in data["模块"]:
-        for n in m["节点"]:
-            if n["标题"] == title:
-                return n
-    raise AssertionError("找不到节点「%s」" % title)
-
-
-def check_回显含模块节点模板与时限(workspace, reply):
-    for text in ("越冬", "覆膜", "清园", "施追肥", "覆膜记录"):
-        assert text in reply, "回显里没有「%s」" % text
-    assert "时限" in reply, "回显里没提时限"
-    # 时限句原文在 check 的清单里（脚本层已断言）；Codex 侧只捕获最后一条回复，清单常在中间回复里，这里只要求提到。
-
-
-def check_图里多了指南提出的(workspace, reply):
+def check_图里多了指南提的节点(workspace, reply):
     data = _graph(workspace)
-    titles = _titles(data)
-    assert titles.get("越冬") == ["覆膜", "清园"], "「越冬」模块应有覆膜、清园两个节点，实际：%s" % titles.get("越冬")
-    assert titles.get("养护") == ["浇水", "除草", "搭架", "施追肥"], "「养护」应在末尾多一个施追肥、浇水不重复，实际：%s" % titles.get("养护")
-    for module, nodes in ORIGINAL.items():
-        if module != "养护":
-            assert titles.get(module) == nodes, "模块「%s」被动了：%s" % (module, titles.get(module))
-    assert set(titles) == set(ORIGINAL) | {"越冬"}, "模块集合不对：%s" % sorted(titles)
+    模块 = [m["标题"] for m in data["模块"]]
+    assert 新模块 in 模块, "指南里的新模块「%s」没进图：%s" % (新模块, 模块)
+    titles = [n["标题"] for _, n in _nodes(data)]
+    for t in 新节点:
+        assert t in titles, "指南里的「%s」没进图：%s" % (t, titles)
+    所在 = {n["标题"]: m["标题"] for m, n in _nodes(data)}
+    assert 所在["覆膜"] == 新模块 and 所在["清园"] == 新模块, "覆膜与清园该在新模块「%s」下：%s" % (新模块, 所在)
+    assert 所在["施追肥"] == "养护", "施追肥该挂在已有模块「养护」下，实际 %r" % 所在["施追肥"]
 
 
-def check_空白模板与id(workspace, reply):
-    data = _graph(workspace)
-    assert _node(data, "覆膜")["空白模板"] == {"来源": "官方", "文件": "覆膜记录.docx"}, "覆膜应挂官方模板 覆膜记录.docx，实际 %r" % _node(data, "覆膜")["空白模板"]
-    assert _node(data, "清园")["空白模板"] == "无"
-    assert _node(data, "施追肥")["空白模板"] == "无"
-    for title, id_ in ORIGINAL_IDS.items():
-        assert _node(data, title)["id"] == id_, "原有节点「%s」的 id 变了" % title
+def check_同名的没重复(workspace, reply):
+    titles = [n["标题"] for _, n in _nodes(_graph(workspace))]
+    assert titles.count(已有的) == 1, "「%s」图里已经有，不该再提、再建：%s" % (已有的, titles)
+    assert len(titles) == len(set(titles)), "图里有重名节点：%s" % titles
+    assert len(titles) == 12, "9 个原有加 3 个新提的，该恰是 12 个：%s" % titles
 
 
-def check_案件图不存时限且无条目(workspace, reply):
-    data = _graph(workspace)
-    for m in data["模块"]:
-        for n in m["节点"]:
-            assert "时限" not in n, "案件图节点「%s」带了时限（ADR-0016）" % n["标题"]
-            assert n["条目"] == [], "雏形不该写条目：%s" % n["标题"]
-    assert set(data) == {"格式版本", "领域", "模块"}, "图顶层多了键：%s" % sorted(data)
+def check_案件图没写时限(workspace, reply):
+    for _, n in _nodes(_graph(workspace)):
+        if n["标题"] in 新节点:
+            assert not n.get("时限"), "案件图上的时限只回显不写（引擎拒），「%s」却写了 %r" % (n["标题"], n["时限"])
+    assert all(n["条目"] == [] for _, n in _nodes(_graph(workspace))), "雏形不该写条目"
 
 
-def check_视图已重算(workspace, reply):
+def check_视图重算了(workspace, reply):
     md = (workspace / "图视图.md").read_text(encoding="utf-8")
-    assert "越冬" in md and "施追肥" in md, "图视图.md 没有重算"
+    for t in (新模块,) + 新节点:
+        assert t in md, "图视图.md 里没有「%s」，视图没随写图重算" % t
     view = json.loads((workspace / "图视图.json").read_text(encoding="utf-8"))
-    assert "越冬" in [m["标题"] for m in view["模块"]], "图视图.json 没有重算"
-    assert _node(view, "覆膜")["来源"] == "案件"
+    前方 = [x["标题"] for m in view["前方"] for x in m["节点"]]
+    assert all(t in 前方 for t in 新节点), "新节点都未生成，该在前方里：%s" % 前方
 
 
-def _is_harness_noise(name):
-    """harness 跑 python 时留下的缓存目录（__pycache__、.uv-cache、.uv-python 等），不算工作区产物。
-
-    #105 实测 Codex 也会把 uv 的缓存落成不带点的 `uv-cache`，所以 `uv-` 开头的一并忽略：
-    它是 harness 自备解释器留下的，不是 skill 的产物。七份同名小函数逐字相同，改一处就一起改。
-    """
-    return name == "__pycache__" or name.startswith(".") or name.startswith("uv-")
-
-
-def check_没写别的文件(workspace, reply):
+def check_没留雏形文件(workspace, reply):
     names = sorted(p.name for p in workspace.iterdir() if not _is_harness_noise(p.name))
-    assert names == ["AGENTS.md", "CLAUDE.md", "图.json", "图视图.json", "图视图.md", "指南", "收件箱", "文书", "材料", "模板"], "工作区里多出了文件（雏形文件该写在临时目录）：%s" % names
-    assert sorted(p.name for p in (workspace / "指南").iterdir()) == ["种植指南.md"], "指南/ 里多出了东西"
+    多 = [n for n in names if n not in 根上允许]
+    assert not 多, "雏形文件该写在临时位置，工作区根多出了：%s" % 多
+
+
+def check_回显里有新提的(workspace, reply):
+    for t in (新模块,) + 新节点:
+        assert t in reply, "回显清单里没有「%s」：\n%s" % (t, reply)

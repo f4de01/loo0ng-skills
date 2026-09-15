@@ -22,11 +22,12 @@
               用 assert 判真伪，函数名即报红时给出的断言名
 
 每次运行：建临时工作区 → 回放种子 → 调 harness → 回复正则 → 逐条断言 → 删工作区（finally）。
-每次运行另建一个临时的「活图家」，经环境变量 LOO0NG_HOME 交给 harness（ADR-0019）：领域目录的活图
-本来住 ~/.loo0ng/领域/，eval 不该往律师的主目录里拷东西，也不该被上一次跑剩下的活图影响（ADR-0015
-只生不存）。跑完连它一起删。Codex 侧实测吃这个变量，沙箱也写得动 %TEMP% 下的这个目录（#90）。
+每次运行另建一个临时的「家」，经环境变量 LOO0NG_HOME 交给 harness（ADR-0023）：个人预设图本来住
+~/.loo0ng/预设图/，eval 不该往律师的主目录里写东西（另存会写进去），也不该被上一次跑剩下的预设图影响
+（ADR-0015 只生不存）。跑完连它一起删。Codex 侧实测吃这个变量，沙箱也写得动 %TEMP% 下的这个目录（#90）。
 Claude Code 侧走 claude -p（--max-turns 由它自己数；MSYS_NO_PATHCONV=1 防 Git Bash 改写 /名），skill 名带插件
-命名空间 /loo0ng-skills:<名>（开发机 Claude Code 侧装的是插件，照上游一个 harness 只装一条路；--claude-plugin "" 退回裸名）；
+命名空间 /loo0ng-skills:<名>（照上游一个 harness 只装一条路：装了插件就带命名空间，没装（改造期走 junction，
+ADR-0022）就是裸名；--claude-plugin 显式给了以它为准，给空串就是裸名）；
 Codex 侧走 codex exec --json，回合数按流里的工具类 item 数，超上限即杀进程树。
 Codex 侧编排 skill 用替身提示词（读 ~/.agents/skills/<名>/SKILL.md 并照做），测的是正文不是触发。
 结果只打印不进仓库。退出码：0 全绿；1 有红；2 用法或用例配置错误。
@@ -54,16 +55,26 @@ DEFAULT_MAX_TURNS = 30
 DEFAULT_TIMEOUT = 300
 CASE_KEYS = {"种子", "skill", "回复正则", "回合上限", "超时秒", "允许工具", "Codex沙箱", "说明"}
 CODEX_SANDBOXES = ("workspace-write", "danger-full-access")
-LIVE_HOME_ENV = "LOO0NG_HOME"  # 活图的「家」，与 skills/in-progress/domain/scripts/sketch.py 同一个名字
-WS_LIVE_HOME = ".活图家"        # 没设 LIVE_HOME_ENV 时回放把活图落在工作区里的这个目录（evals/共用/回放助手.py）
+HOME_ENV = "LOO0NG_HOME"     # 个人预设图的「家」，与 skills/in-progress/domain/scripts/preset.py 同一个名字
+WS_HOME = ".预设图家"         # 没设 HOME_ENV 时回放把家落在工作区里的这个目录（evals/共用/回放助手.py）
 DEFAULT_CODEX_SANDBOX = "workspace-write"
 CASE_REQUIRED = ("种子", "回复正则")
-SEED_META_FILES = ("回放.py", "状态.md")
+SEED_META_FILES = ("回放.py", "状态.md", "__pycache__")  # 不拷进工作区：前两个是种子的元文件，第三个不该在仓库里
 CODEX_TOOL_ITEMS = {"command_execution", "file_change", "mcp_tool_call", "web_search"}
 CODEX_STAND_IN = "读 ~/.agents/skills/{skill}/SKILL.md 并照做：{prompt}"
-# Claude Code 侧走插件路线（照上游：一个 harness 只装一条路，开发机 Claude Code 装的是插件），skill 名带插件命名空间；
-# 传 --claude-plugin "" 退回 junction 路线的裸名。
+# Claude Code 侧照上游「一个 harness 只装一条路」：装了插件（~/.claude/plugins/installed_plugins.json 里有
+# loo0ng-skills@）skill 名就带插件命名空间，没装（改造期走 junction，ADR-0022）就是裸名；与 scripts/link-skills.ps1
+# 认的是同一个文件。--claude-plugin 显式给了以它为准，给空串就是裸名。
 DEFAULT_CLAUDE_PLUGIN = "loo0ng-skills"
+INSTALLED_PLUGINS = pathlib.Path.home() / ".claude" / "plugins" / "installed_plugins.json"
+
+
+def default_claude_plugin() -> str:
+    try:
+        installed = INSTALLED_PLUGINS.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+    return DEFAULT_CLAUDE_PLUGIN if DEFAULT_CLAUDE_PLUGIN + "@" in installed else ""
 
 
 class EvalError(Exception):
@@ -128,8 +139,9 @@ def parse_args(argv=None):
     ap.add_argument("--keep", action="store_true", help="跑完不删临时工作区（排障用）")
     ap.add_argument("--model", default=None, help="模型，透传给 harness；不给则走 CLI 默认")
     ap.add_argument("--effort", default=None, help="推理档，透传给 harness；不给则走 CLI 默认")
-    ap.add_argument("--claude-plugin", default=DEFAULT_CLAUDE_PLUGIN,
-                    help="Claude Code 侧 skill 名前的插件命名空间，默认 %s；给空串走 junction 路线的裸名" % DEFAULT_CLAUDE_PLUGIN)
+    ap.add_argument("--claude-plugin", default=None,
+                    help="Claude Code 侧 skill 名前的插件命名空间；不给就看装没装插件（装了是 %s，没装是裸名），"
+                         "给空串强制走 junction 路线的裸名" % DEFAULT_CLAUDE_PLUGIN)
     opts = ap.parse_args(argv)
     if opts.materialize:
         # 只生工作区这一路不跑用例，跑用例才有意义的参数一个都不收（收了也没处使，静默吃掉更糟）。
@@ -143,6 +155,8 @@ def parse_args(argv=None):
             ap.error("--materialize 只生工作区、不跑用例，别再给 %s" % "、".join(多余))
     elif not opts.harness:
         ap.error("要么给 --harness 跑用例，要么给 --materialize 只生一个工作区")
+    if opts.claude_plugin is None:
+        opts.claude_plugin = default_claude_plugin()
     return opts
 
 
@@ -286,7 +300,9 @@ def replay_seed(evals_root: pathlib.Path, seed: str, workspace: pathlib.Path) ->
             shutil.copy2(entry, target)
     replay = seed_dir / "回放.py"
     if replay.is_file():
-        r = subprocess.run([sys.executable, str(replay), str(workspace)], cwd=str(workspace),
+        # -B：回放与它 import 的模块都不写 __pycache__。种子目录在仓库里，落一个缓存目录就会被上面那段
+        # 原样拷进每个工作区（种子自己写 sys.dont_write_bytecode 只管它设了之后的那些 import）。
+        r = subprocess.run([sys.executable, "-B", str(replay), str(workspace)], cwd=str(workspace),
                            capture_output=True, text=True, encoding="utf-8", errors="replace")
         if r.returncode != 0:
             raise EvalError("种子 %s 回放失败（退出码 %d）：\n%s" % (seed, r.returncode, (r.stderr or r.stdout).strip()))
@@ -419,8 +435,12 @@ def _invoke_claude(cmd: List[str], workspace: pathlib.Path, timeout: int) -> Inv
     if result.get("subtype") == "error_max_turns":
         return Invocation("max_turns", "", turns, "; ".join(result.get("errors") or ["回合上限"]))
     if result.get("is_error") or result.get("subtype") != "success":
+        # errors 常常是空的（用量上限、过载这类错只写在 result 里），subtype 又照旧是 success：
+        # 只报 subtype 就成了「claude 报错：success」，看不出是什么错（#20 排障时撞上）。把 result 带上。
+        因 = "; ".join(result.get("errors") or []) or str(result.get("api_error_status") or result.get("subtype"))
+        文 = str(result.get("result") or "").strip()[:400]
         return Invocation("error", str(result.get("result") or ""), turns,
-                          "claude 报错：%s" % "; ".join(result.get("errors") or [str(result.get("subtype"))]))
+                          "claude 报错：%s%s" % (因, "：" + 文 if 文 else ""))
     return Invocation("ok", str(result.get("result") or ""), turns)
 
 
@@ -495,13 +515,13 @@ def run_case(case: Case, opts, invoke: Callable = invoke) -> List[RunResult]:
     results = []
     for run in range(1, opts.runs + 1):
         workspace = make_workspace(case.name)
-        live_home = None
-        was = os.environ.get(LIVE_HOME_ENV)
+        home = None
+        was = os.environ.get(HOME_ENV)
         started = time.monotonic()
         try:
-            # 活图家也建在 try 里：它建不出来时上面那个工作区照样要删。
-            live_home = make_workspace(case.name + "-活图家")
-            os.environ[LIVE_HOME_ENV] = str(live_home)
+            # 家也建在 try 里：它建不出来时上面那个工作区照样要删。
+            home = make_workspace(case.name + "-家")
+            os.environ[HOME_ENV] = str(home)
             if case.seed:
                 replay_seed(pathlib.Path(opts.evals), case.seed, workspace)
             inv = invoke(opts.harness, case, workspace, prompt, max_turns, timeout,
@@ -509,17 +529,17 @@ def run_case(case: Case, opts, invoke: Callable = invoke) -> List[RunResult]:
             failures = evaluate(case, workspace, inv)
         finally:
             if was is None:
-                os.environ.pop(LIVE_HOME_ENV, None)
+                os.environ.pop(HOME_ENV, None)
             else:
-                os.environ[LIVE_HOME_ENV] = was
+                os.environ[HOME_ENV] = was
             if opts.keep:
                 print("  工作区保留：%s" % workspace)
-                if live_home:
-                    print("  活图家保留：%s" % live_home)
+                if home:
+                    print("  家保留：%s" % home)
             else:
                 remove_workspace(workspace)
-                if live_home:
-                    remove_workspace(live_home)
+                if home:
+                    remove_workspace(home)
         results.append(RunResult(case.name, run, time.monotonic() - started, inv.turns, failures))
     return results
 
@@ -537,14 +557,14 @@ def materialize(opts, out) -> int:
         print("错误：%s" % e, file=sys.stderr)
         return 2
     print(str(workspace), file=out)
-    # 活图落在工作区里的种子：触发之前必须把这个变量设进环境。回放自己兜底只管回放那几条命令，
-    # 管不到 harness 里的模型：它自己跑 sketch.py home 时没有这个变量就解析到真的 ~/.loo0ng，
-    # 一次关票触发就写进了开发者自己那份活图（#105 在 Codex 侧实测到）。
-    家 = workspace / WS_LIVE_HOME
+    # 家落在工作区里的种子（个人预设图在里面）：触发之前必须把这个变量设进环境。回放自己兜底只管回放
+    # 那几条命令，管不到 harness 里的模型：它调 preset.py 时没有这个变量就解析到真的 ~/.loo0ng，
+    # 起手找不到那份个人预设图，另存又会写进开发者自己的家（#105 在 Codex 侧实测过同款事故）。
+    家 = workspace / WS_HOME
     if 家.is_dir():
-        print("%s=%s" % (LIVE_HOME_ENV, 家), file=out)
-        print("这个种子的活图在工作区里。触发之前把上面这个变量设进环境，"
-              "否则模型自己跑 sketch.py home 会写到真的 ~/.loo0ng（#105）。", file=out)
+        print("%s=%s" % (HOME_ENV, 家), file=out)
+        print("这个种子的个人预设图在工作区里的家。触发之前把上面这个变量设进环境，"
+              "否则模型调 preset.py 会读写真的 ~/.loo0ng（#105）。", file=out)
     return 0
 
 

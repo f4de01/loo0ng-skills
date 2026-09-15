@@ -92,6 +92,8 @@ bash scripts/check-release.sh .            # 发版前：changesets 配置、同
 for d in tests/*/; do python -m unittest discover -s "$d" -p 'test_*.py' || exit 1; done
 ```
 
+`tests/evals/test_seeds.py` 是种子那一份：16 个种子各回放一遍，对着各自的 `状态.md` 断工作区状态（目录形状、图与两份视图、条目、高亮清没清、归档索引、家里那份个人预设图），并守两条接口：每个种子都有 `回放.py` 与 `状态.md`、每个用例指的种子都存在。种子一改它立刻红，所以改种子与改它是同一次提交的事。约半分钟（每个种子都真跑一遍起手 CLI）。
+
 `tests/to-docx/` 只有一条跑道（ADR-0024 之后，版式门禁整件退场）：**不起 Word，在任何机器上必须全绿、不许 skip**，合起来半分钟上下。19 件官方模板逐件回归（`test_templates.py`）守的是施加前后 `tblPr`、`tblGrid`、`trPr`、`tcPr` 逐字节相同、槽外格式不变、元数据清掉：数据泄露与渲染格式两样保证从运行时的门禁挪进了测试，每次改 `fill.py` 都要过 19 件。
 
 **3.9 那条跑道**：随包脚本的底线是 python 3.9（律师那台 mac 的 `/usr/bin/python3` 是 3.9.6），`tests/python-floor/` 只按形状扫，真跑要自己起一次。装一份钉住的后端再跑全套：
@@ -111,7 +113,7 @@ python scripts/skill-eval.py --harness codex                  # Codex 侧，走 
 python scripts/skill-eval.py --harness claude --case 冒烟     # 只跑一个用例；--case 可重复
 python scripts/skill-eval.py --harness codex --runs 3         # 怀疑抖动时多跑几次
 python scripts/skill-eval.py --harness claude --evals evals/自检   # 跑器自检用例（故意失败），不进门槛
-python scripts/skill-eval.py --harness claude --case 回流 --model opus --effort high   # 换模型跑
+python scripts/skill-eval.py --harness claude --case 出一版留黄 --model opus --effort high   # 换模型跑
 ```
 
 Codex 侧提示词经 stdin 送入（`PROMPT` 位置是 `-`）：PATH 上的 `codex` 是 npm 的 `.cmd` 垫片，cmd.exe 会把参数里第一个换行之后的字吞掉，多行提示词（如带一段稿子的「出一版」用例）只剩第一行（#28）。其他参数：`--max-turns N`、`--timeout 秒` 覆盖用例里的值；`--keep` 跑完不删工作区，只为排障；`--model` 与 `--effort` 透传给各自的 CLI（Claude Code 侧 `--model`/`--effort`，Codex 侧 `-m` 加一条 `-c model_reasoning_effort=...`），两个都不给时走 CLI 自己的默认（Codex 读 `~/.codex/config.toml`），这是既有跑法的兼容线；这次用的是哪个，跑器回显第一行报出来，跨跑比较才读得出结果是哪个模型跑的。退出码 0 全绿、1 有红、2 用法或用例配置错。结果只打印不进仓库。从 Claude Code 会话内跑 `--harness claude` 不用自己去环境变量：跑器已去掉 `CLAUDECODE` 两项并带上 `MSYS_NO_PATHCONV=1`。
@@ -125,13 +127,13 @@ evals/
 │   ├── 用例.json        # 见下
 │   └── 断言.py          # check_ 开头的函数各是一条断言，签名 (workspace: Path, reply: str)，assert 判真伪
 ├── 自检/<名>/           # 只测跑器自己的用例（如 故意失败），同格式，用 --evals evals/自检 跑
-├── 种子/<场景>/         # 收件箱/ 等直接拷进工作区的东西 + 回放.py + 状态.md；除「空目录」与「填过黄」（#14，起手重做 #17 之前直接调引擎起图）外每个回放都以真的起手 CLI 开头（#31；「逐节点回流」「活图多一件」「回流」先跑 `sketch.py home` 取活图路径，前两个再拿它 `init`，「回流」的案件那一层仍按包内出厂种子起手、活图只作回流的目标）
-├── 共用/                # 跨用例、跨种子共用的几个模块，不是用例也不是种子（跑器按目录里有没有 用例.json 认用例，扫不到这里）：
-│                        #   回放助手.py 七个路由种子共用的起手与写图动作（用活图() 把领域目录从包内种子换成一份活图，ADR-0019）；基线.py 三份图文件的 sha256（路由只读的判据）；
-│                        #   路由断言.py ask-matt 五条验收项加「只指向表里的三个入口」，八个路由用例各 import 一遍；
-│                        #   活图断言.py 活图在哪、回流前的逐文件 sha256，四个逐节点回流用例与用例「回流」各 import 一遍，种子「回流」的回放也读它（ADR-0019、ADR-0020）
-└── 领域/<领域名>/领域图.json   # 脚本层用的合成小领域「菜园」（ADR-0015，#26），tests/graph 与 tests/domain 全用它跑；领域/说明.md 一段说明
+├── 种子/<场景>/         # 待归档/ 等直接拷进工作区的东西 + 回放.py + 状态.md（#20 按 ADR-0023 重定）。除「空目录」（它就是起手之前的样子）外每个回放都以真的起手 CLI 开头：出厂预设图「破产」按名解析、原位读；合成小领域「菜园」是一份由回放助手用引擎现造在「家」里的**个人预设图**（4 模块 9 节点），「图引擎」「待归档」「模板」「指南」「另存」都从它起手。tests/evals/test_seeds.py 逐个回放、对着各自的 状态.md 断
+└── 共用/                # 跨用例、跨种子共用的几个模块，不是用例也不是种子（跑器按目录里有没有 用例.json 认用例，扫不到这里）：
+                         #   回放助手.py 起手、写图、归档、合成 docx、造菜园与「家」的解析，各种子共用；基线.py 三份图文件的 sha256（路由只读与「图一字不动」的判据）；
+                         #   路由断言.py ask-matt 五条验收项加「只指向表里的三个入口」「只读基线」「五段按序」「第一行是待拍板行」，八个路由用例各 import 一遍
 ```
+
+用例与种子的对应（27 个用例，含不依赖任何 skill 的 `冒烟`；16 个种子）：起手类两个（`起手`、`起手一问二选`）在「空目录」上；归档两个（`归档一件`、`归档清单拍板`）在「待归档」上；`改标题`、`换节点被拒` 在「图引擎」上，`出雏形` 在「指南」上，`模板槽清单` 在「模板」上，`另存预设图` 在「另存」上；办节点那一路 `出一版留黄`、`记一句`、`拍板`、`模块不适用` 与路由的 `问了图里没有的事` 在「在办中」上，`兜底登记` 在「兜底」上，`拒改收尾` 在「拒改」上（ADR-0024 之后「不通过收尾」的替身：模板里的槽所在 run 带域代码，施加必拒），`律师填后重出` 与 `模型误去黄` 在「填过黄」上，`跨对话确认`、`两份同时待确认`、`路由第一行` 在「两份待确认」上，其余路由用例各自一个同名种子。
 
 ADR-0015「目录名保持 ASCII」只指 `tests/`、`evals/` 两个顶层；其下按仓库习惯用中文（ADR 自己的例子 `evals/种子/<场景>/` 即如此），`--case 冒烟` 直接传中文名。
 
@@ -140,7 +142,7 @@ ADR-0015「目录名保持 ASCII」只指 `tests/`、`evals/` 两个顶层；其
 | 键 | 含义 |
 | --- | --- |
 | `种子` | `evals/种子/` 下的场景名，本票允许为空 |
-| `skill` | 编排 skill 名，可空。Claude Code 侧拼成 `/loo0ng-skills:<skill> <提示词>`（开发机 Claude Code 侧装的是插件，照上游一个 harness 只装一条路；`--claude-plugin ""` 退回 junction 路线的裸名 `/<skill>`）；Codex 侧用替身提示词「读 `~/.agents/skills/<skill>/SKILL.md` 并照做：<提示词>」，测的是正文不是触发，触发另由人工实测与完成定义那一次覆盖。带 skill 的用例必须有 `说明` |
+| `skill` | 编排 skill 名，可空。Claude Code 侧拼成 `/loo0ng-skills:<skill> <提示词>`（照上游一个 harness 只装一条路：跑器看 `~/.claude/plugins/installed_plugins.json` 里有没有装本插件，装了带命名空间，没装（改造期走 junction）就是裸名 `/<skill>`；`--claude-plugin` 显式给了以它为准）；Codex 侧用替身提示词「读 `~/.agents/skills/<skill>/SKILL.md` 并照做：<提示词>」，测的是正文不是触发，触发另由人工实测与完成定义那一次覆盖。带 skill 的用例必须有 `说明` |
 | `回复正则` | 对最后一条回复做 `re.search`，可空；报红时断言名是「回复正则」 |
 | `回合上限` | Claude Code 侧交给 `--max-turns`；Codex 侧数 JSONL 流里工具类 item（命令、改文件、MCP、搜索），超了杀进程树。默认 30 |
 | `超时秒` | 单次调用的墙钟上限，超了杀进程树。默认 300 |
@@ -150,11 +152,9 @@ ADR-0015「目录名保持 ASCII」只指 `tests/`、`evals/` 两个顶层；其
 
 每次运行：在 `%TEMP%` 下建临时工作区 → 回放种子 → 调 harness（cwd 即工作区）→ 回复正则 → 逐条断言 → 删工作区（超时、超回合、断言抛错都删）。断言报红时给出函数名与 assert 的消息。
 
-**`LOO0NG_HOME` 自 ADR-0023 起指的是个人预设图的「家」**（`<家>/预设图/<名>/`，由 `domain` 的 `preset.py` 解析）：活图、领域目录与 `sketch.py home` 整套已退场，下面这一段写的还是旧形状，随种子与跑器一起在 #20 重写；「跑器建一个临时的家、两侧都吃这个变量、别碰律师真的 `~/.loo0ng`」这一条不变。
+每次运行另在 `%TEMP%` 下建一个**家**，经环境变量 `LOO0NG_HOME` 交给 harness（ADR-0023：个人预设图住 `<家>/预设图/<名>/`，由 `domain` 的 `preset.py` 解析，默认 `~/.loo0ng`）：eval 既不该往律师的主目录里写东西（另存会写进去），也不该吃上一次跑剩下的预设图（ADR-0015 只生不存）。跑完连它一起删，`--keep` 时连它一起留并打印路径。两侧都吃这个变量（#90 实测 Codex 的 `workspace-write` 沙箱写得动 `%TEMP%` 下的它）。`--materialize` 生出来的工作区不设它，回放自己兜底：`evals/共用/回放助手.py` 没看到这个变量就把家落进工作区里的 `.预设图家/`（点开头，起手不挪它），所以「空目录」「图引擎」那几个在家里造菜园的种子 `--materialize` 出来也碰不到真的 `~/.loo0ng/`。**但兜底只管回放自己那几条命令，管不到 harness 里的模型**：模型调 `preset.py` 时环境里没有这个变量，解析到的就是真的 `~/.loo0ng/`，起手找不到那份个人预设图、另存写进开发者自己的家（#105 在 Codex 侧实测过同款事故）。所以 `--materialize` 回显里带上这次要设的 `LOO0NG_HOME`，关票触发之前把它设进环境；eval 那条路由跑器统一设，碰不到真的主目录。
 
-每次运行另在 `%TEMP%` 下建一个**活图家**，经环境变量 `LOO0NG_HOME` 交给 harness（ADR-0019）：领域目录的活图本来住 `~/.loo0ng/领域/`，eval 既不该往律师的主目录里拷东西，也不该吃上一次跑剩下的活图（ADR-0015 只生不存）。跑完连它一起删，`--keep` 时连它一起留并打印路径。两侧都吃这个变量（#90 实测 Codex 的 `workspace-write` 沙箱写得动 `%TEMP%` 下的它）。`--materialize` 生出来的工作区不设它，回放自己兜底：多数种子的领域目录本来就钉在包内的出厂种子上（`evals/共用/回放助手.py` 的默认值），那个工作区的指针块指的就是种子；调过 `用活图()` 的那几个（「逐节点回流」「活图多一件」「回流」）把活图落进工作区里的 `.活图家/`。**但兜底只管回放自己那几条命令，管不到 harness 里的模型**：模型自己跑 `sketch.py home` 时环境里没有这个变量，解析到的就是真的 `~/.loo0ng/`，一次关票触发就能写进开发者自己那份活图（#105 在 Codex 侧实测到；用例「回流」的提示词不再给路径之后，这条路才走得到）。所以 `--materialize` 回显里带上这次要设的 `LOO0NG_HOME`，关票触发之前把它设进环境；eval 那条路由跑器统一设，碰不到真的主目录。
-
-种子接口（实现随起手票）：`evals/种子/<场景>/` 里除 `回放.py` 与 `状态.md` 之外的条目原样拷进工作区，再在工作区里跑 `python 回放.py <工作区>`；起手（`setup-case`）、引擎 CLI、归档脚本都写在回放里，跑器不另定回放格式。
+种子接口：`evals/种子/<场景>/` 里除 `回放.py` 与 `状态.md` 之外的条目原样拷进工作区，再在工作区里跑 `python 回放.py <工作区>`；起手（`setup-case`）、引擎 CLI、归档脚本都写在回放里，跑器不另定回放格式。起手会把工作区根上原有的条目挪进 `待归档/`，所以种子里要落在别处的文件先放 `待归档/` 下、由回放经归档 CLI 搬（「指南」「在办中」即如此），只有「空目录」把文件放根上（它测的正是起手把根上的东西挪进待归档）。
 
 Windows 上工作区用 `os.mkdir` 而不用 `tempfile.mkdtemp`：后者建的目录只有 SYSTEM、Administrators、OWNER RIGHTS 三条 ACE，Codex 沙箱账户写进去的文件本用户读不了也删不了。
 
@@ -170,12 +170,12 @@ Windows 上工作区用 `os.mkdir` 而不用 `tempfile.mkdtemp`：后者建的�
 
 ```bash
 # 1. 生一个工作区：打印路径就停，不跑 harness、不删
-#    活图在工作区里的种子（「逐节点回流」「活图多一件」「回流」）还会多回显一行 LOO0NG_HOME=<…>
+#    在家里造了个人预设图的种子（「空目录」「图引擎」「待归档」「模板」「指南」「另存」）还会多回显一行 LOO0NG_HOME=<…>
 python scripts/skill-eval.py --materialize 在办中
 
 # 2. Claude Code 侧（开发会话里就能跑，打的是真名，算真实触发；插件路线带 loo0ng-skills: 命名空间）
 cd <上一步打印的路径>
-export LOO0NG_HOME=<上一步回显的那个>   # 回显了就必须设：不设的话模型自己跑 home 会写真的 ~/.loo0ng
+export LOO0NG_HOME=<上一步回显的那个>   # 回显了就必须设：不设的话模型调 preset.py 会读写真的 ~/.loo0ng
 MSYS_NO_PATHCONV=1 CLAUDECODE= CLAUDE_CODE_ENTRYPOINT= \
   claude -p "/loo0ng-skills:<skill 名> <律师那句话>" --output-format json \
   --permission-mode acceptEdits --no-session-persistence --allowedTools Bash
@@ -186,7 +186,7 @@ MSYS_NO_PATHCONV=1 CLAUDECODE= CLAUDE_CODE_ENTRYPOINT= \
 # 4. 用完删掉那个目录
 ```
 
-种子挑与要验的路径最接近的那个：`在办中` 是办到一半（12 模块 72 节点、一份已确认一份待确认），`空目录` 用来验起手，`图引擎` 是合成小领域「菜园」，`逐节点回流` 是「菜园」上一个待确认节点加一份活图（它的回放在 `LOO0NG_HOME` 没设时把活图落进工作区里的 `.活图家/`，所以 `--materialize` 出来的那个也碰不到真的 `~/.loo0ng/`）。
+种子挑与要验的路径最接近的那个：`在办中` 是办到一半（出厂预设图「破产」12 模块 72 节点、一份已确认一份待确认、律师说过的四行），`空目录` 用来验起手，`图引擎` 是合成小领域「菜园」（个人预设图），`填过黄` 是律师在 Word 里填过黄之后的重出，`拒改` 是施加必拒的那一档。
 
 **第 2 步那行与跑器给 Claude Code 侧拼的命令是同一条**（`build_command`），差别不在命令而在别处：打的是你自己想打的那句话（不是用例里的提示词）、看的是回复本身（不跑断言）、判的是人。所以 Claude Code 侧这一次相对合入门槛那次 eval 的增量本来就小，两道门在这一侧几乎重合；增量大的是 Codex 侧，那边 eval 用的是替身提示词、根本没测触发（ADR-0015）。这条局限照实记着，别把它当成两次独立的证据。
 

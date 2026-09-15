@@ -6,8 +6,9 @@ import pathlib
 
 REPO = pathlib.Path(__file__).resolve().parents[3]
 FILL = REPO / "skills" / "in-progress" / "to-docx" / "scripts" / "fill.py"
-文书相对 = "文书/接管/印章备案/印章备案.docx"
+文书相对 = "文书/接受指定与报备/管理人印章备案报告/管理人印章备案报告.docx"
 补记 = "律师补记：印模以刻章回执为准。"
+根上允许 = {"AGENTS.md", "CLAUDE.md", "图.json", "图视图.json", "图视图.md", "归档索引.md", "待归档", "材料", "参考", "文书"}
 
 _spec = importlib.util.spec_from_file_location("loo0ng_fill_for_assert", FILL)
 填 = importlib.util.module_from_spec(_spec)
@@ -70,9 +71,8 @@ def check_没有节点被自动确认(workspace, reply):
 
 def check_没往工作区乱写(workspace, reply):
     names = sorted(p.name for p in workspace.iterdir() if not _is_harness_noise(p.name))
-    allowed = {"图.json", "图视图.json", "图视图.md", "待归档", "材料", "参考", "文书"}
-    extra = [n for n in names if n not in allowed]
-    assert extra == [], "工作区根多出了东西（差量写临时目录，工作区里不建暂存目录）：%s" % extra
-    docs = workspace / "文书" / "接管" / "印章备案"
+    多 = [n for n in names if n not in 根上允许]
+    assert not 多, "工作区根多出了东西（差量写临时目录，工作区里不建暂存目录）：%s" % 多
+    docs = (workspace / 文书相对).parent
     stray = [p.name for p in docs.iterdir() if p.suffix not in (".docx", ".md")]
     assert stray == [], "文书目录里多出了东西：%s" % stray
