@@ -7,6 +7,7 @@ EXPECTED_TITLES = {
     "养护": ["浇水", "除草", "搭架"],
     "收获": ["采摘", "记账"],
 }
+根上允许 = {"AGENTS.md", "CLAUDE.md", "图.json", "图视图.json", "图视图.md", "待归档", "材料", "参考", "文书"}
 
 
 def _graph(workspace):
@@ -29,9 +30,11 @@ def check_图里标题已改_其余不动(workspace, reply):
     data = _graph(workspace)
     titles = {m["标题"]: [n["标题"] for n in m["节点"]] for m in data["模块"]}
     assert titles == EXPECTED_TITLES, "模块与节点标题应只改一处，实际：%s" % titles
-    assert _node(data, "播种入土")["id"] == "n-xiazhong", "改标题不应换 id"
+    n = _node(data, "播种入土")
+    assert n["id"] == "n-2-2", "改标题不应换 id，实际 %r" % n["id"]
+    assert n["空白模板"] == "播种登记.docx", "改标题不该动空白模板，实际 %r" % n["空白模板"]
     assert all(n["条目"] == [] for m in data["模块"] for n in m["节点"]), "改标题不该动条目"
-    assert set(data) == {"格式版本", "领域", "模块"}, "图顶层多了键：%s" % sorted(data)
+    assert set(data) == {"格式版本", "模块"}, "图顶层多了键：%s" % sorted(data)
 
 
 def check_视图md已重算(workspace, reply):
@@ -40,24 +43,21 @@ def check_视图md已重算(workspace, reply):
     assert "下种" not in md, "图视图.md 还留着旧标题"
 
 
-def check_视图json来源与时限按id查出(workspace, reply):
+def check_视图json已重算(workspace, reply):
     view = _view(workspace)
     n = _node(view, "播种入土")
-    assert n["来源"] == "领域图", "改了标题的领域图节点来源仍应是 领域图，实际 %r" % n["来源"]
-    assert n["时限"] == "选种之后、雨季之前（手册，示例）", "时限应按 id 从领域图查出，实际 %r" % n.get("时限")
-    assert view["前方"] == [], "整份起手后前方应为空"
+    assert n["状态"] == "未生成" and n["高亮"] == "无文书", "改标题不该改状态：%s" % n
+    前方 = [x["标题"] for m in view["前方"] for x in m["节点"]]
+    assert len(前方) == 9 and "播种入土" in 前方, "整份起手、一个没生成，前方该是全部九个：%s" % 前方
     assert view["格式版本"] == _graph(workspace)["格式版本"], "两份 JSON 的格式版本应一致"
 
 
 def _is_harness_noise(name):
-    """harness 跑 python 时留下的缓存目录（__pycache__、.uv-cache、.uv-python 等），不算工作区产物。
-
-    #105 实测 Codex 也会把 uv 的缓存落成不带点的 `uv-cache`，所以 `uv-` 开头的一并忽略：
-    它是 harness 自备解释器留下的，不是 skill 的产物。七份同名小函数逐字相同，改一处就一起改。
-    """
+    """harness 跑 python 时留下的缓存目录（__pycache__、.uv-cache、uv-cache 等），不算工作区产物。"""
     return name == "__pycache__" or name.startswith(".") or name.startswith("uv-")
 
 
 def check_没写别的文件(workspace, reply):
     names = sorted(p.name for p in workspace.iterdir() if not _is_harness_noise(p.name))
-    assert names == ["AGENTS.md", "CLAUDE.md", "图.json", "图视图.json", "图视图.md", "指南", "收件箱", "文书", "材料", "模板"], "工作区里多出了文件：%s" % names
+    多 = [n for n in names if n not in 根上允许]
+    assert not 多, "工作区里多出了文件：%s" % 多

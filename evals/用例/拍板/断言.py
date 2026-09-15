@@ -47,10 +47,12 @@ def check_别的节点没被动过(workspace, reply):
 
 def check_视图重算了(workspace, reply):
     md = (workspace / "图视图.md").read_text(encoding="utf-8")
-    assert "已确认" in md, "图视图.md 该显示已确认的状态"
     words = _node(workspace, 确认的)["条目"][-1]["原话"]
     assert words in md, "图视图.md 该显示确认的原话，缺 %r" % words
+    view = json.loads((workspace / "图视图.json").read_text(encoding="utf-8"))
+    n = next(x for m in view["模块"] for x in m["节点"] if x["标题"] == 确认的)
+    assert n["状态"] == "已确认" and "最近确认" in n, "视图该把它算成已确认：%s" % n
 
 
 def check_回复给了下一句(workspace, reply):
-    assert "doit" in reply or "新对话" in reply, "收尾第三段没说下一句该打什么：\n%s" % reply
+    assert "doit" in reply or "新对话" in reply, "收尾没说下一句该打什么：\n%s" % reply
