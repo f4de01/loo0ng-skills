@@ -42,8 +42,10 @@ OWNERS = (OWNER_FACTORY, OWNER_PERSONAL)
 
 PERSONAL_HOME_ENV = "LOO0NG_HOME"      # 「家」那一层；脚本层单测与 eval 用它，律师那台机上不设
 PERSONAL_HOME_DIRNAME = ".loo0ng"
-PERSONAL_DIRNAME = "预设图"
-FACTORY_ROOT_RELATIVE = pathlib.Path("..") / "assets" / PERSONAL_DIRNAME
+PRESET_DIRNAME = "预设图"              # 两处共用的那一层目录名：包内 assets/预设图/，本机 ~/.loo0ng/预设图/
+# 包内出厂预设图的根。引擎按同一形状拒写它（graph.py 的 PRESET_ROOT_RELATIVE），改这里要改那一处。
+FACTORY_ROOT_RELATIVE = pathlib.Path("..") / "assets" / PRESET_DIRNAME
+# 兄弟 skill 的图引擎。跨 skill 一律子进程互调、按兄弟目录找（sketch.py 有同一行，改一处要改两处）。
 ENGINE_RELATIVE = pathlib.Path("..") / ".." / "graph" / "scripts" / "graph.py"
 STAGING_SUFFIX = ".另存中"
 
@@ -67,7 +69,7 @@ def personal_root(given: Optional[str] = None) -> pathlib.Path:
         return pathlib.Path(given).resolve()
     home = os.environ.get(PERSONAL_HOME_ENV, "").strip()
     base = pathlib.Path(home) if home else pathlib.Path.home() / PERSONAL_HOME_DIRNAME
-    return (base / PERSONAL_DIRNAME).resolve()
+    return (base / PRESET_DIRNAME).resolve()
 
 
 def roots_of(args) -> List[Tuple[str, pathlib.Path]]:
@@ -186,7 +188,7 @@ def cmd_save(args) -> int:
     if not graph_path.is_file():
         raise Rejected("找不到案件图 %s：另存要在案件工作区里跑" % graph_path)
     factory = factory_root(args.factory_root) / name
-    if (factory / PRESET_FILENAME).is_file():
+    if factory.exists():  # 看的是这个名占没占，不是那份图读不读得出：同名就是同名（ADR-0023）
         raise Rejected("出厂预设图里已经有「%s」（%s）：两处同名会让起手的列表分不清，换个名字再另存。"
                        "出厂件谁都不许写，另存永远落在个人预设图那一处。" % (name, factory.as_posix()))
     target = personal_root(args.personal_root) / name

@@ -28,6 +28,7 @@ import unicodedata
 from typing import Dict, List, Optional, Tuple
 
 DEFAULT_GRAPH = "图.json"
+# 兄弟 skill 的图引擎。跨 skill 一律子进程互调、按兄弟目录找（preset.py 有同一行，改一处要改两处）。
 ENGINE_RELATIVE = pathlib.Path("..") / ".." / "graph" / "scripts" / "graph.py"
 NO_TEMPLATE = "无"
 ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
@@ -190,7 +191,7 @@ class Plan:
 
 def render(plan: Plan, graph_name: str) -> str:
     kind_label = "预设图" if plan.kind == "preset" else "案件图"
-    lines = ["# 雏形清单（对 %s，%s）" % (graph_name, kind_label), ""]
+    lines = ["# 雏形（对 %s，%s）" % (graph_name, kind_label), ""]
     if plan.source:
         lines += ["来源：%s" % plan.source, ""]
     new_lines, existing_lines = [], []

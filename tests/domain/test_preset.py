@@ -195,6 +195,13 @@ class 另存(PresetCase):
         self.assertIn("出厂", r.err)
         self.assertEqual(list(self.个人.iterdir()), [], "拒了就一个字不写")
 
+    def test_出厂那个名被占着就算图读不出也拒(self):
+        (self.出厂 / "菜园3.0").mkdir()          # 目录在、预设图.json 还没有：名占着就是占着
+        r = self.另存()
+        self.assertEqual(r.code, 1, r)
+        self.assertIn("出厂", r.err)
+        self.assertEqual(list(self.个人.iterdir()), [])
+
     def test_目标已存在不覆盖(self):
         旧 = self.造一份(self.个人, "菜园3.0", 模块=[("旧的", [("旧节点", None, None)])])
         旧字节 = (旧 / "预设图.json").read_bytes()
