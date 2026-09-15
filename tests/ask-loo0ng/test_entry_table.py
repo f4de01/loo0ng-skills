@@ -7,7 +7,7 @@
 import re
 import unittest
 
-from support import SKILL, YAML, 下一任务, 件, 全部skill名, 正文, 表里的行
+from support import REPO, SKILL, YAML, 下一任务, 件, 全部skill名, 正文, 表里的行
 
 # 律师打名字的三件：两个编排 skill 加路由本身（ADR-0005、ADR-0008、ADR-0010）。
 入口 = ("setup-case", "doit", "ask-loo0ng")
@@ -41,10 +41,19 @@ class 两张表Test(unittest.TestCase):
             self.assertEqual(显示名[name], 名, "%s 的显示名变了" % name)
             self.assertIn("%s（%s）" % (name, 名), 指针块, "%s 的显示名与工作区指针块对不上" % name)
 
-    def test_登记进了桶README(self):
-        # 改造期七件都在 in-progress/，非 promoted：只登记在桶 README，不进 plugin.json 与根 README（ADR-0022）
-        bucket_readme = (件("ask-loo0ng").parent / "README.md").read_text(encoding="utf-8")
-        self.assertIn("[ask-loo0ng](./ask-loo0ng/SKILL.md)", bucket_readme)
+    def test_七件都登记在promoted桶的四处(self):
+        """promoted 桶的件四处接线缺一不可：桶 README、根 README、plugin.json、docs 页。
+        check-wiring.sh 整条覆盖这一条；这里只钉住「表里的七件正是登记好的那七件」。"""
+        根 = (REPO / "README.md").read_text(encoding="utf-8")
+        插件 = (REPO / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8")
+        for name in 入口 + 一句话:
+            桶名 = 件(name).parent.name
+            self.assertIn(桶名, ("engineering", "productivity"), "%s 还没毕业到 promoted 桶" % name)
+            桶readme = (件(name).parent / "README.md").read_text(encoding="utf-8")
+            self.assertIn("(./%s/SKILL.md)" % name, 桶readme, "%s 没登记进 %s 的桶 README" % (name, 桶名))
+            self.assertIn("(./skills/%s/%s/SKILL.md)" % (桶名, name), 根, "%s 没登记进根 README" % name)
+            self.assertIn('"./skills/%s/%s"' % (桶名, name), 插件, "%s 没进 plugin.json 的 skills 数组" % name)
+            self.assertTrue((REPO / "docs" / 桶名 / ("%s.md" % name)).is_file(), "%s 缺 docs 页" % name)
 
 
 class 双旗Test(unittest.TestCase):

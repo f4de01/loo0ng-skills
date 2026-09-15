@@ -8,11 +8,11 @@
 
 三件事，三句话。下面写的是律师实际打出去的那一串：Claude Code 里 `/名 …`，Codex 里 `$名 …`；装法不同，名字前面可能多一段 `loo0ng-skills:`，见下面的安装段。
 
-**起手一个案子**：在一个空目录里打 `/setup-case`，一案一次。它把案件工作区的目录建起来，这个案子的图三选一（空图、整份「破产」领域图的 12 模块 72 节点、或开发者交付的定制图）；你起手前放好的本案指引它整读一遍，末尾给你一张清单，你说一句话拍板才作数。
+**起手一个案子**：在一个空目录里打 `/setup-case`，一案一次。它把案件工作区的目录建起来，只问你一句：空图，还是用哪一份**预设图**起（随包出厂的与你自己存下的分两组列给你，选了就整份拷进来，连空白模板一起）。你起手前堆在目录里的东西一律当作待归档，末尾给你一张清单说每一件要归到哪，你说一句话拍板才搬。
 
-**出一版文书**：新到的材料丢进 `收件箱/`，打 `/doit 出一版 裁定确认无异议债权的申请`。一个对话办一份文书：它先把收件箱里的东西各归各位，再读这个案子的材料、指南、空白模板与你过往的文书，照该节点的官方模板出一份 DOCX，缺的槽与没把握的句子标黄，附一份审查报告（写明生成依据、存疑之处、要你裁定的地方）。你在 WPS 里看完说一句「确认」，这一份就完成了。反过来也行：文书你自己写好了，交给它登记。
+**出一版文书**：新到的材料丢进 `待归档/`，打 `/doit 出一版 裁定确认无异议债权的申请`。一个对话办一份文书：它先把待归档里的东西各归各位，再读这个案子的材料、指南、空白模板与同模块里你已确认的文书，照该节点的官方模板**只写要改的那几处**，代码在模板原件上原地填、直接落盘。**填不了的槽与没把握的句子一律留黄**，收尾直接告诉你黄标在哪几处。黄色处你在 Word 里自己填最快，或者在对话里把事实给它、说一句重出——重出只动仍黄的地方与你点名的地方，你填过的一个字不碰。填完说一句「确认 <节点>」，哪个对话说都行。反过来也行：文书你自己写好了，交给它登记。
 
-**问接下来做什么**：`/ask-loo0ng`。一张只读的地图，随时可以问，也可以一直不问。它答你现在在哪、上一件完成的是什么、下一件该办哪个，给出往下的路与每一步的拍板点，最后把你下一句该打的那一串整个写出来。它自己不动任何东西。
+**问接下来做什么**：`/ask-loo0ng`。一张只读的地图，随时可以问，也可以一直不问。**第一行就是待拍板行**：哪几份文书黄色已清、还等你那一句确认，直接列出来——那是你最容易漏的一句。往下答你现在在哪、上一件完成的是什么、下一件该办哪个，给出往下的路与每一步的拍板点，最后把你下一句该打的那一串整个写出来。它自己不动任何东西。
 
 你的案件材料只在你自己的机器上：工作台读写的是案件工作区那个目录，本仓库不收任何案件材料。
 
@@ -30,7 +30,7 @@
 /plugin install loo0ng-skills@loo0ng-marketplace
 ```
 
-`owner/repo` 形式只取默认分支；要装某个分支，用 `https://github.com/f4de01/loo0ng-skills.git#<branch>`。**安装源须是公开仓库**：「私有仓库凭本机 gh 或 git 凭据克隆」只在开发机上验过，律师那台 mac 上私有仓库一条都没走通，本仓库为此转成了 public（`docs/实测/mac-20260909/结论.md`）。装上后 skill 名带 `loo0ng-skills:` 前缀，例如 `/loo0ng-skills:ask-loo0ng`。**改造期间（ADR-0022）插件清单为空**：七件都在 `in-progress/`，这条路装到的是空包，请走下面 skills.sh 单件装，或留在 0.4.0。
+`owner/repo` 形式只取默认分支；要装某个分支，用 `https://github.com/f4de01/loo0ng-skills.git#<branch>`。**安装源须是公开仓库**：「私有仓库凭本机 gh 或 git 凭据克隆」只在开发机上验过，律师那台 mac 上私有仓库一条都没走通，本仓库为此转成了 public（`docs/实测/mac-20260909/结论.md`）。装上后 skill 名带 `loo0ng-skills:` 前缀，例如 `/loo0ng-skills:ask-loo0ng`。
 
 </details>
 
@@ -58,9 +58,20 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/link-skills.ps1
 
 ## Skill 清单
 
-七件 skill 目前全部住 `skills/in-progress/`，逐件重做、改完一件毕业一件（ADR-0022）；名单与分工见 [skills/in-progress/README.md](./skills/in-progress/README.md)。毕业后的归属照上游分桶：办案主线六件住 `skills/engineering/`，离了案子也能单独用的 `to-docx` 住 `skills/productivity/`（各桶的清单在 `skills/<bucket>/README.md`），每件另有一页面向人的说明 `docs/<bucket>/<name>.md`。
+七件，照上游分桶：办案主线六件住 `skills/engineering/`，离了案子也能单独用的 `to-docx` 住 `skills/productivity/`。每件另有一页面向人的说明 `docs/<bucket>/<name>.md`。
 
-按谁能触发分两组。**User-invoked** 三件（`setup-case`、`doit`、`ask-loo0ng`）律师打名字触发：Claude Code 里是 `/名 …`，Codex 里是 `$名 …`，只做编排，模型不会自己调用。**Model-invoked** 四件（`graph`、`domain`、`filing`、`to-docx`）由模型够到，律师无需记名。
+**User-invoked** 三件，律师打名字触发（Claude Code 里 `/名 …`，Codex 里 `$名 …`），只做编排，模型不会自己调用：
+
+- **[setup-case](./skills/engineering/setup-case/SKILL.md)** — 起手：把当前目录长成案件工作区，一案一次。[说明](./docs/engineering/setup-case.md)
+- **[doit](./skills/engineering/doit/SKILL.md)** — 办节点：一个对话办一个节点，出一版、重出、登记自写、确认、不适用。[说明](./docs/engineering/doit.md)
+- **[ask-loo0ng](./skills/engineering/ask-loo0ng/SKILL.md)** — 问路：只读的地图，第一行是待拍板行。[说明](./docs/engineering/ask-loo0ng.md)
+
+**Model-invoked** 四件，由模型够到，律师无需记名：
+
+- **[graph](./skills/engineering/graph/SKILL.md)** — 图引擎：`图.json` 的唯一写入口，写完重算两份视图。[说明](./docs/engineering/graph.md)
+- **[domain](./skills/engineering/domain/SKILL.md)** — 预设图的家：出厂与个人两处两归属，解析、列出、另存、导入。[说明](./docs/engineering/domain.md)
+- **[filing](./skills/engineering/filing/SKILL.md)** — 归档：把文件搬进材料、参考/模板、参考/指南三格，并维护归档索引。[说明](./docs/engineering/filing.md)
+- **[to-docx](./skills/productivity/to-docx/SKILL.md)** — 填模板：把 DOCX 打成带编号的清单，按差量原地施加。[说明](./docs/productivity/to-docx.md)
 
 ## 给开发者
 
@@ -76,4 +87,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/link-skills.ps1
 
 ## 许可
 
-代码与文档按 [MIT](LICENSE) 授权。`skills/<bucket>/domain/assets/<领域>/` 下的官方模板原件与指引手册原文是第三方文件，不在 MIT 的覆盖范围内，各依其自身来源的条款：范围说明在 `LICENSE` 末尾。
+代码与文档按 [MIT](LICENSE) 授权。`skills/engineering/domain/assets/预设图/<名>/` 下的官方模板原件与指引手册原文是第三方文件，不在 MIT 的覆盖范围内，各依其自身来源的条款：范围说明在 `LICENSE` 末尾。

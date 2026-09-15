@@ -8,7 +8,7 @@ import sys
 import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-SCRIPTS = REPO / "skills" / "in-progress" / "to-docx" / "scripts"
+SCRIPTS = REPO / "skills" / "productivity" / "to-docx" / "scripts"
 ALLOWED = {"fill.py": {"docx"}}
 
 # 3.9 上没有 `sys.stdlib_module_names`（3.10 才加），而这套测试也要在 3.9 解释器上跑得起来（#13）。

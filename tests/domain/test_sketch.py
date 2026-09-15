@@ -1,4 +1,4 @@
-"""skills/in-progress/domain/scripts/sketch.py 的脚本层单测（unittest，标准库零依赖）。
+"""skills/engineering/domain/scripts/sketch.py 的脚本层单测（unittest，标准库零依赖）。
 
 运行：python -m unittest tests/domain/test_sketch.py
 
@@ -20,7 +20,7 @@ import tempfile
 import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-SCRIPT = REPO / "skills" / "in-progress" / "domain" / "scripts" / "sketch.py"
+SCRIPT = REPO / "skills" / "engineering" / "domain" / "scripts" / "sketch.py"
 
 sys.path.insert(0, str(REPO / "tests" / "共用"))
 import 工作区 as 工  # noqa: E402

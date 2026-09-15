@@ -1,4 +1,4 @@
-"""skills/in-progress/setup-case/scripts/setup.py 的脚本层单测（unittest，标准库零依赖）。
+"""skills/engineering/setup-case/scripts/setup.py 的脚本层单测（unittest，标准库零依赖）。
 
 运行：python -m unittest discover -s tests/setup-case -p 'test_*.py'
 
@@ -19,9 +19,9 @@ import tempfile
 import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-SKILL = REPO / "skills" / "in-progress" / "setup-case"
+SKILL = REPO / "skills" / "engineering" / "setup-case"
 SCRIPT = SKILL / "scripts" / "setup.py"
-PRESET_CLI = REPO / "skills" / "in-progress" / "domain" / "scripts" / "preset.py"
+PRESET_CLI = REPO / "skills" / "engineering" / "domain" / "scripts" / "preset.py"
 PERSONAL_HOME_ENV = "LOO0NG_HOME"   # 个人预设图的「家」，与 preset.py、eval 跑器同一个名字
 
 sys.path.insert(0, str(REPO / "tests" / "共用"))

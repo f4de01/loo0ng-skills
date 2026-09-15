@@ -111,10 +111,11 @@ def check_断言以对方SKILL为准(workspace, reply):
 
 
 # 5. 你在答案里认出自己的处境，而不是最近似的通用场景。
+# 两份文书分处两步时「主线第 3—4 步」「第 3 至第 4 步」都算：断的是「落到主线上」，不是落到哪一个数字上。
 def check_认出自己处境(workspace, reply):
     s = 段(reply, "你在哪")
     assert s.strip(), "回复里没有「你在哪」这一段：\n%s" % reply
-    assert re.search(r"主线第\s*[1-5]\s*步|无事可做|终点|空图", s), \
+    assert re.search(r"主线第\s*[1-5]\s*(?:[-–—~至到]\s*第?\s*[1-5]\s*)?步|无事可做|终点|空图", s), \
         "「你在哪」没落到主线的某一步上：\n%s" % s
     标题 = 节点标题(workspace)
     if 标题:
@@ -127,7 +128,7 @@ def check_认出自己处境(workspace, reply):
 
 # 本项目自己加的一条（ADR-0005 B7）：只指向表里真存在的三个入口，不编、不带命名空间前缀。
 def check_只指向表里的三个入口(workspace, reply):
-    # 前面紧挨着字母、数字、点、斜杠、冒号的不算：那是路径里的一段（如 skills/in-progress/domain/…），不是打给谁的。
+    # 前面紧挨着字母、数字、点、斜杠、冒号的不算：那是路径里的一段（如 skills/engineering/domain/…），不是打给谁的。
     for 前缀, 名 in re.findall(r"(?<![\w./\\:-])([/$])([A-Za-z][A-Za-z0-9:_-]*)", reply):
         if 前缀 == "$" and not re.fullmatch(入口, 名):
             raise AssertionError("`$%s` 不是表里的入口（`$` 打裸名，不带命名空间前缀）：\n%s" % (名, reply))

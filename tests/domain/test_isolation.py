@@ -13,7 +13,7 @@ import sys
 import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-DOMAIN = REPO / "skills" / "in-progress" / "domain"
+DOMAIN = REPO / "skills" / "engineering" / "domain"
 SCRIPTS = [DOMAIN / "scripts" / "sketch.py", DOMAIN / "scripts" / "preset.py"]
 正文 = DOMAIN / "SKILL.md"
 # ADR-0023 退场的词：活图与出厂种子那套两份图、入库、回流，以及搬去 to-docx 的 docx-text。

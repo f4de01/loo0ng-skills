@@ -5,7 +5,7 @@
 ## 目录布局
 
 ```
-skills/<bucket>/<name>/       # 桶照上游五个：engineering、productivity、misc、in-progress、deprecated；改造期七件都在 in-progress/（ADR-0022），毕业后主线六件回 engineering/，to-docx 回 productivity/
+skills/<bucket>/<name>/       # 桶照上游五个：engineering、productivity、misc、in-progress、deprecated；办案主线六件在 engineering/，to-docx 在 productivity/，另外三桶只有 README
 ├── SKILL.md              # frontmatter：name、description；编排 skill 与路由另加 disable-model-invocation: true
 ├── agents/openai.yaml    # Codex 侧外观：interface.display_name（= name）、interface.short_description（中文进这里）；编排 skill 与路由另加 policy.allow_implicit_invocation: false
 ├── references/           # 正文按需指向的长材料
@@ -14,7 +14,7 @@ skills/<bucket>/<name>/       # 桶照上游五个：engineering、productivity�
 └── assets/               # 只有 domain 有：assets/预设图/<名>/ 下 预设图.json、模板/ 官方模板原件、指引手册/ 指引手册原文（ADR-0023）。这是出厂预设图，随包升级整个被换掉、原位读不拷出包，会话里谁都不许写；律师那台机上的个人预设图在 ~/.loo0ng/预设图/<名>/，由另存与导入写
 ```
 
-**2026-09-14 起七件全部住 `in-progress/`，逐件改造后再毕业回 `engineering/` 或 `productivity/`（ADR-0022）；本段其余写的是毕业后的归属。** 分桶照上游（ADR-0009 的 2026-09-13 附注）：`skills/` 下五个桶，每桶一份 `README.md` 逐件列出、名字链接到 `./<name>/SKILL.md`；promoted 桶（`engineering/`、`productivity/`）里的每件进 `.claude-plugin/plugin.json` 与根 `README.md`（名字链接到 `SKILL.md`），并有一页 `docs/<bucket>/<name>.md`（固定段：What it does、When to reach for it、Common questions、It's working if、Where it fits，页内链接一律绝对）；`misc/`、`in-progress/`、`deprecated/` 里的不进这三处。上游 `engineering/` 装的是主线（daily code work），`productivity/` 装的是离了主线也能单独用的工具；对应到这里，办案主线六件（`ask-loo0ng`、`setup-case`、`doit`、`graph`、`domain`、`filing`，都只在有 `图.json` 的工作区里工作）在 `engineering/`，`to-docx`（清单可对任意 DOCX 打、施加默认写临时位置）在 `productivity/`；另外三桶目前只有 README。草稿放分支不放目录，要公开试用的才进 `in-progress/`（这一轮改的是全部七件、跨多次发布，分支装不下，所以七件都在那里）。分发清单只有一份：`.claude-plugin/plugin.json` 的 `skills` 数组逐件列路径（Claude Code 插件）；`.claude-plugin/marketplace.json` 让仓库自成单插件市场。不发 Codex 原生插件，Codex 及其他 harness 经 skills.sh 装编辑副本（ADR-0021，与上游 ADR-0002 同一个理由：Codex 清单只收单一路径，分桶后会把 `in-progress/` 一并装出去）。
+分桶照上游（ADR-0009 的 2026-09-13 附注）：`skills/` 下五个桶，每桶一份 `README.md` 逐件列出、名字链接到 `./<name>/SKILL.md`；promoted 桶（`engineering/`、`productivity/`）里的每件进 `.claude-plugin/plugin.json` 与根 `README.md`（名字链接到 `SKILL.md`），并有一页 `docs/<bucket>/<name>.md`（固定段：What it does、When to reach for it、Common questions、It's working if、Where it fits，页内链接一律绝对）；`misc/`、`in-progress/`、`deprecated/` 里的不进这三处。上游 `engineering/` 装的是主线（daily code work），`productivity/` 装的是离了主线也能单独用的工具；对应到这里，办案主线六件（`ask-loo0ng`、`setup-case`、`doit`、`graph`、`domain`、`filing`，都只在有 `图.json` 的工作区里工作）在 `engineering/`，`to-docx`（清单可对任意 DOCX 打、施加默认写临时位置）在 `productivity/`；另外三桶目前只有 README。草稿放分支不放目录，要公开试用的才进 `in-progress/`。分发清单只有一份：`.claude-plugin/plugin.json` 的 `skills` 数组逐件列路径（Claude Code 插件）；`.claude-plugin/marketplace.json` 让仓库自成单插件市场。不发 Codex 原生插件，Codex 及其他 harness 经 skills.sh 装编辑副本（ADR-0021，与上游 ADR-0002 同一个理由：Codex 清单只收单一路径，分桶后会把 `in-progress/` 一并装出去）。
 
 ## 命名与编码
 
@@ -99,7 +99,7 @@ for d in tests/*/; do python -m unittest discover -s "$d" -p 'test_*.py' || exit
 **3.9 那条跑道**：随包脚本的底线是 python 3.9（律师那台 mac 的 `/usr/bin/python3` 是 3.9.6），`tests/python-floor/` 只按形状扫，真跑要自己起一次。装一份钉住的后端再跑全套：
 
 ```bash
-uv pip install --python <3.9 解释器> --target <临时目录> -r skills/in-progress/to-docx/requirements.txt
+uv pip install --python <3.9 解释器> --target <临时目录> -r skills/productivity/to-docx/requirements.txt
 PYTHONPATH=<临时目录> <3.9 解释器> -m unittest discover -s tests/to-docx -p 'test_*.py'
 ```
 
@@ -145,7 +145,7 @@ ADR-0015「目录名保持 ASCII」只指 `tests/`、`evals/` 两个顶层；其
 | 键 | 含义 |
 | --- | --- |
 | `种子` | `evals/种子/` 下的场景名，本票允许为空 |
-| `skill` | 编排 skill 名，可空。Claude Code 侧拼成 `/loo0ng-skills:<skill> <提示词>`（照上游一个 harness 只装一条路：跑器看 `~/.claude/plugins/installed_plugins.json` 里有没有装本插件，装了带命名空间，没装（改造期走 junction）就是裸名 `/<skill>`；`--claude-plugin` 显式给了以它为准）；Codex 侧用替身提示词「读 `~/.agents/skills/<skill>/SKILL.md` 并照做：<提示词>」，测的是正文不是触发，触发另由人工实测与完成定义那一次覆盖。带 skill 的用例必须有 `说明` |
+| `skill` | 编排 skill 名，可空。Claude Code 侧拼成 `/loo0ng-skills:<skill> <提示词>`（照上游一个 harness 只装一条路：跑器看 `~/.claude/plugins/installed_plugins.json` 里有没有装本插件，装了带命名空间，没装（开发机挂 junction 跑待验分支时就是这样）就是裸名 `/<skill>`；`--claude-plugin` 显式给了以它为准）；Codex 侧用替身提示词「读 `~/.agents/skills/<skill>/SKILL.md` 并照做：<提示词>」，测的是正文不是触发，触发另由人工实测与完成定义那一次覆盖。带 skill 的用例必须有 `说明` |
 | `回复正则` | 对最后一条回复做 `re.search`，可空；报红时断言名是「回复正则」 |
 | `回合上限` | Claude Code 侧交给 `--max-turns`；Codex 侧数 JSONL 流里工具类 item（命令、改文件、MCP、搜索），超了杀进程树。默认 30 |
 | `超时秒` | 单次调用的墙钟上限，超了杀进程树。默认 300 |
@@ -161,7 +161,7 @@ ADR-0015「目录名保持 ASCII」只指 `tests/`、`evals/` 两个顶层；其
 
 Windows 上工作区用 `os.mkdir` 而不用 `tempfile.mkdtemp`：后者建的目录只有 SYSTEM、Administrators、OWNER RIGHTS 三条 ACE，Codex 沙箱账户写进去的文件本用户读不了也删不了。
 
-合入门槛 = 脚本层全绿 + 两侧 eval 全绿 + 三条校验；关票门槛 = Codex 与 Claude Code 各真实触发一次（ADR-0015）。**改造期按件收（ADR-0022）**：`in-progress/` 里的件提交前只跑 `check-skill.sh`、`check-wiring.sh` 与 `claude plugin validate`；一件毕业时它的单测与 eval 随脚本与正文重定，留下的才重新成为它的门槛。
+合入门槛 = 脚本层全绿 + 两侧 eval 全绿 + 三条校验；关票门槛 = Codex 与 Claude Code 各真实触发一次（ADR-0015）。`in-progress/` 里要公开试用的件提交前只跑 `check-skill.sh`、`check-wiring.sh` 与 `claude plugin validate`；它毕业时单测与 eval 随脚本与正文重定，留下的才重新成为它的门槛。
 
 全绿只有一件例外：Codex 侧的 `出雏形` 列为已知抖动，单件红放行（律师 2026-09-08 裁定，#68；见 ADR-0015 的同日附注）。只对这一件、只在 Codex 侧、且只在其余各件全绿时成立；别的用例红仍是阻塞，PR 里要点名这件红并写明与本票无关。
 
@@ -210,7 +210,7 @@ MSYS_NO_PATHCONV=1 CLAUDECODE= CLAUDE_CODE_ENTRYPOINT= \
 
 本地也能跑同一条链（`npm run version` → 提交 → `npx changeset tag`），但 CI 是常态。仓库设置里 Actions 的 "Allow GitHub Actions to create and approve pull requests" 必须勾上，否则开不了 PR。
 
-上 CI 的只有发布这一条路：ADR-0015 的 2026-09-12 附注把「全部本地不做 CI」的射程划回测试那一层，脚本层单测、两侧 eval 仍然全部本地跑。离线兜底包不再随 Release 附带（ADR-0021）；要给断网的律师机装，直接拷 `skills/in-progress/` 下的七个目录。
+上 CI 的只有发布这一条路：ADR-0015 的 2026-09-12 附注把「全部本地不做 CI」的射程划回测试那一层，脚本层单测、两侧 eval 仍然全部本地跑。离线兜底包不再随 Release 附带（ADR-0021）；要给断网的律师机装，直接拷 `skills/engineering/` 下的六个目录与 `skills/productivity/to-docx/`。
 
 ## 分发事实（#18，2026-09-05 实测）
 

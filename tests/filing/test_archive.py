@@ -1,4 +1,4 @@
-"""skills/in-progress/filing/scripts/archive.py 的脚本层单测（unittest，标准库零依赖）。
+"""skills/engineering/filing/scripts/archive.py 的脚本层单测（unittest，标准库零依赖）。
 
 运行：python -m unittest discover -s tests/filing -p 'test_*.py'
 
@@ -20,7 +20,7 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "tests" / "共用"))
 import 工作区 as 工  # noqa: E402
 
-SCRIPT = REPO / "skills" / "in-progress" / "filing" / "scripts" / "archive.py"
+SCRIPT = REPO / "skills" / "engineering" / "filing" / "scripts" / "archive.py"
 spec = importlib.util.spec_from_file_location("loo0ng_archive", SCRIPT)
 archive = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(archive)

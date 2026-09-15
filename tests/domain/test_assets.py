@@ -19,11 +19,11 @@ import tempfile
 import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-ASSETS = REPO / "skills" / "in-progress" / "domain" / "assets"
+ASSETS = REPO / "skills" / "engineering" / "domain" / "assets"
 PRESETS = ASSETS / "预设图"
 破产 = PRESETS / "破产"
 图文件 = 破产 / "预设图.json"
-ENGINE = REPO / "skills" / "in-progress" / "graph" / "scripts" / "graph.py"
+ENGINE = REPO / "skills" / "engineering" / "graph" / "scripts" / "graph.py"
 PRIVACY = REPO / "scripts" / "privacy-check.py"
 ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 
