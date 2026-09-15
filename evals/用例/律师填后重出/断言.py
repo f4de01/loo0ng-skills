@@ -6,9 +6,12 @@ import importlib.util
 import json
 import pathlib
 import re
+import sys
 
-REPO = pathlib.Path(__file__).resolve().parents[3]
-FILL = REPO / "skills" / "in-progress" / "to-docx" / "scripts" / "fill.py"
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "共用"))
+from 桶 import skill目录  # noqa: E402
+
+FILL = skill目录("to-docx") / "scripts" / "fill.py"
 节点 = "管理人印章备案报告"
 文书相对 = "文书/接受指定与报备/管理人印章备案报告/管理人印章备案报告.docx"
 审查相对 = "文书/接受指定与报备/管理人印章备案报告/管理人印章备案报告-审查报告.md"
