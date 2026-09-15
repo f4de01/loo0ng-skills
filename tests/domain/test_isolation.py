@@ -89,8 +89,8 @@ class 会话边界(unittest.TestCase):
         self.assertIn("未拍板不另存", text)
         self.assertIn("去案件化", text, "标题改法先回显、律师一句话之后才落")
 
-    def test_起手不再跑雏形(self):
-        self.assertIn("起手不再跑雏形", 正文.read_text(encoding="utf-8"))
+    def test_起手不跑雏形(self):
+        self.assertIn("起手不跑雏形", 正文.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":
