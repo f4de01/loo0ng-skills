@@ -1,3 +1,3 @@
 interface:
   display_name: "domain"
-  short_description: "领域目录三样；从指南长雏形，拍板后经引擎写入"
+  short_description: "预设图的家：解析路径、分两组列出、另存与导入；雏形判同名后经引擎写入"

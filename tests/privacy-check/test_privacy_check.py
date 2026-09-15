@@ -289,16 +289,16 @@ class MainGuardTests(GitRepoMixin, unittest.TestCase):
         code, out = self.check("--staged")
         self.assertEqual(code, 0, out)
 
-    def test_domain_graph_on_main_is_rejected(self):
-        rel = "skills/in-progress/domain/assets/破产/图.json"
+    def test_preset_graph_on_main_is_rejected(self):
+        rel = "skills/in-progress/domain/assets/预设图/破产/预设图.json"
         self.write(rel, '{"模块": []}\n')
         self.git("add", "skills")
         code, out = self.check("--staged")
         self.assertRejected(code, out)
         self.assertIn(rel, out)
 
-    def test_domain_templates_on_main_pass(self):
-        rel = "skills/in-progress/domain/assets/破产/模板/说明.md"
+    def test_preset_templates_on_main_pass(self):
+        rel = "skills/in-progress/domain/assets/预设图/破产/模板/说明.md"
         self.write(rel, "官方模板说明\n")
         self.git("add", "skills")
         code, out = self.check("--staged")

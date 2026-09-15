@@ -5,7 +5,7 @@
 ## 硬边界（不上桌）
 
 1. **案件材料永不入本仓库**：真实案件材料只存在于仓库外的案件工作区（`D:\Claude\Data\Cases\`）；仓库内所有案件引用只指向外部路径；案件敏感信息不得写入 issue、commit message；机械守门（隐私钩子）见 `docs/adr/0014`。
-2. **办案会话对本仓库只读**：在案件目录上工作的会话不写本仓库（含 `knowledge/`）；判为通用的裁定由开发会话誊入，入库须经第二双眼；案件图里的模块与节点回流领域图的机制见 `docs/adr/0012` 与 `docs/adr/0019`；律师侧逐节点回流写的是 `~/.loo0ng/领域/` 下的活图，在本仓库之外，不破这条只读。
+2. **办案会话对本仓库只读**：在案件目录上工作的会话不写本仓库（含 `knowledge/`）；判为通用的裁定由开发会话誊入，导入的预设图进仓库那次 diff 须经第二双眼；律师一句话另存出的个人预设图写的是 `~/.loo0ng/预设图/` 下那一份，在本仓库之外，不破这条只读（ADR-0023）。
 
 ADR-0001 至 0021 为参考（ADR-0022）：记的是当时为什么这么定，与 skill 正文冲突时以正文为准，引用它们不构成反对一个改动的理由。
 
@@ -15,7 +15,7 @@ ADR-0001 至 0021 为参考（ADR-0022）：记的是当时为什么这么定，
 2. **路由入口表同步**：增删或改名任一入口，必改 `ask-loo0ng` 自持的入口表。
 3. **双旗同步**：编排 skill 与路由同时带 `disable-model-invocation: true` 与 `allow_implicit_invocation: false`；参考 skill 两者都不带。`agents/openai.yaml` 手写，`display_name` 等于 `name`（ADR-0021）。
 4. **relink**：改名、增删 skill 后重跑 `scripts/link-skills.ps1`。
-5. **领域目录三样**：`skills/<bucket>/domain/assets/` 只有领域图、官方模板原件、指引手册原文（ADR-0004）；这份是出厂种子，律师的活图在包外（ADR-0019）。
+5. **出厂预设图三样**：`skills/<bucket>/domain/assets/预设图/<名>/` 只有 `预设图.json`、`模板/` 官方模板原件、`指引手册/` 指引手册原文（ADR-0023）；出厂件谁都不许在会话里写，个人预设图在包外的 `~/.loo0ng/预设图/` 下。
 
 6. **机械校验**：改了 `skills/`、`docs/`、`README.md` 或 `.claude-plugin/` 就跑 `bash scripts/check-skill.sh .`、`bash scripts/check-wiring.sh .`、`claude plugin validate . --strict`，全绿才提交；改名或删除后另跑 `bash scripts/check-stale.sh . <旧名>`；发版前 `bash scripts/check-release.sh .`（ADR-0021）。
 
