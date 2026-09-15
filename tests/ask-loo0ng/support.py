@@ -4,10 +4,14 @@
 """
 import pathlib
 import re
+import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-桶 = REPO / "skills" / "in-progress"
-SKILL_DIR = 桶 / "ask-loo0ng"
+# 路由住哪个桶不写死，按名当场解析（evals/共用/桶.py，与 eval 那一侧同一处）。
+sys.path.insert(0, str(REPO / "evals" / "共用"))
+from 桶 import skill目录 as 件, 全部skill名  # noqa: E402
+
+SKILL_DIR = 件("ask-loo0ng")
 SKILL = SKILL_DIR / "SKILL.md"
 YAML = SKILL_DIR / "agents" / "openai.yaml"
 下一任务 = SKILL_DIR / "references" / "下一任务.md"

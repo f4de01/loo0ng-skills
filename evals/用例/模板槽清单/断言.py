@@ -6,9 +6,10 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "共用"))
 from 基线 import 校验基线  # noqa: E402
+from 桶 import skill目录  # noqa: E402
 
 模板名 = "1-2.关于管理人印章备案的报告.docx"
-原件 = pathlib.Path(__file__).resolve().parents[3] / "skills" / "in-progress" / "domain" / "assets" / "预设图" / "破产" / "模板" / 模板名
+原件 = skill目录("domain") / "assets" / "预设图" / "破产" / "模板" / 模板名
 根上允许 = {"AGENTS.md", "CLAUDE.md", "图.json", "图视图.json", "图视图.md", "待归档", "材料", "参考", "文书"}
 
 

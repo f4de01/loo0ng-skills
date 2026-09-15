@@ -21,14 +21,17 @@ import sys
 import time
 import zipfile
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import 桶  # noqa: E402
+
 REPO = pathlib.Path(__file__).resolve().parents[2]
-SKILLS = REPO / "skills" / "in-progress"
-SETUP = SKILLS / "setup-case" / "scripts" / "setup.py"
-ENGINE = SKILLS / "graph" / "scripts" / "graph.py"
-PRESET = SKILLS / "domain" / "scripts" / "preset.py"
-ARCHIVE = SKILLS / "filing" / "scripts" / "archive.py"
-FILL = SKILLS / "to-docx" / "scripts" / "fill.py"
-出厂预设图 = SKILLS / "domain" / "assets" / "预设图"
+# 住哪个桶不写死，按 skill 名当场解析（evals/共用/桶.py）：搬桶时这里一个字都不用改。
+SETUP = 桶.脚本("setup-case", "setup.py")
+ENGINE = 桶.脚本("graph", "graph.py")
+PRESET = 桶.脚本("domain", "preset.py")
+ARCHIVE = 桶.脚本("filing", "archive.py")
+FILL = 桶.脚本("to-docx", "fill.py")
+出厂预设图 = 桶.skill目录("domain") / "assets" / "预设图"
 官方模板 = 出厂预设图 / "破产" / "模板"
 
 HOME_ENV = "LOO0NG_HOME"     # 个人预设图的家，与 preset.py、跑器同一个名字
