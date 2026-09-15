@@ -5,13 +5,17 @@
 import json
 import pathlib
 import re
+import sys
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "共用"))
+from 桶 import skill目录, 相对仓库  # noqa: E402
 
 目录 = ["待归档", "材料", "参考/模板", "参考/指南", "文书"]
 根上允许 = {"AGENTS.md", "CLAUDE.md", "图.json", "图视图.json", "图视图.md", "归档索引.md", "待归档", "材料", "参考", "文书"}
 成品 = "管理人承诺书（已交法院）.md"
 成品节点 = "管理人承诺书及团队人员"
 成品落点 = "文书/接受指定与报备/管理人承诺书及团队人员/管理人承诺书及团队人员.md"
-包内 = "skills/in-progress/domain/assets"    # 指针块不该指进这里：包一升级它就被换掉
+包内 = 相对仓库(skill目录("domain") / "assets")    # 指针块不该指进这里：包一升级它就被换掉
 
 
 def _is_harness_noise(name):

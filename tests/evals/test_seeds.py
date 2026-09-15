@@ -87,7 +87,7 @@ class 回放(unittest.TestCase):
         for 旧 in 旧形状:
             self.assertFalse((self.ws / 旧).exists(), "工作区里还有旧形状的 %s" % 旧)
         agents = (self.ws / "AGENTS.md").read_text(encoding="utf-8")
-        self.assertNotIn("skills/in-progress", agents.replace("\\", "/"), "指针块不记路径（ADR-0023）")
+        self.assertNotIn("skills/", agents.replace("\\", "/"), "指针块不记路径（ADR-0023）：不许指进 skill 包里")
         self.assertTrue((self.ws / ".基线.json").is_file() or self.种子 in ("填过黄",), "路由种子要写基线")
 
 

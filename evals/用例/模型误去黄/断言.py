@@ -3,9 +3,12 @@
 import importlib.util
 import json
 import pathlib
+import sys
 
-REPO = pathlib.Path(__file__).resolve().parents[3]
-FILL = REPO / "skills" / "in-progress" / "to-docx" / "scripts" / "fill.py"
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "共用"))
+from 桶 import skill目录  # noqa: E402
+
+FILL = skill目录("to-docx") / "scripts" / "fill.py"
 文书相对 = "文书/接受指定与报备/管理人印章备案报告/管理人印章备案报告.docx"
 补记 = "律师补记：印模以刻章回执为准。"
 根上允许 = {"AGENTS.md", "CLAUDE.md", "图.json", "图视图.json", "图视图.md", "归档索引.md", "待归档", "材料", "参考", "文书"}
