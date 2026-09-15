@@ -1,6 +1,6 @@
-"""起手 CLI 的依赖边界（#31 验收）：import 只含标准库，不 import 图引擎，写图只经引擎子进程。
+"""起手 CLI 的依赖边界：import 只含标准库，不 import 兄弟 skill，写图只经引擎子进程。
 
-运行：python -m unittest tests/setup-case/test_isolation.py
+运行：python -m unittest discover -s tests/setup-case -p 'test_isolation.py'
 """
 import ast
 import pathlib
@@ -32,7 +32,7 @@ class IsolationTest(unittest.TestCase):
 
     def test_does_not_import_engine_or_siblings(self):
         mods = imported_modules(SCRIPT)
-        for f in ("graph", "archive", "statement", "sketch", "fill", "gate", "loo0ng"):
+        for f in ("graph", "archive", "preset", "sketch", "fill", "loo0ng"):
             self.assertNotIn(f, mods, "setup.py import 了 %s" % f)
 
     def test_no_bom(self):
@@ -40,22 +40,30 @@ class IsolationTest(unittest.TestCase):
             self.assertFalse(path.read_bytes().startswith(b"\xef\xbb\xbf"), "%s 带 BOM" % path.name)
 
 
-class SeedTemplateTest(unittest.TestCase):
-    """种子模板住在本 skill 目录里（ADR-0009），之后没有任何 skill 往工作区的 AGENTS.md 里写。"""
+class PointerBlockTest(unittest.TestCase):
+    """指针块模板住在本 skill 目录里（ADR-0009），之后没有任何 skill 往工作区的 AGENTS.md 里写。"""
 
-    def test_工作区指针块模板四项齐全(self):
-        text = (SKILL / "references" / "工作区AGENTS.md").read_text(encoding="utf-8")
-        self.assertIn("{领域}", text)
-        self.assertIn("{领域目录}", text)
+    TEMPLATE = SKILL / "references" / "工作区AGENTS.md"
+
+    def text(self):
+        return self.TEMPLATE.read_text(encoding="utf-8")
+
+    def test_四项齐全(self):
+        text = self.text()
+        self.assertIn("{预设图}", text)
         for expected in ("图.json", "图视图.md", "图视图.json",
-                        "setup-case", "doit", "ask-loo0ng", "只读"):
+                         "setup-case", "doit", "ask-loo0ng", "只读"):
             self.assertIn(expected, text, "指针块模板里缺 %s" % expected)
 
-    def test_既有成品审查报告模板五段固定(self):
-        text = (SKILL / "references" / "既有成品审查报告.md").read_text(encoding="utf-8")
-        headings = [line for line in text.splitlines() if line.startswith("## ")]
-        self.assertEqual(headings, ["## 生成依据", "## 存疑点", "## 待律师裁定", "## 版式门禁", "## 时限"],
-                         "审查报告五段固定、顺序固定（to-docx/references/审查报告.md）")
+    def test_只有四项(self):
+        项 = [line for line in self.text().splitlines() if line.startswith("- ")]
+        self.assertEqual(len(项), 4, 项)
+
+    def test_模板里没有领域目录那一行(self):
+        """ADR-0023：只记预设图的名与归属，路径每次按名当场解析。"""
+        text = self.text()
+        for 旧 in ("{领域}", "{领域目录}", "领域目录"):
+            self.assertNotIn(旧, text, "指针块模板里还有 %s" % 旧)
 
 
 if __name__ == "__main__":
