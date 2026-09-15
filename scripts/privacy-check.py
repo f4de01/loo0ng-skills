@@ -6,7 +6,7 @@
 三种模式（互斥）：
   --staged            pre-commit 用。扫暂存 diff 的新增行、暂存文件名；
                       Office 文件（docx / xlsx / pptx）拆 zip 扫 XML；其他二进制放行但点名披露。
-                      在 main 上暂存触及 knowledge/ 或领域图文件的改动即拒绝。
+                      在 main 上暂存触及 knowledge/ 或出厂预设图文件的改动即拒绝。
   --commit-msg FILE   commit-msg 用。扫提交说明（跳过注释行与 scissors 之后的部分）。
   --stdin             发 issue 前过正文：从标准输入读文本，命中则非零退出并列出类别。
   --all               全仓扫描：所有已跟踪文件的全文与文件名，装钩子那天跑一次做基线。
@@ -32,11 +32,11 @@ from typing import List, Optional, Tuple
 CASE_ROOT = r"D:\Claude\Data\Cases"
 OFFICE_EXTS = (".docx", ".xlsx", ".pptx", ".docm", ".xlsm", ".pptm", ".dotx", ".xltx", ".potx")
 
-# main 上守的两处路径（ADR-0014）。领域图与案件图同格式（JSON），住在 domain 的 assets 下；
-# 同目录下的官方模板原件与指引手册按定义不含案件内容，不守。
+# main 上守的两处路径（ADR-0014，路径按 ADR-0023 换成预设图的形状）。出厂预设图与案件图同格式
+# （JSON），住在 domain 的 assets/预设图/ 下；同目录下的官方模板原件与指引手册按定义不含案件内容，不守。
 GUARDED_PREFIXES = ("knowledge/",)
-DOMAIN_GRAPH_PREFIX = "skills/in-progress/domain/assets/"
-DOMAIN_GRAPH_SUFFIX = ".json"
+PRESET_GRAPH_PREFIX = "skills/in-progress/domain/assets/预设图/"
+PRESET_GRAPH_SUFFIX = ".json"
 GUARDED_BRANCH = "main"
 
 _CJK = r"\u4e00-\u9fff"
@@ -238,7 +238,7 @@ def current_branch() -> Optional[str]:
 def is_guarded_path(path: str) -> bool:
     if path.startswith(GUARDED_PREFIXES):
         return True
-    return path.startswith(DOMAIN_GRAPH_PREFIX) and path.endswith(DOMAIN_GRAPH_SUFFIX)
+    return path.startswith(PRESET_GRAPH_PREFIX) and path.endswith(PRESET_GRAPH_SUFFIX)
 
 
 # ---------------------------------------------------------------- 报告

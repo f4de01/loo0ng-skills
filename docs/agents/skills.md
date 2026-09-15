@@ -10,8 +10,8 @@ skills/<bucket>/<name>/       # 桶照上游五个：engineering、productivity�
 ├── agents/openai.yaml    # Codex 侧外观：interface.display_name（= name）、interface.short_description（中文进这里）；编排 skill 与路由另加 policy.allow_implicit_invocation: false
 ├── references/           # 正文按需指向的长材料
 ├── requirements.txt      # 只有 to-docx 有：填模板脚本后端的精确钉（python-docx==1.2.0，ADR-0018）。随包到律师机，agent 自备环境时按它装；仓库根上放到不了那里
-├── scripts/              # 标准库零依赖的 CLI；只有 to-docx 的 fill.py 例外（python-docx，ADR-0023）。互不 import；跨 skill 一律以子进程互调、默认按兄弟目录找：要写图的（domain 的雏形、setup-case 的起手与既有成品登记）调 graph 的引擎，起手取活图路径（setup-case 的 init --domain-name）调 domain 的 sketch.py home（#97）
-└── assets/               # 只有 domain 有：assets/<领域>/ 下领域图、模板/ 官方模板原件、指引手册/ 指引手册原文（ADR-0004）。这份是出厂种子，随包升级被换掉；律师那台机上的活图在 ~/.loo0ng/领域/<领域>/，由 sketch.py home 首次起手时拷出（ADR-0019）
+├── scripts/              # 标准库零依赖的 CLI；只有 to-docx 的 fill.py 例外（python-docx，ADR-0023）。互不 import；跨 skill 一律以子进程互调、默认按兄弟目录找：要写图的（domain 的雏形与另存、setup-case 的起手与既有成品登记）调 graph 的引擎，起手列预设图与按名解析路径调 domain 的 preset.py（ADR-0023）
+└── assets/               # 只有 domain 有：assets/预设图/<名>/ 下 预设图.json、模板/ 官方模板原件、指引手册/ 指引手册原文（ADR-0023）。这是出厂预设图，随包升级整个被换掉、原位读不拷出包，会话里谁都不许写；律师那台机上的个人预设图在 ~/.loo0ng/预设图/<名>/，由另存与导入写
 ```
 
 **2026-09-14 起七件全部住 `in-progress/`，逐件改造后再毕业回 `engineering/` 或 `productivity/`（ADR-0022）；本段其余写的是毕业后的归属。** 分桶照上游（ADR-0009 的 2026-09-13 附注）：`skills/` 下五个桶，每桶一份 `README.md` 逐件列出、名字链接到 `./<name>/SKILL.md`；promoted 桶（`engineering/`、`productivity/`）里的每件进 `.claude-plugin/plugin.json` 与根 `README.md`（名字链接到 `SKILL.md`），并有一页 `docs/<bucket>/<name>.md`（固定段：What it does、When to reach for it、Common questions、It's working if、Where it fits，页内链接一律绝对）；`misc/`、`in-progress/`、`deprecated/` 里的不进这三处。上游 `engineering/` 装的是主线（daily code work），`productivity/` 装的是离了主线也能单独用的工具；对应到这里，办案主线六件（`ask-loo0ng`、`setup-case`、`doit`、`graph`、`domain`、`filing`，都只在有 `图.json` 的工作区里工作）在 `engineering/`，`to-docx`（清单可对任意 DOCX 打、施加默认写临时位置）在 `productivity/`；另外三桶目前只有 README。草稿放分支不放目录，要公开试用的才进 `in-progress/`（这一轮改的是全部七件、跨多次发布，分支装不下，所以七件都在那里）。分发清单只有一份：`.claude-plugin/plugin.json` 的 `skills` 数组逐件列路径（Claude Code 插件）；`.claude-plugin/marketplace.json` 让仓库自成单插件市场。不发 Codex 原生插件，Codex 及其他 harness 经 skills.sh 装编辑副本（ADR-0021，与上游 ADR-0002 同一个理由：Codex 清单只收单一路径，分桶后会把 `in-progress/` 一并装出去）。
@@ -149,6 +149,8 @@ ADR-0015「目录名保持 ASCII」只指 `tests/`、`evals/` 两个顶层；其
 | `说明` | 一句话，含用例的局限；带 skill 时必填，写明替身提示词的局限 |
 
 每次运行：在 `%TEMP%` 下建临时工作区 → 回放种子 → 调 harness（cwd 即工作区）→ 回复正则 → 逐条断言 → 删工作区（超时、超回合、断言抛错都删）。断言报红时给出函数名与 assert 的消息。
+
+**`LOO0NG_HOME` 自 ADR-0023 起指的是个人预设图的「家」**（`<家>/预设图/<名>/`，由 `domain` 的 `preset.py` 解析）：活图、领域目录与 `sketch.py home` 整套已退场，下面这一段写的还是旧形状，随种子与跑器一起在 #20 重写；「跑器建一个临时的家、两侧都吃这个变量、别碰律师真的 `~/.loo0ng`」这一条不变。
 
 每次运行另在 `%TEMP%` 下建一个**活图家**，经环境变量 `LOO0NG_HOME` 交给 harness（ADR-0019）：领域目录的活图本来住 `~/.loo0ng/领域/`，eval 既不该往律师的主目录里拷东西，也不该吃上一次跑剩下的活图（ADR-0015 只生不存）。跑完连它一起删，`--keep` 时连它一起留并打印路径。两侧都吃这个变量（#90 实测 Codex 的 `workspace-write` 沙箱写得动 `%TEMP%` 下的它）。`--materialize` 生出来的工作区不设它，回放自己兜底：多数种子的领域目录本来就钉在包内的出厂种子上（`evals/共用/回放助手.py` 的默认值），那个工作区的指针块指的就是种子；调过 `用活图()` 的那几个（「逐节点回流」「活图多一件」「回流」）把活图落进工作区里的 `.活图家/`。**但兜底只管回放自己那几条命令，管不到 harness 里的模型**：模型自己跑 `sketch.py home` 时环境里没有这个变量，解析到的就是真的 `~/.loo0ng/`，一次关票触发就能写进开发者自己那份活图（#105 在 Codex 侧实测到；用例「回流」的提示词不再给路径之后，这条路才走得到）。所以 `--materialize` 回显里带上这次要设的 `LOO0NG_HOME`，关票触发之前把它设进环境；eval 那条路由跑器统一设，碰不到真的主目录。
 
