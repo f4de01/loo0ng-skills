@@ -1,13 +1,13 @@
 ---
-status: proposed
+status: accepted
 date: 2026-09-15
 ---
 
 # 正文留在 AGENTS.md，开发配置共用指针，不用符号链接
 
-本仓原先把共同约束放在 `AGENTS.md`，`CLAUDE.md` 用 `@AGENTS.md` 导入，再独占 issue tracker、triage labels、domain docs 三段配置。#57 要确认 Codex 实际收到什么，并核实上游的反向符号链接在 Windows 上能否使用。本记录及相应文件改动待开发者裁定，尚未宣称接受。
+本仓原先把共同约束放在 `AGENTS.md`，`CLAUDE.md` 用 `@AGENTS.md` 导入，再独占 issue tracker、triage labels、domain docs 三段配置。#57 要确认 Codex 实际收到什么，并核实上游的反向符号链接在 Windows 上能否使用。PR #68 合并后，开发者于 2026-09-15（America/Los_Angeles）明确批准将本记录改为 accepted 并关闭 #57。
 
-## 建议裁定
+## 裁定
 
 保留 `AGENTS.md` 为普通文件、为共同正文的唯一来源；`CLAUDE.md` 也是普通文件，只保留 `@AGENTS.md`。三段配置描述的都是通用开发工作，不是 Claude 专属能力，应让两侧看到同一组入口：在 `AGENTS.md` 的长约定指针旁加一行，按 issue 操作、分诊、领域探索三个触发条件，指向已有的 `docs/agents/` 文档。五角色标签的完整词表仍在 `triage-labels.md`，不复制一份。
 
@@ -61,4 +61,4 @@ date: 2026-09-15
 - 反转正文并用符号链接复用，受上述本机检出和权限问题阻挡；复制两份全文又会产生两个维护源。
 - 保留现有 Claude 导入方向，不以这次 Codex 实测冒充 Claude 侧导入的新证据。
 - 本票只改指令文件与决策记录，没有运行代码变更，无适用的 TDD 接口或类型检查命令，不新增镜像正文的单元测试。文本、登记、接线及插件校验按仓库约定执行；脚本全套回归按 implement 流程执行。
-- ADR 先以 `proposed` 提交供审阅，按 #57 评论「结论的裁定与 ADR 落字要人过」，开发者确认后才改为 `accepted`；本次不关闭 issue。实跑记录可作为 PR 的验收证据。
+- ADR 先以 `proposed` 提交供审阅，按 #57 评论「结论的裁定与 ADR 落字要人过」，开发者确认后改为 `accepted`。实跑记录已随 PR #68 提交，批准记录落库后关闭 #57。
