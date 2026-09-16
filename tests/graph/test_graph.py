@@ -150,7 +150,7 @@ class ValidationTest(EngineCase):
         self.写原样(ws, raw)
         r = self.rejected(ws, "add-module", "--title", "甲")
         self.assertIn("领域", r.err)
-        self.assertIn("ADR-0023", r.err)
+        self.assertIn("领域自格式版本 2 起不是图的字段", r.err)
 
     def test_空白模板的旧写法即拒(self):
         ws = self.整份工作区()

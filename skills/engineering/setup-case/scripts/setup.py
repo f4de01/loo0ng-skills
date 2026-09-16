@@ -3,7 +3,7 @@
 
 标准库零依赖，不 import 兄弟 skill：图的每一次写入都经 skill "graph" 的 scripts/graph.py 子进程，
 它仍是 图.json 的唯一写入口；预设图的绝对路径经 skill "domain" 的 scripts/preset.py resolve
-子进程取，两处两归属仍归它管（ADR-0023）。本脚本不含任何领域语义。
+子进程取，两处两归属仍归它管。本脚本不含任何领域语义。
 
 用法：
   python setup.py init [--preset <名> --owner 出厂|个人]
@@ -11,7 +11,7 @@
   python setup.py register --node <节点标题或 id> --file <工作区内相对路径>
                        [--workspace <目录>] [--engine <graph.py>]
 
-init 的前置只有一条：工作区里没有 图.json（起手一案一次，ADR-0007）。**目录非空不拒**：目录里
+init 的前置只有一条：工作区里没有 图.json（起手一案一次）。**目录非空不拒**：目录里
 原有的文件与目录一律挪进 待归档/，等归档（调 skill "filing"）判去向。两条起手路二选一：不给
 --preset 就是空图；给 --preset <名> 加 --owner 出厂|个人 就整份拷入那份预设图，它的 模板/ 一并
 拷进 参考/模板/。顺序是先解析预设图、再落图、再建格：解析不到或引擎拒了，都是一格不建、一个字不写。
@@ -19,7 +19,7 @@ init 的前置只有一条：工作区里没有 图.json（起手一案一次，
 
 register 是起手清单里「既有成品登记为已生成、来源律师」那一条的机械落地：把那份成品挪进它
 节点的文书目录、按固定一行写审查报告（每一版文书必有一份，skill "to-docx" 的 REVIEW-FORMAT.md），
-再经引擎追加一条来源为律师的生成条目。它只登记不确认：确认永不自动（ADR-0002）。
+再经引擎追加一条来源为律师的生成条目。它只登记不确认：确认永不自动。
 
 退出码：0 完成；1 拒绝（图已存在、解析不到预设图、引擎拒写、找不到文件、路径越界、目标已被占）；2 用法错误。
 """
@@ -40,7 +40,7 @@ CLAUDE_FILENAME = "CLAUDE.md"
 CLAUDE_MD_TEXT = "@AGENTS.md\n"
 POINTER_HEADING = "# 案件工作区"
 
-# 目录形状（ADR-0023 第 2 节）。文书/<模块>/<节点>/ 出件时才建。
+# 目录形状。文书/<模块>/<节点>/ 出件时才建。
 CELLS = ("待归档", "材料", "参考/模板", "参考/指南", "文书")
 PENDING = "待归档"
 DOCS_CELL = "文书"
@@ -51,14 +51,13 @@ OWNER_FACTORY, OWNER_PERSONAL = "出厂", "个人"
 OWNERS = (OWNER_FACTORY, OWNER_PERSONAL)
 EMPTY_LABEL = "无（空图起手）"
 
-# 跨 skill 一律子进程互调、按兄弟目录找（docs/agents/skills.md）。
+# 跨 skill 一律子进程互调、按兄弟目录找。
 ENGINE_RELATIVE = pathlib.Path("..") / ".." / "graph" / "scripts" / "graph.py"
 PRESET_CLI_RELATIVE = pathlib.Path("..") / ".." / "domain" / "scripts" / "preset.py"
 
 AGENTS_TEMPLATE = pathlib.Path(__file__).resolve().parent.parent / "WORKSPACE-AGENTS.md"
 
-# 审查报告只有这一行，一个字不多（CONTEXT.md「审查报告」，skill "to-docx" 的
-# REVIEW-FORMAT.md「律师自写的」）：没有施加、没有高亮清单，下次重出读到它就知道
+# 律师自写文书的审查报告只记这一行：没有施加、没有高亮清单，下次重出读到它就知道
 # 当前文书里的黄全是律师自己加的，一处不动。律师那句话不进这里：生成条目不存原话（引擎里
 # 只有确认条目存），起手清单那一句留在对话与收尾里。
 REVIEW_LINE = "律师自写\n"
@@ -111,7 +110,7 @@ def check_workspace_relative(value: str, label: str) -> None:
 # ---------------------------------------------------------------- init
 
 def resolve_preset(preset_cli: pathlib.Path, name: str, owner: str) -> Tuple[pathlib.Path, List[str]]:
-    """子进程调 skill "domain" 的 preset.py resolve 取那份预设图的绝对路径（ADR-0023）。
+    """子进程调 skill "domain" 的 preset.py resolve 取那份预设图的绝对路径。
 
     与调图引擎是同一个形状：两处两归属归它管，本脚本既不自己算路径，也不把路径记进工作区。
     它发生在落图与建格之前：resolve 拒了这里跟着拒，一格不建、一个字不写。回显原样带回去。
@@ -169,7 +168,7 @@ def sweep_to_pending(ws: pathlib.Path) -> List[str]:
 
 
 def copy_preset_templates(ws: pathlib.Path, preset_dir: pathlib.Path) -> List[str]:
-    """预设图的 模板/ 整份拷进 参考/模板/：不改名、不覆盖、子目录相对路径原样（ADR-0024 第一类）。"""
+    """预设图的 模板/ 整份拷进 参考/模板/：不改名、不覆盖、子目录相对路径原样。"""
     source = preset_dir / PRESET_TEMPLATES_DIRNAME
     target = ws / WORKSPACE_TEMPLATES
     if not source.is_dir():
@@ -215,7 +214,7 @@ def put_beside(path: pathlib.Path, block: str, marker: str, at_end: bool) -> str
 
 
 def write_pointer_block(ws: pathlib.Path, preset_label: str) -> List[str]:
-    """指针块只记四项，一条路径都不记（ADR-0023）：包一升级绝对路径就死，路径每次按名当场解析。
+    """指针块只记四项，一条路径都不记：包一升级绝对路径就死，路径每次按名当场解析。
 
     AGENTS.md 给 Codex 读，CLAUDE.md 一行引它给 Claude Code 读。目录里原本就有这两份的（Codex
     建的项目常有），那是律师或 Codex 自己写的项目说明，原文一字不动。
@@ -270,7 +269,7 @@ def cmd_init(args) -> int:
 
 def locate_node(ws: pathlib.Path, key: str) -> Tuple[str, str, str]:
     """回（模块目录名, 节点目录名, 节点标题）。目录名取 图视图.json 里引擎算好的那一份：
-    标题做目录名的转义规则只定一次，在引擎里（ADR-0023），本脚本不自己再实现一遍。"""
+    标题做目录名的转义规则只定一次，在引擎里，本脚本不自己再实现一遍。"""
     view_path = ws / VIEW_JSON
     if not view_path.is_file():
         raise Rejected("%s 里没有 %s：先起手（setup.py init），或调用 skill \"graph\" 重算视图"
@@ -328,7 +327,7 @@ def cmd_register(args) -> int:
         review_path.write_text(REVIEW_LINE, encoding="utf-8")
     except OSError as e:
         undo_register(source, doc_path, review_path, made_dirs)
-        raise Rejected("挪不进 %s：%s。节点标题做目录名用不了的字由引擎换成全角（ADR-0023），"
+        raise Rejected("挪不进 %s：%s。节点标题做目录名用不了的字由引擎换成全角，"
                        "仍不行就先改标题（调用 skill \"graph\"）。" % (doc_dir, e)) from e
 
     code, out, err = run_engine(engine, ws / GRAPH_FILENAME, [

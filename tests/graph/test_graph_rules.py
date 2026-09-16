@@ -308,7 +308,7 @@ class ExportPresetTest(EngineCase):
         假包 = self.tmp / "domain" / "assets" / "预设图"
         for 名 in ("菜园", "菜园2.0"):
             r = self.rejected(ws, "export-preset", "--out", str(假包 / 名))
-            self.assertIn("ADR-0020", r.err, 名)
+            self.assertIn("出厂件谁都不许写", r.err, 名)
             self.assertFalse((假包 / 名).exists(), "拒了却落了盘：%s" % (假包 / 名))
 
     def test_另存不覆盖已有的(self):

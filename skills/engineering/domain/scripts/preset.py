@@ -4,7 +4,7 @@
 标准库零依赖，不 import 图引擎：另存的那一次写图仍只经 skill "graph" 的 scripts/graph.py 子进程。
 本脚本不含任何领域语义：预设图的名只是一个目录名，图的形状由引擎说了算。
 
-两处两归属（ADR-0023）：
+两处两归属：
   出厂  <本 skill>/assets/预设图/<名>/   预设图.json、模板/、指引手册/   随包分发，升级整个换掉，原位读、不拷出包
   个人  ~/.loo0ng/预设图/<名>/           预设图.json、模板/             律师另存而来，升级碰不到
 两处不合并、同名不并存：另存与出厂重名即拒，让律师换个名字（起手列表两组同名会混）。
@@ -166,7 +166,7 @@ def resolve_engine(given: Optional[str]) -> pathlib.Path:
 
 
 def copy_templates(source: pathlib.Path, target: pathlib.Path) -> Tuple[int, List[str]]:
-    """参考/模板/ 整份拷进预设图的 模板/：不改名、不覆盖、子目录相对路径原样（ADR-0024 第一类）。"""
+    """参考/模板/ 整份拷进预设图的 模板/：不改名、不覆盖、子目录相对路径原样。"""
     notes = []
     if not source.is_dir():
         return 0, ["工作区里没有 %s/，一件模板没拷：挂着模板的节点在别处起手时要补" % source.as_posix()]
@@ -188,7 +188,7 @@ def cmd_save(args) -> int:
     if not graph_path.is_file():
         raise Rejected("找不到案件图 %s：另存要在案件工作区里跑" % graph_path)
     factory = factory_root(args.factory_root) / name
-    if factory.exists():  # 看的是这个名占没占，不是那份图读不读得出：同名就是同名（ADR-0023）
+    if factory.exists():  # 看的是这个名占没占，不是那份图读不读得出：同名就是同名
         raise Rejected("出厂预设图里已经有「%s」（%s）：两处同名会让起手的列表分不清，换个名字再另存。"
                        "出厂件谁都不许写，另存永远落在个人预设图那一处。" % (name, factory.as_posix()))
     target = personal_root(args.personal_root) / name

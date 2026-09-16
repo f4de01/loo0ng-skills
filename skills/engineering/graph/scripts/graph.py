@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """图引擎 CLI：案件图与预设图的唯一写入缝。标准库零依赖，Windows 中文路径可用。
 
-图是工作区根的单一 JSON 图.json（ADR-0003）：顶层只有 格式版本、模块；模块内嵌节点，节点内嵌条目。
-起手之后案件图自足（ADR-0023）：状态、前方、时限、目录名全部只从图自己的内容算，不再读图外的任何东西。
-条目只追加（生成 / 确认 / 不适用），状态只算不存；每次写图后覆盖重算 图视图.md 与 图视图.json（ADR-0011）。
+图是工作区根的单一 JSON 图.json：顶层只有 格式版本、模块；模块内嵌节点，节点内嵌条目。
+起手之后案件图自足：状态、前方、时限、目录名全部只从图自己的内容算，不再读图外的任何东西。
+条目只追加（生成 / 确认 / 不适用），状态只算不存；每次写图后覆盖重算 图视图.md 与 图视图.json。
 字段表与最小样例见 ../GRAPH-FORMAT.md。
 
 用法：
@@ -31,10 +31,10 @@ import sys
 import zipfile
 from typing import Dict, List, Optional, Tuple
 
-FORMAT_VERSION = 2  # 图.json 与 图视图.json 共用，同步升（ADR-0011）。2 起案件图自足（ADR-0023）
+FORMAT_VERSION = 2  # 图.json 与 图视图.json 共用，同步升；案件图自足
 DEFAULT_GRAPH = "图.json"
 PRESET_FILENAME = "预设图.json"
-# 包内出厂预设图的判据（ADR-0020 的拒写，路径按 ADR-0023 换成预设图的形状）。
+# 包内出厂预设图的判据：包内路径命中即拒写。
 # 同一套判据在 skill "setup-case" 与 skill "domain" 侧也有一份（那边只报不拒）：改这里要改那两处。
 PRESET_ASSETS_DIRNAME = "预设图"
 ASSETS_DIRNAME = "assets"
@@ -60,7 +60,7 @@ ENTRY_KEYS = {
     "不适用": {"动作", "时间", "来源", "原话"},
 }
 
-# 目录名转义：这九个字符在 Windows 或 POSIX 的目录名里用不了，一律换成同形的全角（ADR-0023）。
+# 目录名转义：这九个字符在 Windows 或 POSIX 的目录名里用不了，一律换成同形的全角。
 # 全仓只有这一份表：文书目录、模板拷贝、视图里的 目录名 列都读它，别处不许再定一份。
 DIRNAME_ESCAPES = {
     "/": "／", "\\": "＼", ":": "：", "*": "＊", "?": "？",
@@ -101,7 +101,7 @@ def new_id(prefix: str) -> str:
 
 
 def dirname_of(title: str) -> str:
-    """标题做目录名：只把用不了的字符换成全角，别的一个不动（ADR-0023）。"""
+    """标题做目录名：只把用不了的字符换成全角，别的一个不动。"""
     out = title
     for bad, good in DIRNAME_ESCAPES.items():
         out = out.replace(bad, good)
@@ -123,11 +123,11 @@ def validate_graph(data, *, kind: str, label: str) -> None:
     _check(data["格式版本"] == FORMAT_VERSION and isinstance(data["格式版本"], int)
            and not isinstance(data["格式版本"], bool),
            "%s 的格式版本是 %r，本引擎只认 %d；旧版本的图没有升级路径，"
-           "从预设图重新起手（ADR-0023）" % (label, data["格式版本"], FORMAT_VERSION))
+           "从预设图重新起手" % (label, data["格式版本"], FORMAT_VERSION))
     _check(set(data) == GRAPH_KEYS,
            "%s 顶层键须恰为 格式版本、模块，实际：%s%s" % (
                label, "、".join(sorted(data)),
-               "（领域自格式版本 2 起不是图的字段，ADR-0023）" if "领域" in data else ""))
+               "（领域自格式版本 2 起不是图的字段）" if "领域" in data else ""))
     _check(isinstance(data["模块"], list), "%s 的 模块 须是数组" % label)
     ids = set()
     module_titles_seen, node_titles_seen = {}, {}
@@ -176,12 +176,12 @@ def is_relative_path(text: str) -> bool:
 
 
 def validate_template(value, label, title):
-    """空白模板只记文件名（ADR-0023）：文件住 参考/模板/ 下，图不记来源、不记路径。"""
+    """空白模板只记文件名：文件住 参考/模板/ 下，图不记来源、不记路径。"""
     if value == NO_TEMPLATE:
         return
     if isinstance(value, dict):
         raise Invalid("%s 里节点「%s」的 空白模板 还是「来源 + 文件」的旧写法；"
-                      "自格式版本 2 起只记文件名（ADR-0023）" % (label, title))
+                      "自格式版本 2 起只记文件名" % (label, title))
     _check(isinstance(value, str) and value.strip(),
            "%s 里节点「%s」的 空白模板 须是「无」或一个文件名" % (label, title))
     _check("/" not in value and "\\" not in value,
@@ -193,7 +193,7 @@ def validate_entries(entries, label, title):
     for e in entries:
         _check(isinstance(e, dict) and e.get("动作") in ACTIONS, "%s 里节点「%s」有条目的 动作 不合法" % (label, title))
         if e["动作"] == "生成" and "源" in e:
-            raise Invalid("%s 里节点「%s」的生成条目还带 源：文书覆盖不迭代，没有 Markdown 源了（ADR-0023）"
+            raise Invalid("%s 里节点「%s」的生成条目还带 源：文书覆盖不迭代，没有 Markdown 源了"
                           % (label, title))
         _check(set(e) == ENTRY_KEYS[e["动作"]],
                "%s 里节点「%s」的 %s 条目键不对：%s" % (label, title, e["动作"], "、".join(sorted(e))))
@@ -236,7 +236,7 @@ def module_state(module) -> str:
 
 
 def last_generation(node) -> Optional[dict]:
-    """最近一次生成，附它是第几次：文书覆盖同一路径，留痕只在条目里（ADR-0023）。"""
+    """最近一次生成，附它是第几次：文书覆盖同一路径，留痕只在条目里。"""
     gens = [e for e in node["条目"] if e["动作"] == "生成"]
     if not gens:
         return None
@@ -291,14 +291,14 @@ def read_json(path: pathlib.Path, label: str):
 
 
 def write_json_atomic(path: pathlib.Path, obj) -> None:
-    """临时文件 + os.replace，单写者不设锁（ADR-0003）。"""
+    """临时文件 + os.replace，单写者不设锁。"""
     write_text_atomic(path, json.dumps(obj, ensure_ascii=False, indent=2) + "\n")
 
 
 def write_text_atomic(path: pathlib.Path, text: str) -> None:
     tmp = path.with_name(path.name + ".tmp-" + secrets.token_hex(4))
     try:
-        # 显式 open：Path.write_text 的 newline= 是 3.10 才有的，律师那台 mac 是 3.9（#61）
+        # 显式 open：Path.write_text 的 newline= 是 3.10 才有的，律师那台 mac 是 3.9
         with open(str(tmp), "w", encoding="utf-8", newline="\n") as f:
             f.write(text)
         os.replace(str(tmp), str(path))
@@ -560,7 +560,7 @@ class Engine:
         n["条目"].append({"动作": "不适用", "时间": now(), "来源": SOURCE_LAWYER, "原话": words})
 
     def not_applicable_module(self, key: str, words: str):
-        """模块级不适用 = 模块里每个节点各记一条不适用（#7）。图自足，没有要先带入的东西。"""
+        """模块级不适用 = 模块里每个节点各记一条不适用。图自足，没有要先带入的东西。"""
         self.require_case_kind("追加条目")
         m = self.resolve_module(key)
         if not m["节点"]:
@@ -575,7 +575,7 @@ class Engine:
                 count += 1
         self.say("模块「%s」不适用：%d 个节点各追加一条不适用条目，原话「%s」" % (m["标题"], count, words))
 
-    # ---- 起手（二选一，ADR-0023）
+    # ---- 起手（二选一）
     def init(self, empty: bool, preset_arg: Optional[str]):
         if self.graph_path.exists():
             raise Rejected("%s 已存在，起手一案一次；要改图用别的子命令" % self.graph_path)
@@ -597,7 +597,7 @@ class Engine:
         self.say("已按预设图 %s 整份起手：%d 个模块、%d 个节点，空白模板与时限句一次到位" % (
             path.parent.name, len(self.data["模块"]), sum(len(m["节点"]) for m in self.data["模块"])))
 
-    # ---- 另存（ADR-0023）
+    # ---- 另存
     def export_preset(self, out_arg: str):
         # --out 一律是目录，不按后缀猜：「破产3.0」这种名字带点的预设图，猜法会把它当成
         # 文件名落错形状，也会让下面那条包内拒写的判据看错一层目录。
@@ -626,18 +626,17 @@ class Engine:
     def require_preset_kind(self, what: str):
         if self.kind != "preset":
             raise Rejected("%s只在预设图上；案件图的时限由起手整份拷入，律师不在案件图上写它"
-                           "（ADR-0016、ADR-0023）。要改预设图用 --kind preset" % what)
+                           "。要改预设图用 --kind preset" % what)
 
     def refuse_if_in_package(self, path: pathlib.Path):
-        """包内的出厂预设图谁都不许写，没有例外（ADR-0020、ADR-0023）：包一升级它就被整个换掉，
+        """包内的出厂预设图谁都不许写，没有例外：包一升级它就被整个换掉，
         写进去的东西静默消失，而律师这一侧没有 git 看得见。个人预设图在另一个目录，物理上碰不到。
         两处调它：预设图的 commit，与另存的落点（另存是从案件图跑的，看的是目标不是本图）。
-        案件图不归这条管：案件图落进仓库是另一条硬边界的病，该在起手那一刻拦，不该在第 37 条
-        条目落盘时才报。只拦写：validate、views 与拿它起手（--preset 指着它）照旧。"""
+        这里只检查预设图写入的目标路径。只拦写：validate、views 与拿它起手（--preset 指着它）照旧。"""
         if not in_package(path):
             return
         raise Rejected(
-            "%s 在 skill 包内（出厂预设图），出厂件谁都不许写（ADR-0020、ADR-0023）：包一升级它就被整个换掉。"
+            "%s 在 skill 包内（出厂预设图），出厂件谁都不许写：包一升级它就被整个换掉。"
             "律师自己的图用 export-preset 另存成个人预设图，落在本机的个人预设图目录下，"
             "取它的路径调 skill \"domain\"；开发者要改出厂件，也是先写个人预设图，再经 PR 进仓库。"
             % path.resolve().parent.as_posix())
@@ -658,7 +657,7 @@ class Engine:
             siblings.insert(idx, item)
 
     def check_id_option(self, id_: Optional[str]):
-        """--id 只给预设图作者用；案件图里律师自加的 id 由引擎生成（ADR-0003）。"""
+        """--id 只给预设图作者用；案件图里律师自加的 id 由引擎生成。"""
         if id_ and self.kind != "preset":
             raise Rejected("--id 只在 --kind preset 下可用；案件图里的 id 由引擎生成")
 
@@ -667,7 +666,7 @@ def parse_template(text: str):
     """空白模板写法：无 | <文件名>。带路径或旧的「官方:x.docx」都拒。"""
     head, sep, rest = text.partition(":")
     if sep and head in ("官方", "生成"):
-        raise Rejected("空白模板不再分官方与生成两格，只记文件名（ADR-0023）：把 %r 写成 %r"
+        raise Rejected("空白模板不再分官方与生成两格，只记文件名：把 %r 写成 %r"
                        % (text, rest.strip() or "<文件名>"))
     if text == NO_TEMPLATE:
         return NO_TEMPLATE
@@ -679,7 +678,7 @@ def parse_template(text: str):
 # ---------------------------------------------------------------- 派生视图
 
 def build_view(data, graph_path: pathlib.Path) -> dict:
-    """图每次写完整体重算。状态、目录名、高亮、前方都在这里算一次，插件不自己算（ADR-0011）。"""
+    """图每次写完整体重算。状态、目录名、高亮、前方都在这里算一次，插件不自己算。"""
     root = graph_path.parent
 
     def composition(item):
