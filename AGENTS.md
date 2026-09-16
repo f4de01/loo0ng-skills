@@ -23,6 +23,8 @@ ADR-0001 至 0021 为参考（ADR-0022）：记的是当时为什么这么定，
 
 长约定见 `docs/agents/skills.md`。
 
+开发时按需读：issue 操作见 `docs/agents/issue-tracker.md`（本仓 GitHub Issues，使用 `gh`）；分诊见 `docs/agents/triage-labels.md`（五角色标签）；探索代码与记录领域决策见 `docs/agents/domain.md`（根 `CONTEXT.md` 与 `docs/adr/`）。
+
 ## 本文件写什么
 
 本文件每轮整篇进上下文，只装三种东西：硬边界；违反了产品就坏的结构不变量（每条一行，理由在 `docs/adr/`）；指向长约定的一行指针。对模型行为的要求不写在这里：事故的教训在发布时经空话检验后写进它所属 skill 的正文。结构不变量随 `skills/` 目录建立时写入。依据 ADR-0009 与 `docs/research/AGENTS-md-该写什么.md`。
