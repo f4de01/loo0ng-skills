@@ -1,11 +1,11 @@
 ---
-status: proposed
+status: accepted
 date: 2026-09-15
 ---
 
 # 安装顺序按律师排，skills.sh 在前，自建插件市场保留
 
-#56 要裁定律师与开发者的安装路线及 README 的先后。建议律师自行安装先走 skills.sh，README 将它列在首位；开发者沿用当前 Claude Code 插件、Codex 需要时走 skills.sh 的分工。每个 agent 只装一条路线，junction 仍是维护者开发工具。本文及 README 的改动是待人裁定的草案，获准后将状态改为 accepted；编号按 #56 预留的 0026 使用。
+#56 要裁定律师与开发者的安装路线及 README 的先后。律师自行安装先走 skills.sh，README 将它列在首位；开发者沿用当前 Claude Code 插件、Codex 需要时走 skills.sh 的分工。每个 agent 只装一条路线，junction 仍是维护者开发工具。开发者在本会话中明确回复「采纳」，批准本文与 README 的安装路线方案，状态据此改为 accepted；编号按 #56 预留的 0026 使用。
 
 ## 依据与取舍
 
