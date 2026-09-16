@@ -9,7 +9,7 @@
 
 四条：清单的形状是精确钉且只此一条依赖；这台机器上装的版本等于清单里的数；`fill.py` 回显里的版本取自运行
 时而不是照抄清单常量（拿替身元数据跑一次，回显跟着替身走，且退出码仍是 0）；清单里的数与散文里写出它的
-每一处（`SKILL.md`、`REVIEW-FORMAT.md` 的样例、`docs/agents/skills.md` 的布局表、ADR-0018）一致。
+每一处（`SKILL.md`、`REVIEW-FORMAT.md` 的样例、`.agents/registration.md` 的布局表、`.agents/writing-docs.md` 的说明、ADR-0018）一致。
 另加一条守 stdout 契约：那一行恒常写、位置固定在第二行。
 
 运行：python -m unittest tests/to-docx/test_requirements.py
@@ -33,7 +33,7 @@ MANIFEST = SKILL / "requirements.txt"
 # 散文里每一份版本号副本都归这条断言管：钉子的价值全在「没有第二个会静默掉队的数」，多写一处就多一个洞。
 # ADR 按编号 glob，不写死那个中文长文件名：ADR 改名时该红在断言上，不该红在读文件上。
 PROSE = [SKILL / "SKILL.md", SKILL / "REVIEW-FORMAT.md",
-         REPO / "docs" / "agents" / "skills.md"] + sorted((REPO / "docs" / "adr").glob("0018-*.md"))
+         REPO / ".agents" / "registration.md", REPO / ".agents" / "writing-docs.md"] + sorted((REPO / "docs" / "adr").glob("0018-*.md"))
 PACKAGE = "python-docx"
 FAKE_VERSION = "9.9.9"
 
@@ -74,7 +74,7 @@ class ManifestTest(unittest.TestCase):
 
     def test_pinned_number_is_the_same_number_everywhere_it_is_written_out(self):
         pinned = manifest_requirements()[0].split("==", 1)[1]
-        self.assertEqual(len(PROSE), 4, "散文里那几处副本一处都不能漏，实际扫到 %r" % [p.name for p in PROSE])
+        self.assertEqual(len(PROSE), 5, "散文里那几处副本一处都不能漏，实际扫到 %r" % [p.name for p in PROSE])
         for path in PROSE:
             text = path.read_text(encoding="utf-8")
             found = set(re.findall(r"python-docx[=\s]*([0-9]+\.[0-9]+\.[0-9]+)", text))

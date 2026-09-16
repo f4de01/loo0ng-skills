@@ -42,7 +42,7 @@ ADR-0017 立了一条原则，但只用它管了渲染器：**缺 Word / WPS / �
 
 - `CONTEXT.md` 新增「冻结转换器」词条，`_Avoid_` 里点名「渲染器」：门禁那条渲染是另一回事，两个词混起来会把 ADR-0017 与本 ADR 搅成一团。「依赖清单」是实现细节，不进词汇表。
 - `loo0ng-to-docx` 的 `SKILL.md` 那段环境正文重写；`references/审查报告.md` 的「生成依据」段加一行出件环境。
-- `docs/agents/skills.md` 的目录布局表加一行：skill 目录下许有 `requirements.txt`。那张表此前是封闭的五项。
+- `.agents/registration.md` 的目录布局表加一行：skill 目录下许有 `requirements.txt`。那张表此前是封闭的五项。
 - 转换器要改（读清单、报环境）。ADR-0017 立的「门禁本体零第三方依赖、且不新增任何依赖」一个字不动，本 ADR 只碰转换器那一侧。
 - **两处没验过，另开票，不作本 ADR 的前提**：受限沙箱（Codex `workspace-write`）下能不能自备环境（[#78](https://github.com/f4de01/lawyer-workbench-v3/issues/78)）；律师那台 mac 上能不能（[#79](https://github.com/f4de01/lawyer-workbench-v3/issues/79)）。`evals` 里为绕开前者而标着 `danger-full-access` 的用例本次不动，留给那张票。
 - 本 ADR 满足三条件：照跑必报、精确钉、清单随包走，三条没有上下文都会让人奇怪；每条都在两三个方案间选过；钉子一旦立起，后来者要改它得重走一遍这里的取舍。

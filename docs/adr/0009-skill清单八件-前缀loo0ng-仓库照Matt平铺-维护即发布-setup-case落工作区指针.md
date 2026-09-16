@@ -18,7 +18,7 @@ date: 2026-09-05
 - **分发照 Matt 双轨**：Claude Code 走插件（`.claude-plugin/plugin.json` + `marketplace.json`，仓库自成单插件市场），Codex 走 skills.sh；`.codex-plugin/plugin.json` 指 `./skills/` 列为实验项。本机开发者即律师，只用 `link-skills.ps1` 条目级 junction 到 `~/.claude/skills/` 与 `~/.agents/skills/`，两条路互斥。上架官方 marketplace、zip、CalVer、别的机器上的实测仍在本图之外。
 - **机制 B 落到案件工作区**：Matt 的 setup 往目标仓库写 `docs/agents/*.md` 与 CLAUDE.md 指针块，本项目的"目标仓库"是案件工作区，setup 就是起手。`loo0ng-setup-case` 在工作区根写 `AGENTS.md`（Codex 读）与 `CLAUDE.md`（一行 `@AGENTS.md`；Claude Code 只读 CLAUDE.md）。块里只有：领域名与领域目录绝对路径（机器相关，所以落工作区而不写死在 skill 里）、图与视图文件名、入口名、"本工作区对 skill 仓库只读"。种子模板放在 `loo0ng-setup-case` 文件夹里。硬依赖（`loo0ng-doit`、`ask-loo0ng`、`loo0ng-domain`）正文写一行「领域目录路径应已由工作区提供，没有则让律师跑 loo0ng-setup-case」；软依赖（`loo0ng-graph`、`loo0ng-filing`）只靠 `图.json`，不写。引擎 CLI 的领域目录参数从这里来。这个块不加确认点，由起手图三选一机械推出。
 - **领域目录**：`docs/指引手册/` 与 `knowledge/模板/` 搬进 `loo0ng-domain/assets/` 发生在它的实现票；`knowledge/` 其余留作素材。8 个来自既有案件的 `.doc` 不进（硬边界 1）。
-- **`AGENTS.md` 照 Matt，不采 legal-skills 的事故驱动写法**。调研 `docs/research/AGENTS-md-该写什么.md` 的结论：这类文件每轮整篇进上下文，只该装三种东西：硬边界、违反了产品就坏的结构不变量（登记、路由同步、双旗同步、relink、领域目录三样）、指向长约定的一行指针（`docs/agents/skills.md`）。对模型行为的要求一律不进 `AGENTS.md`：事故的教训在发布时过 Matt 的空话检验（不写它模型会不会做错）后，写进它所属 skill 的正文，只在那条路上被读到。J11 那种「违反一次、附日期与出处」的规则条不采用。结构不变量随 `skills/` 目录建立时写入，不预建空段。`CLAUDE.md` 改为 `@AGENTS.md` 导入，因为 Claude Code 不自动读 `AGENTS.md`。案件工作区那份 `AGENTS.md` 是起手落下的固定模板，之后没有任何 skill 往里写；案件推进只写 `图.json` 与 `材料/律师陈述/`。
+- **`AGENTS.md` 照 Matt，不采 legal-skills 的事故驱动写法**。调研 `docs/research/AGENTS-md-该写什么.md` 的结论：这类文件每轮整篇进上下文，只该装三种东西：硬边界、违反了产品就坏的结构不变量（登记、路由同步、双旗同步、relink、领域目录三样）、指向长约定的一行指针（`.agents/registration.md`）。对模型行为的要求一律不进 `AGENTS.md`：事故的教训在发布时过 Matt 的空话检验（不写它模型会不会做错）后，写进它所属 skill 的正文，只在那条路上被读到。J11 那种「违反一次、附日期与出处」的规则条不采用。结构不变量随 `skills/` 目录建立时写入，不预建空段。`CLAUDE.md` 改为 `@AGENTS.md` 导入，因为 Claude Code 不自动读 `AGENTS.md`。案件工作区那份 `AGENTS.md` 是起手落下的固定模板，之后没有任何 skill 往里写；案件推进只写 `图.json` 与 `材料/律师陈述/`。
 - **完成定义落票**：每张 skill 实现票带固定「完成」段：在 Codex 案件会话里被触发一次（编排 skill 律师打 `$名`，参考 skill 律师一句话由模型够到），Claude Code 同样一次；关票评论只记日期、平台、打的名、结果类别（落盘 / 拒绝 / 生成失败），不引自由文本与工作区路径。开发迭代可在测试工作区做，关票以真实案件为准。
 
 ## 考虑过的方案
@@ -52,7 +52,7 @@ date: 2026-09-05
 
 ## 附注（2026-09-06，#24）
 
-被 #18 推翻或改写的四项按其决议表落进 `docs/agents/skills.md`，本文不重写：(1)「`name:` 只能小写字母数字连字符（两平台校验硬限）」的理由改为 skills.sh 分发链拦非 ASCII 加 Codex `$` 提及只认 ASCII，两平台本身不拦；(2)「改完跑 `claude plugin validate . --strict`」拆为 marketplace 严格、skills 严格、plugin.json 非严格三条；(3)「`.codex-plugin/plugin.json` 指 `./skills/` 列为实验项」升正式；(4)「改后重跑 `link-skills.ps1`」只在改名、增删后。另：「中文只进 `interface.display_name` 与 `metadata.short-description`」里后者是 `SKILL.md` frontmatter 的键（Codex 读），`agents/openai.yaml` 对应的键是 `interface.short_description`，两处都可放中文，本仓库照 Matt 用 openai.yaml 的两个。
+被 #18 推翻或改写的四项按其决议表落进 `.agents/registration.md`、`.agents/testing.md` 与 `.agents/invocation.md`，本文不重写：(1)「`name:` 只能小写字母数字连字符（两平台校验硬限）」的理由改为 skills.sh 分发链拦非 ASCII 加 Codex `$` 提及只认 ASCII，两平台本身不拦；(2)「改完跑 `claude plugin validate . --strict`」拆为 marketplace 严格、skills 严格、plugin.json 非严格三条；(3)「`.codex-plugin/plugin.json` 指 `./skills/` 列为实验项」升正式；(4)「改后重跑 `link-skills.ps1`」只在改名、增删后。另：「中文只进 `interface.display_name` 与 `metadata.short-description`」里后者是 `SKILL.md` frontmatter 的键（Codex 读），`agents/openai.yaml` 对应的键是 `interface.short_description`，两处都可放中文，本仓库照 Matt 用 openai.yaml 的两个。
 
 ## 附注（2026-09-06，#29）
 
@@ -68,7 +68,7 @@ date: 2026-09-05
 
 「清单八件」的那个数作废，实际是**七件**：编排层两个入口加路由，参考层四个，正文第 12 行列的就是这七个。当时另留的两个槽后来各自关掉（图存档由 ADR-0011、隐私钩子由 ADR-0014，见上面两条附注），七加二的加号没了，八这个数也就没了对应物。本文标题与正文照 ADR 惯例不改，凡在别处读到「八件」都按七件读。
 
-活文档三处（`README.md` 的 Skill 清单段、`docs/agents/skills.md` 的目录布局段、`skills/README.md`）随 #82 已改成七件，机械口径以 `skills/` 下的目录数与 `.claude-plugin/plugin.json` 的 `skills` 数组为准，两者都是七条。
+活文档三处（`README.md` 的 Skill 清单段、`.agents/registration.md` 的目录布局段、`skills/README.md`）随 #82 已改成七件，机械口径以 `skills/` 下的目录数与 `.claude-plugin/plugin.json` 的 `skills` 数组为准，两者都是七条。
 
 ## 附注（2026-09-13，分桶）
 
@@ -86,6 +86,12 @@ date: 2026-09-05
 
 ## 附注（2026-09-14，开发机两条路各 harness 择一）
 
-「本机开发者即律师，只用 `link-skills.ps1` 条目级 junction 到两个目录」改为照上游 install-block「两条路互斥」按 harness 择一：Claude Code 侧装插件 `loo0ng-skills@loo0ng-marketplace`，Codex 侧挂 junction。起因是去前缀（同日前一条附注）之后裸名在 Claude Code 的 `/` 列表里与本机四十多件别的 skill 混在一起、tab 补不出来；插件的 `loo0ng-skills:` 命名空间顶替了原来写进 name 的前缀，这正是本文当年「前缀不靠插件命名空间」那条反过来的用法，Codex 没有命名空间的问题由 `$` 补全按子串命中兜住。代价：Claude Code 侧看到的是 `claude plugin update` 拉到的 GitHub 默认分支那一版，不是工作副本；测未合并的分支要先把市场换成本仓库绝对路径（`docs/agents/skills.md`「分发事实」）。跑器 `skill-eval.py` 的 Claude Code 侧随之拼 `/loo0ng-skills:<skill>`，`--claude-plugin ""` 退回裸名。
+「本机开发者即律师，只用 `link-skills.ps1` 条目级 junction 到两个目录」改为照上游 install-block「两条路互斥」按 harness 择一：Claude Code 侧装插件 `loo0ng-skills@loo0ng-marketplace`，Codex 侧挂 junction。起因是去前缀（同日前一条附注）之后裸名在 Claude Code 的 `/` 列表里与本机四十多件别的 skill 混在一起、tab 补不出来；插件的 `loo0ng-skills:` 命名空间顶替了原来写进 name 的前缀，这正是本文当年「前缀不靠插件命名空间」那条反过来的用法，Codex 没有命名空间的问题由 `$` 补全按子串命中兜住。代价：Claude Code 侧看到的是 `claude plugin update` 拉到的 GitHub 默认分支那一版，不是工作副本；测未合并的分支要先把市场换成本仓库绝对路径（`.agents/release.md`「分发事实」）。跑器 `skill-eval.py` 的 Claude Code 侧随之拼 `/loo0ng-skills:<skill>`，`--claude-plugin ""` 退回裸名。
 
 同日再定：Codex 侧也照上游走 skills.sh 拷贝，开发机暂不装，`~/.agents/skills/` 里的七条 junction 一并清掉；`link-skills.ps1` 退回维护者开发脚本的位置，两侧都不再靠它。跑器 Codex 侧的替身提示词读 `~/.agents/skills/<名>/SKILL.md`，装上 skills.sh 的拷贝之后才跑得起来。
+
+## 附注（2026-09-16，维护者约定分目录）
+
+#59 将维护本 skill 仓库的约定按主题拆到 `.agents/`：调用规则、文档写法、登记与布局、校验与测试、发布与分发。根 `AGENTS.md` 每条结构不变量链接到对应长约定；`CLAUDE.md` 继续导入 `AGENTS.md`。`docs/agents/` 只留 issue tracker、triage 标签、domain 三篇消费方配置。
+
+ADR 有意不搬，继续保留在 `docs/adr/`：现有 ADR 号与目录已被大量引用，搬到 `.agents/adr/` 只获得位置对齐，却要全仓改指针。本次仅更新旧维护文档的去向，不改历史决定；其余维护者资产按 ADR-0028 原位保留。合入本票的 PR 说明须写明「ADR 有意不搬，保留在 docs/adr/」。
