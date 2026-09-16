@@ -354,7 +354,7 @@ class 既有成品登记(Base):
         self.assertEqual(self.node("下种")["条目"][0]["文书"], "文书/播种/下种/下种.md")
 
     def test_审查报告固定一行律师自写(self):
-        """CONTEXT.md「审查报告」与 skill "to-docx" 的 references/审查报告.md：律师兜底的那份
+        """CONTEXT.md「审查报告」与 skill "to-docx" 的 REVIEW-FORMAT.md：律师兜底的那份
         只写一行「律师自写」，一个字不多；重出读到它就知道当前文书里的黄全是律师自己加的。"""
         self.register()
         报告 = self.ws / "文书" / "播种" / "下种" / "下种-审查报告.md"

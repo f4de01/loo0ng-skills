@@ -72,10 +72,9 @@ class 退场(unittest.TestCase):
             for 词 in 退场的词:
                 self.assertNotIn(词, text, "%s 还提着退场的「%s」（ADR-0023）" % (p.name, 词))
 
-    def test_回流那份references删了(self):
-        self.assertFalse((DOMAIN / "references" / "回流.md").exists())
-        self.assertEqual(sorted(p.name for p in (DOMAIN / "references").iterdir()),
-                         ["时限句.md", "雏形格式.md"])
+    def test_只保留雏形与时限的参考文件(self):
+        self.assertEqual(sorted(p.name for p in DOMAIN.glob("*.md")),
+                         ["SKETCH-FORMAT.md", "SKILL.md", "time-limits.md"])
 
 
 class 会话边界(unittest.TestCase):

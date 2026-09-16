@@ -18,7 +18,7 @@ init 的前置只有一条：工作区里没有 图.json（起手一案一次，
 归档、起手清单不在这里，它们是别的 skill 与模型的事。
 
 register 是起手清单里「既有成品登记为已生成、来源律师」那一条的机械落地：把那份成品挪进它
-节点的文书目录、按固定一行写审查报告（每一版文书必有一份，skill "to-docx" 的 references/审查报告.md），
+节点的文书目录、按固定一行写审查报告（每一版文书必有一份，skill "to-docx" 的 REVIEW-FORMAT.md），
 再经引擎追加一条来源为律师的生成条目。它只登记不确认：确认永不自动（ADR-0002）。
 
 退出码：0 完成；1 拒绝（图已存在、解析不到预设图、引擎拒写、找不到文件、路径越界、目标已被占）；2 用法错误。
@@ -55,11 +55,10 @@ EMPTY_LABEL = "无（空图起手）"
 ENGINE_RELATIVE = pathlib.Path("..") / ".." / "graph" / "scripts" / "graph.py"
 PRESET_CLI_RELATIVE = pathlib.Path("..") / ".." / "domain" / "scripts" / "preset.py"
 
-REFERENCES = pathlib.Path(__file__).resolve().parent.parent / "references"
-AGENTS_TEMPLATE = REFERENCES / "工作区AGENTS.md"
+AGENTS_TEMPLATE = pathlib.Path(__file__).resolve().parent.parent / "WORKSPACE-AGENTS.md"
 
 # 审查报告只有这一行，一个字不多（CONTEXT.md「审查报告」，skill "to-docx" 的
-# references/审查报告.md「律师自写的」）：没有施加、没有高亮清单，下次重出读到它就知道
+# REVIEW-FORMAT.md「律师自写的」）：没有施加、没有高亮清单，下次重出读到它就知道
 # 当前文书里的黄全是律师自己加的，一处不动。律师那句话不进这里：生成条目不存原话（引擎里
 # 只有确认条目存），起手清单那一句留在对话与收尾里。
 REVIEW_LINE = "律师自写\n"

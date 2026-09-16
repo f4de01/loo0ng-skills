@@ -36,14 +36,14 @@ class IsolationTest(unittest.TestCase):
             self.assertNotIn(f, mods, "setup.py import 了 %s" % f)
 
     def test_no_bom(self):
-        for path in (SCRIPT, SKILL / "SKILL.md", *(SKILL / "references").iterdir()):
+        for path in (SCRIPT, *SKILL.glob("*.md")):
             self.assertFalse(path.read_bytes().startswith(b"\xef\xbb\xbf"), "%s 带 BOM" % path.name)
 
 
 class PointerBlockTest(unittest.TestCase):
     """指针块模板住在本 skill 目录里（ADR-0009），之后没有任何 skill 往工作区的 AGENTS.md 里写。"""
 
-    TEMPLATE = SKILL / "references" / "工作区AGENTS.md"
+    TEMPLATE = SKILL / "WORKSPACE-AGENTS.md"
 
     def text(self):
         return self.TEMPLATE.read_text(encoding="utf-8")

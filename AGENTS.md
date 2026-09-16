@@ -19,7 +19,7 @@ ADR-0001 至 0021 为参考（ADR-0022）：记的是当时为什么这么定，
 
 6. **机械校验**：改了任何文本文件就跑 `bash scripts/check-text.sh .`（全仓文本规矩：禁破折号 U+2014、非 `.ps1` 不带 BOM、`.ps1` 必须带 BOM）；改了 `skills/`、`docs/`、`README.md` 或 `.claude-plugin/` 另跑 `bash scripts/check-skill.sh .`、`bash scripts/check-wiring.sh .`、`claude plugin validate . --strict`，全绿才提交；改名或删除后另跑 `bash scripts/check-stale.sh . <旧名>`；发版前 `bash scripts/check-release.sh .`（ADR-0021）。
 
-7. **正文随包自足**：`SKILL.md` 与 `references/*.md` 里不出现 ADR 号、issue 号、版本号，也不指向本 skill 目录之外的仓库文件。装到律师机上的只有这一个目录（ADR-0025）。
+7. **正文随包自足**：skill 根目录的全部 `*.md` 里不出现 ADR 号、issue 号、版本号，也不指向本 skill 目录之外的仓库文件。装到律师机上的只有这一个目录（ADR-0025）。
 
 长约定见 `docs/agents/skills.md`。
 

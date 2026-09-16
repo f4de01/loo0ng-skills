@@ -21,3 +21,7 @@
 - ADR-0009 附注里"不发 Codex 插件 → 到那时再定"：现在定了。
 - ADR-0015 2026-09-12 附注里描述的发布 workflow 形态。
 - `docs/agents/skills.md` 里关于 `metadata`、生成器、`release.py`、`pack-offline.py`、`.codex-plugin` 的段落已同步改写。
+
+## 2026-09-15 附注：对照上游后维持显示名等于调用名（#55）
+
+已核对上游 `mattpocock/skills@959a8e9` 的 `skills/engineering/ask-matt/agents/openai.yaml`：`interface.display_name` 为 `"Ask Matt"`，采用人读名。本仓经裁定仍维持七件 skill 的 `display_name` 等于 `name`：律师按 `$doit` 等调用名找入口，显示名与调用名一致可少记一套对应关系；中文功能说明由 `short_description` 承担。这是对照上游之后保留的差异，七件 YAML 与现有命名约定不变。
