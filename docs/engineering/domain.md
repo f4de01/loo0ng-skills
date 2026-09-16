@@ -17,9 +17,9 @@
 
 不必打它的名字：
 
-- 起手那一问「空图还是哪份预设图」——它把两组列给你看。
-- 「**把这个案子的图存成预设图叫 Y**」——另存。
-- 从空图建图时「**从这份指南里提节点**」——雏形。
+- 起手那一问「空图还是哪份预设图」：它把两组列给你看。
+- 「**把这个案子的图存成预设图叫 Y**」：另存。
+- 从空图建图时「**从这份指南里提节点**」：雏形。
 
 开发者另有一条**导入**：从一个来源（目录树、指引手册、别的案件图）长出一份新的预设图，再经 PR 进仓库。这条路你用不到。
 
@@ -53,4 +53,4 @@
 
 ## Where it fits
 
-`domain` 只解析、列出、另存与判同名，**不直接改任何一张图**——写图一律经 [graph](https://github.com/f4de01/loo0ng-skills/blob/main/docs/engineering/graph.md)。起手由 [setup-case](https://github.com/f4de01/loo0ng-skills/blob/main/docs/engineering/setup-case.md) 驱动，它调本 skill 拿列表与路径。指南与模板进工作区是归档，走 [filing](https://github.com/f4de01/loo0ng-skills/blob/main/docs/engineering/filing.md)；把 docx 打成文本走 [to-docx](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/to-docx.md)。出一版与拍板是 [doit](https://github.com/f4de01/loo0ng-skills/blob/main/docs/engineering/doit.md)，问在哪是 [ask-loo0ng](https://github.com/f4de01/loo0ng-skills/blob/main/docs/engineering/ask-loo0ng.md)。它不含任何领域语义：换一个领域只是多一个预设图目录。
+`domain` 只解析、列出、另存与判同名，**不直接改任何一张图**：写图一律经 [graph](https://github.com/f4de01/loo0ng-skills/blob/main/docs/engineering/graph.md)。起手由 [setup-case](https://github.com/f4de01/loo0ng-skills/blob/main/docs/engineering/setup-case.md) 驱动，它调本 skill 拿列表与路径。指南与模板进工作区是归档，走 [filing](https://github.com/f4de01/loo0ng-skills/blob/main/docs/engineering/filing.md)；把 docx 打成文本走 [to-docx](https://github.com/f4de01/loo0ng-skills/blob/main/docs/productivity/to-docx.md)。出一版与拍板是 [doit](https://github.com/f4de01/loo0ng-skills/blob/main/docs/engineering/doit.md)，问在哪是 [ask-loo0ng](https://github.com/f4de01/loo0ng-skills/blob/main/docs/engineering/ask-loo0ng.md)。它不含任何领域语义：换一个领域只是多一个预设图目录。

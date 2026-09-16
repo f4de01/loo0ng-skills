@@ -65,14 +65,8 @@ claude plugin validate .claude-plugin/plugin.json    # plugin.json，非严格
 ## 其他检查
 
 ```bash
-# 破折号：期望无输出
-git ls-files -z | xargs -0 grep -l -I -P '\x{2014}'
-
-# BOM：PowerShell 以外的文本文件不得带 BOM，期望无输出
-git ls-files -z | grep -z -v '\.ps1$' | xargs -0 grep -l -I $'^\xEF\xBB\xBF'
-
-# BOM：每个 .ps1 首三字节须为 ef bb bf
-for f in scripts/*.ps1; do printf '%s ' "$f"; head -c 3 "$f" | od -An -tx1; done
+# 全仓文本规矩三条（破折号 U+2014、非 .ps1 不带 BOM、.ps1 必须带 BOM），改任何文本文件都跑
+bash scripts/check-text.sh .
 
 # 版本一致：.claude-plugin/plugin.json 跟上 package.json（package-lock 不同步，照上游）
 npm run check-plugin-version
@@ -83,6 +77,8 @@ bash scripts/check-wiring.sh .             # promoted 四处都在、非 promote
 bash scripts/check-stale.sh . <旧名>       # 改名或删除之后：旧名字一处不留
 bash scripts/check-release.sh .            # 发版前：changesets 配置、同步脚本、workflow、版本一致
 ```
+
+`check-text.sh` 三条的名单都取自 `git ls-files`，所以只扫进了版本库的文件，二进制由 `grep -I` 自己跳过。这三条原先只以命令的形态写在这里，没有任何脚本查它们，全靠人记得跑，于是破折号一路漂到 14 个文件 68 处才被发现；收进脚本并进 `AGENTS.md` 不变量 6 之后，每个开发会话都会跑到它。**正则里真要认破折号时写成 `\u2014` 转义**（Python `re` 认得），别在源码里放字面字符。
 
 ## 测试命令
 
@@ -118,7 +114,7 @@ python scripts/skill-eval.py --harness claude --case 出一版留黄 --model opu
 
 Codex 侧提示词经 stdin 送入（`PROMPT` 位置是 `-`）：PATH 上的 `codex` 是 npm 的 `.cmd` 垫片，cmd.exe 会把参数里第一个换行之后的字吞掉，多行提示词（如带一段稿子的「出一版」用例）只剩第一行（#28）。其他参数：`--max-turns N`、`--timeout 秒` 覆盖用例里的值；`--keep` 跑完不删工作区，只为排障；`--model` 与 `--effort` 透传给各自的 CLI（Claude Code 侧 `--model`/`--effort`，Codex 侧 `-m` 加一条 `-c model_reasoning_effort=...`），两个都不给时走 CLI 自己的默认（Codex 读 `~/.codex/config.toml`），这是既有跑法的兼容线；这次用的是哪个，跑器回显第一行报出来，跨跑比较才读得出结果是哪个模型跑的。退出码 0 全绿、1 有红、2 用法或用例配置错。结果只打印不进仓库。从 Claude Code 会话内跑 `--harness claude` 不用自己去环境变量：跑器已去掉 `CLAUDECODE` 两项并带上 `MSYS_NO_PATHCONV=1`。
 
-**正文随包自足（ADR-0025）**：`SKILL.md` 与 `references/*.md` 里不出现 ADR 号、issue 号、版本号，也不指向本 skill 目录之外的仓库文件（`CONTEXT.md`、`AGENTS.md`、`docs/`、`tests/`）——`npx skills add` 与 `claude plugin install` 装过去的只有 `skills/<bucket>/<name>/` 这一个目录，别的都读不到。历史对比句（「以前 X 现在 Y」）与出处标注一并不写；会改变模型判断的内容留下来，改写成判据本身（写「不许 X」，不写「因为当年 Y 所以不许 X」）。`check-skill.sh` 逐件扫，白名单放行清单坐标（`p2#1`）、指向本目录的链接与 `references/` 路径、钉住的后端版本号（`python-docx==1.2.0`、`python 3.9.6`）。
+**正文随包自足（ADR-0025）**：`SKILL.md` 与 `references/*.md` 里不出现 ADR 号、issue 号、版本号，也不指向本 skill 目录之外的仓库文件（`CONTEXT.md`、`AGENTS.md`、`docs/`、`tests/`）。`npx skills add` 与 `claude plugin install` 装过去的只有 `skills/<bucket>/<name>/` 这一个目录，别的都读不到。历史对比句（「以前 X 现在 Y」）与出处标注一并不写；会改变模型判断的内容留下来，改写成判据本身（写「不许 X」，不写「因为当年 Y 所以不许 X」）。`check-skill.sh` 逐件扫，白名单放行清单坐标（`p2#1`）、指向本目录的链接与 `references/` 路径、钉住的后端版本号（`python-docx==1.2.0`、`python 3.9.6`）。
 
 ### `evals/` 目录
 
