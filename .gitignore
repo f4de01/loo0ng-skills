@@ -2,6 +2,7 @@ __pycache__/
 *.pyc
 .scratch/
 node_modules/
+.claude
 
 # 实测包的兜底 skill 副本：打包时现从 skills/ 拷，不入库（免得仓库里出现第二份领域图）
 docs/实测/*/skills-兜底/
