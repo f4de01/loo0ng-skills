@@ -8,7 +8,7 @@
 #   - user-invoked 两端一致：disable-model-invocation: true <=> policy.allow_implicit_invocation: false
 #   - skill 直接子目录只允许 agents/、scripts/、assets/，只有 assets/ 可嵌套
 #   - SKILL.md 正文的参考指针不能指向 assets/ 数据
-#   - 正文随包自足：skill 根目录的全部 *.md 里不出现 ADR 号、issue 号、版本号，
+#   - 说明随包自足：skill 根目录的全部 *.md 与 scripts/ 文件里不出现 ADR 号、issue 号、发布版本号，
 #     也不指向本 skill 目录之外的仓库文件（装到用户机上的 skill 读不到那些东西）
 # 用法示例：bash assets/check-skill.sh ~/my-skills
 set -u
@@ -123,7 +123,7 @@ while IFS= read -r -d '' skill_md; do
   # 正文随包自足：装到用户机上的每一件 skill 自己说完该说的，不指向它读不到的东西。
   # 先剥白名单再扫：清单坐标（p2#1）、指向本 skill 兄弟文件的链接、钉住的后端版本号。
   self_hits=""
-  for doc in "$dir"/*.md; do
+  for doc in "$dir"/*.md "$dir"/scripts/*; do
     [ -f "$doc" ] || continue
     h="$(sed -E \
            -e 's/p[0-9]+#[0-9]+//g' \
@@ -132,7 +132,7 @@ while IFS= read -r -d '' skill_md; do
            -e 's/python ?[0-9]+(\.[0-9]+)+//g' \
            "$doc" \
          | grep -nE "$SELF_CONTAINED_BAN" | head -3)"
-    [ -n "$h" ] && self_hits="$self_hits $(basename "$doc"):$(printf '%s' "$h" | cut -d: -f1 | tr '\n' ',')"
+    [ -n "$h" ] && self_hits="$self_hits ${doc#"$dir"/}:$(printf '%s' "$h" | cut -d: -f1 | tr '\n' ',')"
   done
   if [ -n "$self_hits" ]; then
     bad "正文不随包自足：还留着 ADR 号、issue 号、版本号或包外仓库引用（文件:行）$self_hits"

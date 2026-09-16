@@ -62,7 +62,8 @@ class 写包内即拒Case(Base):
         before = self.字节(self.出厂图)
         code, out = cli("--graph", self.出厂图, "--kind", "preset", *argv)
         self.assertEqual(code, 1, "写包内出厂件该拒，实际过了：%s" % out)
-        self.assertIn("ADR-0020", out, "拒绝消息该点到裁定的出处：%s" % out)
+        self.assertIn("出厂件谁都不许写", out, "拒绝消息应说清规则：%s" % out)
+        self.assertNotIn("ADR-", out)
         self.assertEqual(self.字节(self.出厂图), before, "拒了却动了文件：引擎拒写时文件一字不动")
         return out
 
@@ -95,7 +96,7 @@ class 写包内即拒Case(Base):
         目标 = self.假出厂.parent / "另存来的"
         r = ws.调("export-preset", "--out", str(目标))
         self.assertEqual(r.code, 1, r)
-        self.assertIn("ADR-0020", r.err)
+        self.assertIn("出厂件谁都不许写", r.err)
         self.assertFalse(目标.exists(), "拒了却建了目录：%s" % 目标)
 
     def test_拒绝消息告诉人往哪走(self):

@@ -56,6 +56,25 @@ class CheckSkillTest(unittest.TestCase):
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertIn("extra", result.stdout)
 
+    def test_scripts_are_checked_for_repository_dependencies(self):
+        script = self.skill / "scripts" / "sample.py"
+        for text in ('# 依据 ADR-0023\n', 'print("见 #54")\n',
+                     '# 见 docs/guide.md\n', '# 发布版本 1.2.3\n'):
+            with self.subTest(text=text):
+                script.write_text(text, encoding="utf-8")
+                result = self.check()
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("scripts/sample.py:1", result.stdout)
+
+    def test_scripts_keep_runtime_versions_coordinates_and_local_paths(self):
+        (self.skill / "scripts" / "sample.py").write_text(
+            '# python-docx==1.2.0; python 3.9.6\n'
+            'FORMAT_VERSION = 2\n'
+            '# 槽 p2#1；包内 ../FORMAT.md；工作区 AGENTS.md\n'
+            'print("fill 要写槽号（如 p%d#1）" % 2)\n', encoding="utf-8")
+        result = self.check()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_nested_assets_are_data_even_when_markdown(self):
         payload = self.skill / "assets" / "preset" / "guides"
         payload.mkdir(parents=True)

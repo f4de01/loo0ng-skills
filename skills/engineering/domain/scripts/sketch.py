@@ -4,7 +4,7 @@
 标准库零依赖，不 import 图引擎：写入只经 skill "graph" 的 scripts/graph.py 子进程，它仍是图的唯一写入口。
 本脚本不含任何领域语义：判重只看标题，写入只转交引擎。格式与规则见 ../SKETCH-FORMAT.md。
 
-判重只做同名这一半（ADR-0024 第二类：被检查的一方是模型自己写的雏形，归一化后的标题相等是集合成员）。
+判重只做同名这一半（被检查的一方是模型自己写的雏形，归一化后的标题相等是集合成员）。
 **相似不同名不由脚本判**：`check` 把图里现有的标题清单一并打出来，像不像由模型对着它自己判、
 回显给拍板的人，判成同一个就把那条从雏形文件里删掉再 apply。脚本里没有相似度、没有阈值、没有待定。
 
@@ -13,8 +13,8 @@
   python sketch.py apply --proposal 雏形.json [--graph 图.json] [--kind case|preset] [--engine graph.py]
 
 check 只读：同名的挑掉，其余列进「新提出」，再打出图里现有的标题清单，图一字不动。
-apply 拍板后跑：逐条交引擎写入，引擎的回显照抄；案件图上时限只回显不写（ADR-0016、ADR-0023：
-      案件图的时限由起手从预设图整份拷入，律师不在案件图上写它），id 也只有预设图收。
+apply 拍板后跑：逐条交引擎写入，引擎的回显照抄；案件图上时限只回显不写：
+      案件图的时限由起手从预设图整份拷入，律师不在案件图上写它；id 也只有预设图收。
 
 退出码：0 完成；1 拒绝（雏形不合格式、引擎拒写、找不到文件）；2 用法错误。
 """
@@ -220,7 +220,7 @@ def render(plan: Plan, graph_name: str) -> str:
               "同名的上面已经挑掉了。相似不同名的脚本不判：对着这份清单自己看，"
               "判成同一个就把那条从雏形文件里删掉；判不准的写进回显让人定，拍板之后再 apply。", ""]
     if plan.kind == "case" and plan.has_time_limits():
-        lines += ["时限只回显、案件图不存（ADR-0016、ADR-0023）：案件图的时限由起手从预设图整份拷入，"
+        lines += ["时限只回显、案件图不存：案件图的时限由起手从预设图整份拷入，"
                   "通用的写进预设图，本案的具体日期是案件事实，走 材料/律师说过的.md。", ""]
     lines.append("拍板前 %s 一字未动。" % graph_name)
     return "\n".join(lines)
@@ -300,7 +300,7 @@ def cmd_apply(args) -> int:
             failures.append("%s：%s" % (label, err or "引擎退出码 %d" % code))
             print("%s 未写入（见 stderr）" % label)
     if args.kind == "case" and plan.has_time_limits():
-        print("时限句没有写进案件图（ADR-0016、ADR-0023），只在上面的清单里回显过。")
+        print("时限句没有写进案件图，只在上面的清单里回显过。")
     if failures:
         raise Rejected("引擎拒了 %d 条，其余已写入：\n  " % len(failures) + "\n  ".join(failures))
     return 0
