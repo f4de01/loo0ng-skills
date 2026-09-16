@@ -135,8 +135,8 @@ Matt 在 `writing-for-agents/SKILL.md` 里把这件事说透了。
 - 改动 skills/ 后重跑 scripts/link-skills.ps1
 - 领域目录只有三样：领域图、官方模板原件、指引手册原文
 
-## 约定                       ← 一行指针，长文放 docs/agents/skills.md
-命名与前缀、description 两套写法、发布流程见 `docs/agents/skills.md`。
+## 约定                       ← 一行指针，长文放 .agents/registration.md
+命名与前缀见 `.agents/registration.md`，description 两套写法见 `.agents/invocation.md`，发布流程见 `.agents/release.md`。
 
 ## 行为规则                   ← 违反一次后才写，附日期与出处（J11）；现在为空
 （空）
@@ -145,7 +145,7 @@ Matt 在 `writing-for-agents/SKILL.md` 里把这件事说透了。
 三条进入规则，替换现行那一句元规则：
 
 1. **硬边界与结构不变量主动写**：违反的后果是产品坏或红线破，不等事故。
-2. **约定推到指针后面**：`AGENTS.md` 只留一行"见 x"，正文在 `docs/agents/skills.md`（Matt 的 `.agents/invocation.md` 同位）。
+2. **约定推到指针后面**：`AGENTS.md` 只留一行"见 x"，正文按主题在 `.agents/`（调用规则与 Matt 的 `.agents/invocation.md` 同位）。
 3. **行为规则违反一次才写**：写入时附日期与出处；写之前先过"空话检验"（不写它，模型会不会做错）。
 
 另加一条本轮发现的修正：`CLAUDE.md` 改为 `@AGENTS.md` 导入，让 Claude Code 也真的每轮读到它。

@@ -20,7 +20,7 @@
 
 - ADR-0009 附注里"不发 Codex 插件 → 到那时再定"：现在定了。
 - ADR-0015 2026-09-12 附注里描述的发布 workflow 形态。
-- `docs/agents/skills.md` 里关于 `metadata`、生成器、`release.py`、`pack-offline.py`、`.codex-plugin` 的段落已同步改写。
+- `.agents/registration.md` 与 `.agents/release.md` 里关于 `metadata`、生成器、`release.py`、`pack-offline.py`、`.codex-plugin` 的段落已同步改写。
 
 ## 2026-09-15 附注：对照上游后维持显示名等于调用名（#55）
 

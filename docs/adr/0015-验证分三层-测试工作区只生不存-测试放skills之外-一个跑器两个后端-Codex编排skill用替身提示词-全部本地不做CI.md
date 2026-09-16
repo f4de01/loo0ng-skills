@@ -38,7 +38,7 @@ ADR-0009 把每张 skill 票的完成定义落为「在 Codex 案件会话与 Cl
 
 - `CONTEXT.md` 新增「测试工作区」；「确认」条「测试案件」改为「测试工作区」。种子、用例、跑器是实现细节，不进词汇表。
 - ADR-0006 附注：门禁 fixture 的落点是 `tests/loo0ng-to-docx/`，缺 Word 即 fail。ADR-0009 附注：「开发迭代可在测试工作区做」展开见本 ADR。
-- `tests/`、`evals/`、`scripts/skill-eval.py` 随 `/to-spec` 之后的建仓工作落地；两个起手场景的种子随 `loo0ng-setup-case` 与 `loo0ng-doit` 的实现票写。测试命令进 `docs/agents/skills.md` 的维护段。
+- `tests/`、`evals/`、`scripts/skill-eval.py` 随 `/to-spec` 之后的建仓工作落地；两个起手场景的种子随 `loo0ng-setup-case` 与 `loo0ng-doit` 的实现票写。测试命令进 `.agents/testing.md` 的维护段。
 - 地图 Out of scope 加一行：CI 与第二台机器上的测试。
 
 ## 附注（2026-09-07，ADR-0017）
