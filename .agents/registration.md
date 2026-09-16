@@ -37,7 +37,7 @@ skills/<bucket>/<name>/       # 桶照上游五个：engineering、productivity�
 2. 双旗按 [调用规则](./invocation.md) 的类型写齐：`SKILL.md` 里写旗，手写 `agents/openai.yaml`（`display_name` 等于 `name`）。
 3. `.claude-plugin/plugin.json` 的 `skills` 数组加（或改、删）`./skills/<bucket>/<name>`。
 4. `README.md` 的 User-invoked 或 Model-invoked 组加（或改、删）一行，名字链接到 `./skills/<bucket>/<name>/SKILL.md`；再建（或改名、删）`docs/<bucket>/<name>.md`。
-5. 动到七件里的任一件（名字、律师触发它的那句话、职责）时，改 `ask-loo0ng` 自持的两张表：打名字的三个入口（`setup-case`、`doit`、`ask-loo0ng`）一张，说一句话就到的四件（`filing`、`graph`、`domain`、`to-docx`）一张（ADR-0005、ADR-0023）。
+5. 动到七件里的任一件（名字、律师触发它的那句话、职责，或编排 skill 在流程里调谁）时，改 `ask-loo0ng` 自持的两张表：打名字的三个入口（`setup-case`、`doit`、`ask-loo0ng`）一张，说一句话就到的四件（`filing`、`graph`、`domain`、`to-docx`）一张（ADR-0005、ADR-0023）。
 6. 重跑 relink：`powershell -NoProfile -ExecutionPolicy Bypass -File scripts/link-skills.ps1`（只对靠 junction 的那一侧有意义；Claude Code 侧装了插件时脚本自动跳过那个目录，Codex 侧走 skills.sh 时不跑）。改内容不用重跑，只有改名、增删要。Claude Code 侧要看到改动得 `claude plugin update loo0ng-skills@loo0ng-marketplace`，它只取 GitHub 默认分支；要测未合并的分支，先按 [发布与分发](./release.md) 的「分发事实」把市场换成本仓库绝对路径。
 7. `npm run changeset` 写一条 changeset。
 8. 跑 [校验与测试](./testing.md)。
