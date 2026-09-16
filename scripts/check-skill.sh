@@ -10,6 +10,8 @@
 #   - SKILL.md 正文的参考指针不能指向 assets/ 数据
 #   - 说明随包自足：skill 根目录的全部 *.md 与 scripts/ 文件里不出现 ADR 号、issue 号、发布版本号，
 #     也不指向本 skill 目录之外的仓库文件（装到用户机上的 skill 读不到那些东西）
+#   - 操作句只指向 model-invoked：没有哪件 skill 的根目录 *.md 或 scripts/ 里
+#     写着去调 user-invoked 的那几件（CLI 的拒绝回显也进模型上下文）
 # 用法示例：bash assets/check-skill.sh ~/my-skills
 set -u
 ROOT="${1:-.}"
@@ -34,8 +36,33 @@ fi
 # 正文随包自足要拦下的东西：ADR 号、`#` 加数字形的 issue 号、版本号、包外仓库文件与只在仓库里成立的约定名。
 SELF_CONTAINED_BAN='ADR-?[0-9]|(^|[^A-Za-z0-9])#[0-9]|[0-9]+\.[0-9]+\.[0-9]+|CONTEXT\.md|CHANGELOG|\.changeset|(^|[^A-Za-z0-9_./-])(docs|tests|skills)/|结构不变量|硬边界'
 
+skill_mds() { find "$ROOT/skills" -mindepth 3 -maxdepth 3 -iname SKILL.md -print0 | sort -z; }
+
+# 一份文件里把 $2 这个名字写进操作句的行号（逗号分隔，空即没有）。
+# 六种写法都认：Markdown 的 "名"、`名`、裸名，以及 Python 源码里转义过的 \"名\"。
+operative_hits() {
+  _doc="$1"; _ui="$2"; _bt="$(printf '\140')"
+  {
+    grep -nF "传 \"$_ui\""            "$_doc"
+    grep -nF "传 \\\"$_ui\\\""        "$_doc"
+    grep -nF "传 $_bt$_ui$_bt"        "$_doc"
+    grep -nF "传 $_ui"                "$_doc"
+    grep -nF "调用 skill \"$_ui\""     "$_doc"
+    grep -nF "调用 skill \\\"$_ui\\\"" "$_doc"
+  } 2>/dev/null | cut -d: -f1 | sort -n -u | tr '\n' ',' | sed 's/,$//'
+}
+
 fm_get() { printf '%s\n' "$FM" | grep -m1 -E "^$1:" | sed -E "s/^$1:[[:space:]]*//"; }
 unquote() { printf '%s' "$1" | sed -E 's/^"(.*)"$/\1/; s/^'"'"'(.*)'"'"'$/\1/'; }
+
+# 先扫一遍谁是 user-invoked：它们只能由律师自己打，任何 skill 的操作句都不许指向它们。
+USER_INVOKED=""
+while IFS= read -r -d '' md; do
+  if awk 'NR==1{next} /^---[ \t]*$/{exit} {print}' "$md" \
+       | grep -qE '^disable-model-invocation:[[:space:]]*true'; then
+    USER_INVOKED="$USER_INVOKED $(basename "$(dirname "$md")")"
+  fi
+done < <(skill_mds)
 
 found=0
 while IFS= read -r -d '' skill_md; do
@@ -140,7 +167,25 @@ while IFS= read -r -d '' skill_md; do
     ok "正文随包自足"
   fi
 
-done < <(find "$ROOT/skills" -mindepth 3 -maxdepth 3 -iname SKILL.md -print0 | sort -z)
+  # 操作句（「调用 Skill 工具，传 "名"」）只能指向 model-invoked 的 skill。
+  # user-invoked 的那几件两个 harness 各自硬拦，任何 skill 都调不到；
+  # 要它们上场只能写成叫人自己打（「还没起手的打 `setup-case`」）。
+  # 连 scripts/ 一起扫：CLI 的拒绝回显原样进模型上下文，写错了与正文写错了一样。
+  call_hits=""
+  for doc in "$dir"/*.md "$dir"/scripts/*; do
+    [ -f "$doc" ] || continue
+    for ui in $USER_INVOKED; do
+      nums="$(operative_hits "$doc" "$ui")"
+      [ -n "$nums" ] && call_hits="$call_hits ${doc#"$dir"/}:$ui:$nums"
+    done
+  done
+  if [ -n "$call_hits" ]; then
+    bad "操作句指向了 user-invoked 的 skill（谁都调不到它，改成叫人自己打）（文件:名字:行）$call_hits"
+  else
+    ok "操作句只指向 model-invoked"
+  fi
+
+done < <(skill_mds)
 
 [ "$found" = 1 ] || { echo "skills/ 下没有任何 SKILL.md"; exit 1; }
 echo

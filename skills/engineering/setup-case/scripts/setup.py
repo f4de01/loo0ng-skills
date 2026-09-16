@@ -18,7 +18,7 @@ init 的前置只有一条：工作区里没有 图.json（起手一案一次）
 归档、起手清单不在这里，它们是别的 skill 与模型的事。
 
 register 是起手清单里「既有成品登记为已生成、来源律师」那一条的机械落地：把那份成品挪进它
-节点的文书目录、按固定一行写审查报告（每一版文书必有一份，skill "to-docx" 的 REVIEW-FORMAT.md），
+节点的文书目录、按固定一行写审查报告（每一版文书必有一份，格式归 skill "to-docx"），
 再经引擎追加一条来源为律师的生成条目。它只登记不确认：确认永不自动。
 
 退出码：0 完成；1 拒绝（图已存在、解析不到预设图、引擎拒写、找不到文件、路径越界、目标已被占）；2 用法错误。
@@ -229,8 +229,8 @@ def cmd_init(args) -> int:
     ws = pathlib.Path(args.workspace).resolve()
     graph_path = ws / GRAPH_FILENAME
     if graph_path.exists():
-        raise Rejected("%s 已经有 %s 了：起手一案一次。这个目录已经是案件工作区，要改图的构成调用 "
-                       "skill \"graph\"，要另起一案换一个目录。" % (ws, GRAPH_FILENAME))
+        raise Rejected("%s 已经有 %s 了：起手一案一次。这个目录已经是案件工作区，"
+                       "要改图的构成在对话里说一句就行，要另起一案换一个目录。" % (ws, GRAPH_FILENAME))
     if bool(args.preset) != bool(args.owner):
         raise Rejected("--preset 与 --owner 同给同不给：不给就是空图起手，给就要两个都给"
                        "（--preset <名> --owner 出厂|个人）。名与归属打 skill \"domain\" 的 "
@@ -272,7 +272,7 @@ def locate_node(ws: pathlib.Path, key: str) -> Tuple[str, str, str]:
     标题做目录名的转义规则只定一次，在引擎里，本脚本不自己再实现一遍。"""
     view_path = ws / VIEW_JSON
     if not view_path.is_file():
-        raise Rejected("%s 里没有 %s：先起手（setup.py init），或调用 skill \"graph\" 重算视图"
+        raise Rejected("%s 里没有 %s：先起手（setup.py init），或调用 Skill 工具，传 \"graph\"，重算视图"
                        % (ws, VIEW_JSON))
     try:
         view = read_json(view_path)
@@ -282,7 +282,7 @@ def locate_node(ws: pathlib.Path, key: str) -> Tuple[str, str, str]:
         for n in m.get("节点", []):
             if key in (n.get("标题"), n.get("id")):
                 return m["目录名"], n["目录名"], n["标题"]
-    raise Rejected("图里没有节点「%s」：既有成品要登记到图上已有的节点，先调用 skill \"graph\" "
+    raise Rejected("图里没有节点「%s」：既有成品要登记到图上已有的节点，先调用 Skill 工具，传 \"graph\"，"
                    "新增一个，再登记。" % key)
 
 
@@ -316,7 +316,7 @@ def cmd_register(args) -> int:
     review_rel = "%s/%s%s" % (doc_dir, node_dir, REVIEW_SUFFIX)
     doc_path, review_path = ws / doc_rel, ws / review_rel
     if doc_path.exists():
-        raise Rejected("%s 已经有了，登记不覆盖：那个节点已经有一份文书，要换一版调用 skill \"doit\"。"
+        raise Rejected("%s 已经有了，登记不覆盖：那个节点已经有一份文书，要换一版由律师自己打 doit。"
                        % doc_rel)
     engine = resolve_tool(args.engine, ENGINE_RELATIVE, "图引擎", "--engine")
 
@@ -328,7 +328,7 @@ def cmd_register(args) -> int:
     except OSError as e:
         undo_register(source, doc_path, review_path, made_dirs)
         raise Rejected("挪不进 %s：%s。节点标题做目录名用不了的字由引擎换成全角，"
-                       "仍不行就先改标题（调用 skill \"graph\"）。" % (doc_dir, e)) from e
+                       "仍不行就先改标题（调用 Skill 工具，传 \"graph\"）。" % (doc_dir, e)) from e
 
     code, out, err = run_engine(engine, ws / GRAPH_FILENAME, [
         "generate", "--node", title, "--doc", doc_rel, "--review", review_rel, "--lawyer-written"])
