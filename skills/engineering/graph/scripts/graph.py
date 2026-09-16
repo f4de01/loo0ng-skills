@@ -638,7 +638,7 @@ class Engine:
         raise Rejected(
             "%s 在 skill 包内（出厂预设图），出厂件谁都不许写：包一升级它就被整个换掉。"
             "律师自己的图用 export-preset 另存成个人预设图，落在本机的个人预设图目录下，"
-            "取它的路径调 skill \"domain\"；开发者要改出厂件，也是先写个人预设图，再经 PR 进仓库。"
+            "取它的路径调用 Skill 工具，传 \"domain\"；开发者要改出厂件，也是先写个人预设图，再经 PR 进仓库。"
             % path.resolve().parent.as_posix())
 
     def place(self, siblings: List[dict], item: dict, pos: Position):
