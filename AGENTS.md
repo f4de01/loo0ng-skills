@@ -12,7 +12,7 @@ ADR-0001 至 0021 为参考（ADR-0022）：记的是当时为什么这么定，
 ## 结构不变量（理由在 ADR-0009）
 
 1. **登记**：每件 skill 同时出现在 `skills/<bucket>/<name>/`（桶照上游五个；办案主线六件在 `engineering/`、`to-docx` 在 `productivity/`）、所在桶的 `README.md`、`.claude-plugin/plugin.json` 的 `skills` 数组、根 `README.md` 两组之一，并有一页 `docs/<bucket>/<name>.md`（后三处只收 promoted 桶 `engineering/`、`productivity/` 里的）；根 README 与桶 README 的条目都把名字链接到它的 `SKILL.md`；`name` 只用小写字母、数字、连字符，不带 `loo0ng-` 前缀（路由照上游 `ask-matt` 形叫 `ask-loo0ng`）；`SKILL.md` 不带 BOM。 详见 [登记与布局](./.agents/registration.md)。
-2. **路由两张表同步**：增删或改名任一件 skill，或改了律师触发它的那句话，必改 `ask-loo0ng` 自持的两张表（打名字的三个入口一张，说一句话就到的四件一张）。 详见 [调用规则](./.agents/invocation.md)。
+2. **路由两张表同步**：增删或改名任一件 skill，改了律师触发它的那句话，或改了编排 skill 在流程里调谁，必改 `ask-loo0ng` 自持的两张表（打名字的三个入口一张，说一句话就到的四件一张；兄弟地图收在后一张）。 详见 [调用规则](./.agents/invocation.md)。
 3. **双旗同步**：编排 skill 与路由同时带 `disable-model-invocation: true` 与 `allow_implicit_invocation: false`；参考 skill 两者都不带。`agents/openai.yaml` 手写，`display_name` 等于 `name`（ADR-0021）。 详见 [调用规则](./.agents/invocation.md)。
 4. **relink**：改名、增删 skill 后重跑 `scripts/link-skills.ps1`。 详见 [登记步骤](./.agents/registration.md)。
 5. **出厂预设图三样**：`skills/<bucket>/domain/assets/预设图/<名>/` 只有 `预设图.json`、`模板/` 官方模板原件、`指引手册/` 指引手册原文（ADR-0023）；出厂件谁都不许在会话里写，个人预设图在包外的 `~/.loo0ng/预设图/` 下。 详见 [目录布局](./.agents/registration.md)。
