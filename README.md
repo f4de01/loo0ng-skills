@@ -62,19 +62,40 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/link-skills.ps1
 
 ## Skill 清单
 
-七件，照上游分桶：办案主线六件住 `skills/engineering/`，离了案子也能单独用的 `to-docx` 住 `skills/productivity/`。每件另有一页面向人的说明 `docs/<bucket>/<name>.md`。
+七件，按桶列出，每件另有一页面向人的说明 `docs/<bucket>/<name>.md`。
 
-**User-invoked** 三件，律师打名字触发（Claude Code 里 `/名 …`，Codex 里 `$名 …`），只做编排，模型不会自己调用：
+### Engineering
+
+办案主线的 skill，对应上游的「daily code work」：只在有 `图.json` 的案件工作区里工作的那些。
+
+#### User-invoked
+
+三件，律师打名字触发（Claude Code 里 `/名 …`，Codex 里 `$名 …`），只做编排，模型不会自己调用：
 
 - **[setup-case](./skills/engineering/setup-case/SKILL.md)** 起手：把当前目录长成案件工作区，一案一次。[说明](./docs/engineering/setup-case.md)
 - **[doit](./skills/engineering/doit/SKILL.md)** 办节点：一个对话办一个节点，出一版、重出、登记自写、确认、不适用。[说明](./docs/engineering/doit.md)
 - **[ask-loo0ng](./skills/engineering/ask-loo0ng/SKILL.md)** 问路：只读的地图，第一行是待拍板行。[说明](./docs/engineering/ask-loo0ng.md)
 
-**Model-invoked** 四件，由模型够到，律师无需记名：
+#### Model-invoked
+
+三件，由模型够到，律师无需记名：
 
 - **[graph](./skills/engineering/graph/SKILL.md)** 图引擎：`图.json` 的唯一写入口，写完重算两份视图。[说明](./docs/engineering/graph.md)
 - **[domain](./skills/engineering/domain/SKILL.md)** 预设图的家：出厂与个人两处两归属，解析、列出、另存、导入。[说明](./docs/engineering/domain.md)
 - **[filing](./skills/engineering/filing/SKILL.md)** 归档：把文件搬进材料、参考/模板、参考/指南三格，并维护归档索引。[说明](./docs/engineering/filing.md)
+
+### Productivity
+
+离了案子也能单独用的工具，对应上游的「daily non-code workflow tools」。
+
+#### User-invoked
+
+暂无。
+
+#### Model-invoked
+
+一件，由模型够到，律师无需记名：
+
 - **[to-docx](./skills/productivity/to-docx/SKILL.md)** 填模板：把 DOCX 打成带编号的清单，按差量原地施加。[说明](./docs/productivity/to-docx.md)
 
 ## 给开发者
