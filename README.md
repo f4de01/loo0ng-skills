@@ -18,30 +18,34 @@
 
 ## 安装
 
-两条路二选一：插件是只读的整包订阅，skills.sh 把 skill 文件拷进你的项目由你改。两条都装，每件 skill 会出现两次。
+律师自行安装先走 skills.sh，下面按这个顺序列。开发者当前在 Claude Code 用插件，Codex 要用时走 skills.sh。**每个 agent 只选一条路线**，同一个 agent 两条都装，每件 skill 会出现两次；插件是只读的整包，skills.sh 安装的是可编辑的 skill 文件。
 
 <details>
-<summary><strong>Claude Code：插件</strong></summary>
+<summary><strong>律师安装首选：skills.sh（Codex、Claude Code 及其他 agent）</strong></summary>
 
-本仓库自成单插件市场（`.claude-plugin/marketplace.json`），在会话里：
+律师那台 Mac 已走通的是公开仓库下的 skills.sh 安装；下面以 Codex 为例：
+
+```bash
+npx skills@latest add f4de01/loo0ng-skills -a codex
+```
+
+用 Claude Code 就把 `-a codex` 换成 `-a claude-code`；两边都用可同时指定，但已装本插件的 agent 不再用这条。安装器让你挑 skill 与安装范围。**安装源须是公开仓库**：现场私有仓库下失败三次，转 public 后装上，记录见[现场实测结论](./docs/实测/mac-20260909/结论.md)。这次成功是口述记录，没有保存本轮退出码与报错原文。
+
+</details>
+
+<details>
+<summary><strong>Claude Code 插件：需要整包安装时选（开发者当前用法）</strong></summary>
+
+本仓尚无官方市场上架入口，自建市场是当前提供的插件安装路线，因此保留给需要插件的用户。在 Claude Code 会话里：
 
 ```
 /plugin marketplace add f4de01/loo0ng-skills
 /plugin install loo0ng-skills@loo0ng-marketplace
 ```
 
-`owner/repo` 形式只取默认分支；要装某个分支，用 `https://github.com/f4de01/loo0ng-skills.git#<branch>`。**安装源须是公开仓库**：「私有仓库凭本机 gh 或 git 凭据克隆」只在开发机上验过，律师那台 mac 上私有仓库一条都没走通，本仓库为此转成了 public（`docs/实测/mac-20260909/结论.md`）。装上后 skill 名带 `loo0ng-skills:` 前缀，例如 `/loo0ng-skills:ask-loo0ng`。
+装上后 skill 名带 `loo0ng-skills:` 前缀，例如 `/loo0ng-skills:ask-loo0ng`。开发机已验证这条路线；上述律师 Mac 的现场记录未验证公开仓库下的插件安装，不能把 skills.sh 的成功当作插件安装的证据。
 
-</details>
-
-<details>
-<summary><strong>Codex 及其他 agent：skills.sh</strong></summary>
-
-```bash
-npx skills@latest add f4de01/loo0ng-skills -a codex -a claude-code
-```
-
-**安装源同样须是公开仓库**：律师那台 mac 上这一条对私有仓库失败过三次，转 public 之后才装上（`docs/实测/mac-20260909/结论.md`）。安装器让你挑 skill 与目标 agent；`-a` 可重复，一次装到两个 harness。
+`owner/repo` 形式只取默认分支；要装某个分支，用 `https://github.com/f4de01/loo0ng-skills.git#<branch>`。安装源同样须是公开仓库，私有仓库凭本机凭据安装仅在开发机上验过。
 
 </details>
 
