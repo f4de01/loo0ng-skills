@@ -59,7 +59,7 @@ python <本目录>/scripts/preset.py resolve --name <名> --owner 出厂|个人
 
 1. **建一份空的个人预设图**：`~/.loo0ng/预设图/<新名>/` 下调用 skill "graph"：`graph.py --graph <新名>/预设图.json --kind preset init --empty`。名与出厂重名就换一个。
 2. **整读来源**。docx 调用 skill "to-docx" 打成纯文本（它的 `list --plain`）；目录树与别的案件图直接读。**只从来源提**，不从常识铺节点：来源里没写的不提。
-3. **写雏形文件**，格式见 [references/雏形格式.md](references/雏形格式.md)：每个模块带标题与 id，每个节点带默认标题、id、空白模板（挂哪件官方模板的文件名，无则 `无`）、时限句（取舍见 [references/时限句.md](references/时限句.md)，没有就不写这个键）。写在 `%TEMP%` 之类的临时位置，不落进仓库、不落进工作区。
+3. **写雏形文件**，格式见 [SKETCH-FORMAT.md](./SKETCH-FORMAT.md)：每个模块带标题与 id，每个节点带默认标题、id、空白模板（挂哪件官方模板的文件名，无则 `无`）、时限句（取舍见 [time-limits.md](./time-limits.md)，没有就不写这个键）。写在 `%TEMP%` 之类的临时位置，不落进仓库、不落进工作区。
 4. **判重并回显**：`sketch.py check`（见下面[雏形](#雏形一个机制两种来源)）。相似不同名的由你对着清单自己判，列进回显让开发者定。
 5. **拍板后写入**：`sketch.py apply --kind preset`，逐条经引擎写进那份新的个人预设图。官方模板原件自己拷进它的 `模板/`，文件名要与图上的空白模板属性一致。
 6. **目录树没有时限句**：从目录树导入之后，再对这个领域的指引手册跑一次 2 至 5 步，把时限补上（同名的节点这一趟会被判成「已在图里」，时限调用 skill "graph" 逐条补：`graph.py --graph <新名>/预设图.json --kind preset set-time-limit --node … --time-limit …`）。

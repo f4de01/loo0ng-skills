@@ -10,7 +10,7 @@
   python archive.py [--workspace <案件工作区>] list [--from <工作区外目录>]
   python archive.py [--workspace <案件工作区>] apply --plan <计划.json> [--from <工作区外目录>] [--date YYYY-MM-DD]
 
-计划是一个 JSON 数组，一条一件：路径、去向、说明三个必填字段，材料下可另给子目录（格式见 references/格式.md）。
+计划是一个 JSON 数组，一条一件：路径、去向、说明三个必填字段，材料下可另给子目录（格式见 ARCHIVE-FORMAT.md）。
 
 退出码：0 命令跑到底（逐件结果在回显里，含「已有」与「同名冲突」）；1 整条拒绝，一件不搬；2 用法错误。
 """

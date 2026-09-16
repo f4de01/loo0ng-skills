@@ -80,7 +80,7 @@ class 决策树Test(unittest.TestCase):
         self.assertEqual(len(问3), 1, "决策树里问 3 那一行不见了或多出一行")
         for 词 in ("模块", "节点"):
             self.assertIn(词, 问3[0], "问 3 没说清前方是模块数组、要取到节点那一层"
-                                      "（skill \"graph\" 的 references/格式.md）")
+                                      "（skill \"graph\" 的 GRAPH-FORMAT.md）")
 
     def test_答这几问那一节不提预设图(self):
         self.assertNotIn("预设图", 一节(怎么答标题), "答三问时引用了预设图：案件图自足（ADR-0023）")

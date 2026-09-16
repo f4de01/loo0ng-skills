@@ -8,15 +8,21 @@
 skills/<bucket>/<name>/       # 桶照上游五个：engineering、productivity、misc、in-progress、deprecated；办案主线六件在 engineering/，to-docx 在 productivity/，另外三桶只有 README
 ├── SKILL.md              # frontmatter：name、description；编排 skill 与路由另加 disable-model-invocation: true
 ├── agents/openai.yaml    # Codex 侧外观：interface.display_name（= name）、interface.short_description（中文进这里）；编排 skill 与路由另加 policy.allow_implicit_invocation: false
-├── references/           # 正文按需指向的长材料
+├── *.md                  # 披露式参考文件与 SKILL.md 同级，指针用 ./文件名.md
 ├── requirements.txt      # 只有 to-docx 有：填模板脚本后端的精确钉（python-docx==1.2.0，ADR-0018）。随包到律师机，agent 自备环境时按它装；仓库根上放到不了那里
 ├── scripts/              # 标准库零依赖的 CLI；只有 to-docx 的 fill.py 例外（python-docx，ADR-0023）。互不 import；跨 skill 一律以子进程互调、默认按兄弟目录找：要写图的（domain 的雏形与另存、setup-case 的起手与既有成品登记）调 graph 的引擎，起手列预设图与按名解析路径调 domain 的 preset.py（ADR-0023）
-└── assets/               # 只有 domain 有：assets/预设图/<名>/ 下 预设图.json、模板/ 官方模板原件、指引手册/ 指引手册原文（ADR-0023）。这是出厂预设图，随包升级整个被换掉、原位读不拷出包，会话里谁都不许写；律师那台机上的个人预设图在 ~/.loo0ng/预设图/<名>/，由另存与导入写
+└── assets/               # 由代码读取或拷贝的数据载荷，允许嵌套，所有 skill 均可使用
 ```
+
+根目录放 `SKILL.md`、兄弟 prose 文件与单文件模板。子目录按角色只收三类：`agents/` 放 `openai.yaml`，`scripts/` 放可执行脚本，`assets/` 放由代码读取或拷贝的数据；只有 `assets/` 允许嵌套，其余目录只有一层。判据是由谁读取，不是后缀：数据里的 Markdown 指引手册仍是数据。`SKILL.md` 正文的披露式参考指针只能指向同级兄弟文件，不能指向 `assets/` 下任何文件；数据按名经代码解析，目录位置说明不是阅读指针。`check-skill.sh` 检查角色、深度与数据指针，指针包括 Markdown 链接、引用式链接和反引号文件路径。检查需要 Python（默认 `python3`，找不到则 `python`，可用 `PYTHON` 指定解释器）。跑测试时设 `PYTHONDONTWRITEBYTECODE=1`，避免生成不属于分发布局的缓存目录。
+
+`assets/` 用来容纳多文件嵌套载荷：上游 `mattpocock/skills@959a8e9` 的单文件模板直接放根目录，没有多文件载荷树的先例；目录在这里按数据角色引入，不绑定某件 skill。当前 `domain` 的出厂预设图位于 `assets/预设图/<名>/`，包含 `预设图.json`、`模板/` 官方原件与 `指引手册/` 原文，随包整体替换、原位读取（ADR-0023）；产品约束不变。
 
 分桶照上游（ADR-0009 的 2026-09-13 附注）：`skills/` 下五个桶，每桶一份 `README.md` 逐件列出、名字链接到 `./<name>/SKILL.md`；promoted 桶（`engineering/`、`productivity/`）里的每件进 `.claude-plugin/plugin.json` 与根 `README.md`（名字链接到 `SKILL.md`），并有一页 `docs/<bucket>/<name>.md`（固定段：What it does、When to reach for it、Common questions、It's working if、Where it fits，页内链接一律绝对）；`misc/`、`in-progress/`、`deprecated/` 里的不进这三处。上游 `engineering/` 装的是主线（daily code work），`productivity/` 装的是离了主线也能单独用的工具；对应到这里，办案主线六件（`ask-loo0ng`、`setup-case`、`doit`、`graph`、`domain`、`filing`，都只在有 `图.json` 的工作区里工作）在 `engineering/`，`to-docx`（清单可对任意 DOCX 打、施加默认写临时位置）在 `productivity/`；另外三桶目前只有 README。草稿放分支不放目录，要公开试用的才进 `in-progress/`。分发清单只有一份：`.claude-plugin/plugin.json` 的 `skills` 数组逐件列路径（Claude Code 插件）；`.claude-plugin/marketplace.json` 让仓库自成单插件市场。不发 Codex 原生插件，Codex 及其他 harness 经 skills.sh 装编辑副本（ADR-0021，与上游 ADR-0002 同一个理由：Codex 清单只收单一路径，分桶后会把 `in-progress/` 一并装出去）。
 
 ## 命名与编码
+
+- 披露式参考文件与 `SKILL.md` 同级，正文用 `[文件名](./文件名.md)` 指向它。格式与规格类用大写连字符名（如 `GRAPH-FORMAT.md`），分支与说明类用小写连字符名（如 `time-limits.md`）。这是 #53 的裁定：按 `mattpocock/skills@959a8e9` 的兄弟文件形态摊平，参考内容仍按需读取。
 
 - `name` 只用小写字母、数字、连字符，基名裸着写、不带 `loo0ng-` 前缀（ADR-0009 的 2026-09-13 附注「去前缀」）；路由照上游 `ask-matt` 形叫 `ask-loo0ng`。ASCII 的理由：skills.sh 分发链把非 ASCII 名装成 `unnamed-skill`，Codex `$` 提及只认 ASCII；两平台本身不拦（#18 项 1）。目录名与 `name` 一致。
 - `agents/openai.yaml` 手写，照上游（ADR-0021）：`interface.display_name` 等于 `name`（Codex 的 `$` 补全列表显示的是它，律师按 `name` 那个名字找，中文显示名反而找不到，#29），`interface.short_description` 写中文短描述。frontmatter 只用上游那四个键（`name`、`description`、`disable-model-invocation`、`argument-hint`），不再有 `metadata` 块。
@@ -114,7 +120,7 @@ python scripts/skill-eval.py --harness claude --case 出一版留黄 --model opu
 
 Codex 侧提示词经 stdin 送入（`PROMPT` 位置是 `-`）：PATH 上的 `codex` 是 npm 的 `.cmd` 垫片，cmd.exe 会把参数里第一个换行之后的字吞掉，多行提示词（如带一段稿子的「出一版」用例）只剩第一行（#28）。其他参数：`--max-turns N`、`--timeout 秒` 覆盖用例里的值；`--keep` 跑完不删工作区，只为排障；`--model` 与 `--effort` 透传给各自的 CLI（Claude Code 侧 `--model`/`--effort`，Codex 侧 `-m` 加一条 `-c model_reasoning_effort=...`），两个都不给时走 CLI 自己的默认（Codex 读 `~/.codex/config.toml`），这是既有跑法的兼容线；这次用的是哪个，跑器回显第一行报出来，跨跑比较才读得出结果是哪个模型跑的。退出码 0 全绿、1 有红、2 用法或用例配置错。结果只打印不进仓库。从 Claude Code 会话内跑 `--harness claude` 不用自己去环境变量：跑器已去掉 `CLAUDECODE` 两项并带上 `MSYS_NO_PATHCONV=1`。
 
-**正文随包自足（ADR-0025）**：`SKILL.md` 与 `references/*.md` 里不出现 ADR 号、issue 号、版本号，也不指向本 skill 目录之外的仓库文件（`CONTEXT.md`、`AGENTS.md`、`docs/`、`tests/`）。`npx skills add` 与 `claude plugin install` 装过去的只有 `skills/<bucket>/<name>/` 这一个目录，别的都读不到。历史对比句（「以前 X 现在 Y」）与出处标注一并不写；会改变模型判断的内容留下来，改写成判据本身（写「不许 X」，不写「因为当年 Y 所以不许 X」）。`check-skill.sh` 逐件扫，白名单放行清单坐标（`p2#1`）、指向本目录的链接与 `references/` 路径、钉住的后端版本号（`python-docx==1.2.0`、`python 3.9.6`）。
+**正文随包自足（ADR-0025）**：skill 根目录的全部 `*.md` 里不出现 ADR 号、issue 号、版本号，也不指向本 skill 目录之外的仓库文件（`CONTEXT.md`、`AGENTS.md`、`docs/`、`tests/`）。`npx skills add` 与 `claude plugin install` 装过去的只有 `skills/<bucket>/<name>/` 这一个目录，别的都读不到。历史对比句（「以前 X 现在 Y」）与出处标注一并不写；会改变模型判断的内容留下来，改写成判据本身（写「不许 X」，不写「因为当年 Y 所以不许 X」）。`check-skill.sh` 逐件扫，白名单放行清单坐标（`p2#1`）、指向本目录兄弟文件的链接、钉住的后端版本号（`python-docx==1.2.0`、`python 3.9.6`）。
 
 ### `evals/` 目录
 

@@ -9,7 +9,7 @@
 
 四条：清单的形状是精确钉且只此一条依赖；这台机器上装的版本等于清单里的数；`fill.py` 回显里的版本取自运行
 时而不是照抄清单常量（拿替身元数据跑一次，回显跟着替身走，且退出码仍是 0）；清单里的数与散文里写出它的
-每一处（`SKILL.md`、`references/审查报告.md` 的样例、`docs/agents/skills.md` 的布局表、ADR-0018）一致。
+每一处（`SKILL.md`、`REVIEW-FORMAT.md` 的样例、`docs/agents/skills.md` 的布局表、ADR-0018）一致。
 另加一条守 stdout 契约：那一行恒常写、位置固定在第二行。
 
 运行：python -m unittest tests/to-docx/test_requirements.py
@@ -32,7 +32,7 @@ SKILL = REPO / "skills" / "productivity" / "to-docx"
 MANIFEST = SKILL / "requirements.txt"
 # 散文里每一份版本号副本都归这条断言管：钉子的价值全在「没有第二个会静默掉队的数」，多写一处就多一个洞。
 # ADR 按编号 glob，不写死那个中文长文件名：ADR 改名时该红在断言上，不该红在读文件上。
-PROSE = [SKILL / "SKILL.md", SKILL / "references" / "审查报告.md",
+PROSE = [SKILL / "SKILL.md", SKILL / "REVIEW-FORMAT.md",
          REPO / "docs" / "agents" / "skills.md"] + sorted((REPO / "docs" / "adr").glob("0018-*.md"))
 PACKAGE = "python-docx"
 FAKE_VERSION = "9.9.9"

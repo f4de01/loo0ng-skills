@@ -36,7 +36,7 @@ class 两张表Test(unittest.TestCase):
             self.assertIn('name: %s\n' % name, front, "%s 的 frontmatter name 与目录名不一致" % name)
 
     def test_显示名是中文且与工作区指针块一致(self):
-        指针块 = (件("setup-case") / "references" / "工作区AGENTS.md").read_text(encoding="utf-8")
+        指针块 = (件("setup-case") / "WORKSPACE-AGENTS.md").read_text(encoding="utf-8")
         for name, 名 in 表里的行(入口表标题).items():
             self.assertEqual(显示名[name], 名, "%s 的显示名变了" % name)
             self.assertIn("%s（%s）" % (name, 名), 指针块, "%s 的显示名与工作区指针块对不上" % name)

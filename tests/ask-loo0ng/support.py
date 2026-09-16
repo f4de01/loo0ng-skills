@@ -14,7 +14,7 @@ from 桶 import skill目录 as 件, 全部skill名  # noqa: E402
 SKILL_DIR = 件("ask-loo0ng")
 SKILL = SKILL_DIR / "SKILL.md"
 YAML = SKILL_DIR / "agents" / "openai.yaml"
-下一任务 = SKILL_DIR / "references" / "下一任务.md"
+下一任务 = SKILL_DIR / "next-task.md"
 
 
 def 正文():

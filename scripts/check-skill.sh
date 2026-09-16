@@ -6,12 +6,17 @@
 #   - description 非空、<=1024 字符、含 ": " 时必须加引号（上游 #907 的坑）
 #   - agents/openai.yaml 存在，含 interface.display_name / short_description
 #   - user-invoked 两端一致：disable-model-invocation: true <=> policy.allow_implicit_invocation: false
-#   - 正文随包自足：SKILL.md 与 references/*.md 里不出现 ADR 号、issue 号、版本号，
+#   - skill 直接子目录只允许 agents/、scripts/、assets/，只有 assets/ 可嵌套
+#   - SKILL.md 正文的参考指针不能指向 assets/ 数据
+#   - 正文随包自足：skill 根目录的全部 *.md 里不出现 ADR 号、issue 号、版本号，
 #     也不指向本 skill 目录之外的仓库文件（装到用户机上的 skill 读不到那些东西）
 # 用法示例：bash assets/check-skill.sh ~/my-skills
 set -u
 ROOT="${1:-.}"
 ROOT="${ROOT%/}"
+CHECKER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PYTHON="${PYTHON:-python3}"
+command -v "$PYTHON" >/dev/null 2>&1 || PYTHON=python
 pass=0; fail=0; warn=0
 ok()  { printf '  \033[32m✔\033[0m %s\n' "$1"; pass=$((pass+1)); }
 bad() { printf '  \033[31m✘\033[0m %s\n' "$1"; fail=$((fail+1)); }
@@ -39,6 +44,26 @@ while IFS= read -r -d '' skill_md; do
   name_dir="$(basename "$dir")"
   bucket="$(basename "$(dirname "$dir")")"
   echo "${dir#"$ROOT"/}"
+
+  layout_ok=1
+  while IFS= read -r -d '' child; do
+    case "$(basename "$child")" in
+      assets) ;;
+      agents|scripts)
+        while IFS= read -r -d '' nested; do
+          bad "只有 assets 可嵌套目录：${nested#"$ROOT"/}"; layout_ok=0
+        done < <(find "$child" -mindepth 1 -type d -print0)
+        ;;
+      *) bad "不允许的 skill 子目录：${child#"$ROOT"/}"; layout_ok=0 ;;
+    esac
+  done < <(find "$dir" -mindepth 1 -maxdepth 1 -type d -print0)
+  [ "$layout_ok" = 0 ] || ok "skill 子目录布局合法"
+
+  if pointer_hits="$("$PYTHON" "$CHECKER_DIR/check-asset-pointers.py" "$skill_md" 2>&1)"; then
+    ok "正文参考指针与数据分离"
+  else
+    bad "$pointer_hits"
+  fi
 
   if [ "$(basename "$skill_md")" != "SKILL.md" ]; then
     bad "文件名必须是大写的 SKILL.md（现在是 $(basename "$skill_md")）。Windows 不分大小写，但 Linux/macOS 上的 harness 会找不到它"
@@ -96,15 +121,13 @@ while IFS= read -r -d '' skill_md; do
   fi
 
   # 正文随包自足：装到用户机上的每一件 skill 自己说完该说的，不指向它读不到的东西。
-  # 先剥白名单再扫：清单坐标（p2#1）、指向本 skill 目录内的链接与 references 路径、钉住的后端版本号。
+  # 先剥白名单再扫：清单坐标（p2#1）、指向本 skill 兄弟文件的链接、钉住的后端版本号。
   self_hits=""
-  for doc in "$skill_md" "$dir"/references/*.md; do
+  for doc in "$dir"/*.md; do
     [ -f "$doc" ] || continue
     h="$(sed -E \
            -e 's/p[0-9]+#[0-9]+//g' \
-           -e 's#\]\(references/[^)]*\)#]#g' \
-           -e 's#\]\([A-Za-z0-9._-]+\)#]#g' \
-           -e 's#references/[^ )"]+##g' \
+           -e 's#\]\((\./)?[A-Za-z0-9_-]+\.[A-Za-z0-9]+\)#]#g' \
            -e 's/python-docx[ =]*[0-9]+(\.[0-9]+)+//g' \
            -e 's/python ?[0-9]+(\.[0-9]+)+//g' \
            "$doc" \
@@ -117,7 +140,7 @@ while IFS= read -r -d '' skill_md; do
     ok "正文随包自足"
   fi
 
-done < <(find "$ROOT/skills" -iname SKILL.md -not -path '*/node_modules/*' -print0 | sort -z)
+done < <(find "$ROOT/skills" -mindepth 3 -maxdepth 3 -iname SKILL.md -print0 | sort -z)
 
 [ "$found" = 1 ] || { echo "skills/ 下没有任何 SKILL.md"; exit 1; }
 echo

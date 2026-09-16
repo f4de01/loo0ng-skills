@@ -2,7 +2,7 @@
 """雏形 CLI：把模型从一个来源提出的一批模块与节点，对着一张图判同名、回显，拍板后经图引擎写入。
 
 标准库零依赖，不 import 图引擎：写入只经 skill "graph" 的 scripts/graph.py 子进程，它仍是图的唯一写入口。
-本脚本不含任何领域语义：判重只看标题，写入只转交引擎。格式与规则见 ../references/雏形格式.md。
+本脚本不含任何领域语义：判重只看标题，写入只转交引擎。格式与规则见 ../SKETCH-FORMAT.md。
 
 判重只做同名这一半（ADR-0024 第二类：被检查的一方是模型自己写的雏形，归一化后的标题相等是集合成员）。
 **相似不同名不由脚本判**：`check` 把图里现有的标题清单一并打出来，像不像由模型对着它自己判、
@@ -314,7 +314,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     common = argparse.ArgumentParser(add_help=False)
-    common.add_argument("--proposal", required=True, help="雏形文件（JSON），格式见 references/雏形格式.md")
+    common.add_argument("--proposal", required=True, help="雏形文件（JSON），格式见 SKETCH-FORMAT.md")
     common.add_argument("--graph", default=DEFAULT_GRAPH,
                         help="要写的图，默认当前目录的 图.json；预设图给它的 预设图.json 并加 --kind preset")
     common.add_argument("--kind", choices=("case", "preset"), default="case",
