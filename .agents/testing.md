@@ -127,8 +127,11 @@ MSYS_NO_PATHCONV=1 CLAUDECODE= CLAUDE_CODE_ENTRYPOINT= \
   claude -p "/loo0ng-skills:<skill 名> <律师那句话>" --output-format json \
   --permission-mode acceptEdits --no-session-persistence --allowedTools Bash
 
-# 3. Codex 侧：只能人工，在客户端里 cd 到同一个路径再打 $<skill 名>；
-#    回显了 LOO0NG_HOME 就先在那个终端里设好，客户端继承的是它自己的环境
+# 3. Codex 侧两条路都算按名字触发，挑一条：
+#    a. 客户端：cd 到同一个路径再打 $<skill 名>（`/` 与 `$` 两种写法都调得到，靠补全 tab 选中）。
+#       回显了 LOO0NG_HOME 就先在那个终端里设好，客户端继承的是它自己的环境
+#    b. 无人值守：printf '%s' '$<skill 名> <律师那句话>' | codex exec -s workspace-write -
+#       目录不是 git 仓库时它不肯起，要么先 git init，要么加 --skip-git-repo-check
 
 # 4. 用完删掉那个目录
 ```
@@ -137,6 +140,6 @@ MSYS_NO_PATHCONV=1 CLAUDECODE= CLAUDE_CODE_ENTRYPOINT= \
 
 **第 2 步那行与跑器给 Claude Code 侧拼的命令是同一条**（`build_command`），差别不在命令而在别处：打的是你自己想打的那句话（不是用例里的提示词）、看的是回复本身（不跑断言）、判的是人。所以 Claude Code 侧这一次相对合入门槛那次 eval 的增量本来就小，两道门在这一侧几乎重合；增量大的是 Codex 侧，那边 eval 用的是替身提示词、根本没测触发（ADR-0015）。这条局限照实记着，别把它当成两次独立的证据。
 
-**Codex 侧那一次只能人工**：`$名` 在 AFK 下不解析（`codex debug prompt-input '$名 …'` 可复核：那一串原样留在用户消息里，`SKILL.md` 正文一句都不进 prompt），显式触发的 skill 因此在 `codex exec` 下触不到。律师在客户端里打的是带前缀的 `$loo0ng-skills:<名>`，靠补全 tab 选中（#44）。
+**Codex 侧 `$名` 是解析的**：2026-09-16 在 codex-cli 0.154 上实测，`codex exec` 的提示词里写 `$doit`，`SKILL.md` 全文进上下文（让它抄第一行标题，抄出来的就是 `# 办节点`）；`doit` 带 `disable-model-invocation: true`、被滤出了隐式 skill 清单，那段正文只可能来自 `$名` 展开。所以关票触发在这一侧也能无人值守跑，不是非人工不可。本文件原先记的「AFK 下不解析」对 0.154 不成立，连它给的复核办法一并作废：`codex debug prompt-input` 只渲染提示词、自己不做展开，`$doit`、`$graph`、`$implement` 在它下面一律原样留在用户消息里，拿它推断不出 `exec` 行不行。客户端里 `/` 与 `$` 两种写法都调得到，靠补全 tab 选中（#44）；显示带不带 `loo0ng-skills:` 前缀看装的是哪条路线，拷贝进 `~/.agents/skills/` 的是裸名。
 
-关票评论按 ADR-0009 只记日期、平台、打的名、结果类别，并写明材料是合成的。验到的与验不到的要分清：验到的是**这条安装路线下**按名字触发、流程走通（Claude Code 侧是插件路线的 `/loo0ng-skills:<名>`，Codex 侧是客户端里带前缀的 `$loo0ng-skills:<名>`）；验不到的是真实案件材料下的判断，也验不到插件路线的 `/loo0ng-skills:<名>`（那条另由「两平台注册、补全与拉取实测」与 #44 覆盖）。工作区路径不写进 issue（硬边界 1）。
+关票评论按 ADR-0009 只记日期、平台、打的名、结果类别，并写明材料是合成的。验到的与验不到的要分清：验到的是**这条安装路线下**按名字触发、流程走通（Claude Code 侧是插件路线的 `/loo0ng-skills:<名>`，Codex 侧是 `$<名>`，客户端与 `codex exec` 都算）；验不到的是真实案件材料下的判断，也验不到插件路线的 `/loo0ng-skills:<名>`（那条另由「两平台注册、补全与拉取实测」与 #44 覆盖）。工作区路径不写进 issue（硬边界 1）。
