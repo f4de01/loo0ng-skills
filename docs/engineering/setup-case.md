@@ -48,17 +48,14 @@
 
 ## Common questions
 
-**它会问我几个问题？**
-一个：空图还是哪份预设图。你那句话里已经说了的（「起手，用破产那份」）它不再问一遍。之后全程只有一个确认点：末尾那张**起手清单**。
+**目录里已经有材料或写好的文书，还能起手吗？**
+能。已有文件与子目录先挪进 `待归档/`，点开头的项目（如 `.git`）不动。起手清单把归档去向、建议登记的既有成品、冲突放在一起，等你一句话才归档、登记；既有成品只登记为已生成，不自动确认。没有文件要归就没有这次拍板。出处：[CHANGELOG 0.6.0，起手重做](https://github.com/f4de01/loo0ng-skills/blob/main/CHANGELOG.md#060)。
 
-**我起手前已经写好的文书怎么办？**
-对得上图上某个节点的，起手会建议登记为那个节点的**已生成**（来源记你，审查报告只有「律师自写」一行）。登记不是确认：要确认，在办那个节点的对话里说一句。对不上任何节点的就是普通材料，照常归 `材料/`。
+**以前的领域名、三选一和自动提节点去哪了？**
+现在只选空图或一份预设图，不再问领域名。空图不拷模板；选预设图就整份拷入图与配套模板。起手不再因为指南非空而自动提节点，需要时说「从这份指南里提节点」，由 `domain` 先给雏形，拍板后再写图。出处：[CHANGELOG 0.6.0，起手与 domain 重做](https://github.com/f4de01/loo0ng-skills/blob/main/CHANGELOG.md#060)。
 
-**没有预设图可选怎么办？**
-两组都空就是这次只能从空图起手。空图起手不拷模板，`参考/模板/` 先空着，你自己的空白件之后说一句话归档进来。
-
-**我想把这一案的图留给下一案。**
-办完之后说一句「把这个案子的图存成预设图叫 Y」，走 [domain](https://github.com/f4de01/loo0ng-skills/blob/main/docs/engineering/domain.md)。起手不负责这件事。
+**旧的 `loo0ng-setup-case` 找不到了，插件还装过空包？**
+0.4.0 去掉了六件 skill 的 `loo0ng-` 前缀，没有旧名别名，路由仍叫 `ask-loo0ng`。0.5.0 七件进 `in-progress/` 重做时插件清单曾清空，0.6.0 已恢复七件。旧名安装按 [README 安装说明](https://github.com/f4de01/loo0ng-skills/blob/main/README.md)重装；旧工作区指针块中的入口名也要改成新名，改名本身不改变图与文书。出处：[CHANGELOG 0.4.0](https://github.com/f4de01/loo0ng-skills/blob/main/CHANGELOG.md#040)、[0.5.0](https://github.com/f4de01/loo0ng-skills/blob/main/CHANGELOG.md#050)、[CHANGELOG 0.6.0，七件回归分发](https://github.com/f4de01/loo0ng-skills/blob/main/CHANGELOG.md#060)。
 
 ## It's working if
 
