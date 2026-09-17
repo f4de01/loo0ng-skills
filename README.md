@@ -128,7 +128,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/link-skills.ps1
 
 登记步骤见 [登记约定](./.agents/registration.md)，校验命令与测试命令见 [校验与测试](./.agents/testing.md)，发布与安装约定见 [发布与分发](./.agents/release.md)。发布链照上游 mattpocock/skills：每次修改写一张 changeset，推到 `main` 后 `.github/workflows/release.yml` 里的 changesets/action 自动开一个 "chore: version skills" 的 PR，合并即打 tag；`package.json` 的版本由 `scripts/sync-plugin-version.mjs` 抄进 `.claude-plugin/plugin.json`，版本记录在 `CHANGELOG.md`。测试与 eval 仍然全部本地跑（ADR-0015 2026-09-12 附注）。
 
-发完一版要装到律师那台机器上时，照 `docs/交付/现场清单.md` 现场做，结果填 `docs/交付/记录表.md`：那是开发者本人在那台机器前的四段（装、跑得动填模板脚本的环境、起手一个案子、跑通一个节点），断网可用。
+发完一版要装到律师那台机器上时，照 `docs/交付/现场清单.md` 现场做，结果填 `docs/交付/记录表.md`：那是开发者本人在那台机器前的四段（装、跑得动填模板脚本的环境、起手一个案子、跑通一个节点），断网可用。交到律师手上让他自己照着走的那一份是 `docs/交付/律师上手指南.md`：装 skill、装桌面卡片、起手第一个案子、办完第一个节点，一条线走到底。
 
 ## 许可
 
