@@ -8,6 +8,7 @@
 #   - .github/workflows/release.yml 存在，用 changesets/action，version 输入指向 npm run version，publish 为 changeset tag
 #   - CHANGELOG.md 存在且含当前版本号
 #   - git：当前版本有对应 tag v<version>（提醒级）
+#   - 图的 FORMAT_VERSION 与上一个 tag 相比有没有变（提醒级；变了要通知桌面卡片那个仓库）
 #   - .gitignore 含 node_modules
 # 用法：& "C:\Program Files\Git\bin\bash.exe" assets/check-release.sh <repo-root>
 set -u
@@ -90,6 +91,30 @@ if git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   [ -f "$ROOT/.gitignore" ] && grep -q node_modules "$ROOT/.gitignore" && ok ".gitignore 含 node_modules" || bad ".gitignore 缺 node_modules（会把依赖提交进仓库）"
 else
   bad "不是 git 仓库（git init -b main）"
+fi
+
+echo "图的格式版本"
+GRAPHPY="$ROOT/skills/engineering/graph/scripts/graph.py"
+fv() { grep -m1 -oE '^FORMAT_VERSION[[:space:]]*=[[:space:]]*[0-9]+' "$1" 2>/dev/null | grep -oE '[0-9]+$'; }
+if [ -f "$GRAPHPY" ]; then
+  now="$(fv "$GRAPHPY")"
+  last="$(git -C "$ROOT" tag --sort=-v:refname 2>/dev/null | head -1)"
+  if [ -z "$now" ]; then
+    bad "graph.py 里读不到 FORMAT_VERSION"
+  elif [ -z "$last" ]; then
+    wn "还没有 tag，无从比对格式版本（当前 $now）"
+  else
+    was="$(git -C "$ROOT" show "$last:skills/engineering/graph/scripts/graph.py" 2>/dev/null            | grep -m1 -oE '^FORMAT_VERSION[[:space:]]*=[[:space:]]*[0-9]+' | grep -oE '[0-9]+$')"
+    if [ -z "$was" ]; then
+      wn "$last 里读不到 FORMAT_VERSION，无从比对（当前 $now）"
+    elif [ "$was" = "$now" ]; then
+      ok "格式版本与 $last 一致（$now）"
+    else
+      wn "格式版本从 $was 变成 $now：派生视图的消费方（桌面卡片那个仓库）只认它写死的那一个，发版前通知它"
+    fi
+  fi
+else
+  bad "找不到 skills/engineering/graph/scripts/graph.py"
 fi
 
 echo

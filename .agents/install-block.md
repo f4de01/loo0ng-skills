@@ -15,8 +15,11 @@
 | `claude-plugin` | `README.md` 的第二个 details |
 | `local-junction` | `README.md` 的第三个 details |
 | `skills-sh-local` | `docs/交付/现场清单.md` 的 1.2 |
+| `desktop-card` | `README.md` 的「桌面卡片（可选）」一节 |
 
 `docs/engineering/` 与 `docs/productivity/` 的 skill 说明页一段都不抄，保持不写安装命令。现场清单的七件全选、失败记录、安装后检查与离线拷贝仍由清单自持；它面向 Codex，不抄 Claude Code 插件段。后续 changeset 若需要说明当前安装方式，也从对应块取原文。
+
+**桌面卡片的安装命令不抄进本仓库。** 它住在另一个公开仓库，命令、宿主要求与设置文件的写法以那边的 README 为正本；这边只给一个链接和一句「它读什么」。两个仓库各写一份同一条命令，迟早有一份先改、另一份不知道。
 
 <canonical-block name="route-choice">
 
@@ -70,6 +73,18 @@ npx skills@latest add ~/交付包/repo -a codex
 ```
 
 ⚠️ 这台机器上有没有 `gh`、登没登录，都不知道。没有就直接降路 C。
+
+</canonical-block>
+
+<canonical-block name="desktop-card">
+
+桌面卡片是另一个仓库的东西：一张常驻桌面的卡片，同时看住在办的多个案件，每案显示当前模块、进度、下一个要办的节点。它只读每个案件工作区的 `图视图.json`，一个字节都不写；装不装都不影响这里的七件 skill。
+
+安装命令、它要的宿主、设置文件怎么写，都在它自己的 README：[loo0ng-widget](https://github.com/f4de01/loo0ng-widget)。
+
+装过之后不用第二次配置：起手一个新案件时，`setup-case` 把这个案件的上级目录加进卡片的根目录列表（`~/.loo0ng/卡片设置.json`），卡片下一轮扫描就看得见它；已经在列表里就一个字不动，那份设置不在就整步不做。不想要这一步，起手时给 CLI 加 `--no-card`。
+
+卡片只认当前的图格式。更早的版本起手、至今没被引擎重写过的工作区，它会列在「读不出」里：那种图没有升级路径，从预设图重新起手即可。
 
 </canonical-block>
 

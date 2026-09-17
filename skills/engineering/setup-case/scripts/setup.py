@@ -6,7 +6,7 @@
 子进程取，两处两归属仍归它管。本脚本不含任何领域语义。
 
 用法：
-  python setup.py init [--preset <名> --owner 出厂|个人]
+  python setup.py init [--preset <名> --owner 出厂|个人] [--no-card]
                        [--workspace <目录>] [--engine <graph.py>] [--preset-cli <preset.py>]
   python setup.py register --node <节点标题或 id> --file <工作区内相对路径>
                        [--workspace <目录>] [--engine <graph.py>]
@@ -17,6 +17,11 @@ init 的前置只有一条：工作区里没有 图.json（起手一案一次）
 拷进 参考/模板/。顺序是先解析预设图、再落图、再建格：解析不到或引擎拒了，都是一格不建、一个字不写。
 归档、起手清单不在这里，它们是别的 skill 与模型的事。
 
+init 收尾还维护一份包外的个人文件：桌面卡片按 ~/.loo0ng/卡片设置.json 里的 根目录 列表扫
+下面一层发现案件，本脚本把新工作区的上级目录加进那个列表。**文件不在就一个字不写**：那台机器
+没有卡片，起手不替它长配置，也不在回显里提。加，不删不改，既有的一条不动、顺序不重排；
+读不出、形状不对、写不进都只回一句，起手照样算完成。--no-card 整步不做。
+
 register 是起手清单里「既有成品登记为已生成、来源律师」那一条的机械落地：把那份成品挪进它
 节点的文书目录、按固定一行写审查报告（每一版文书必有一份，格式归 skill "to-docx"），
 再经引擎追加一条来源为律师的生成条目。它只登记不确认：确认永不自动。
@@ -25,6 +30,7 @@ register 是起手清单里「既有成品登记为已生成、来源律师」�
 """
 import argparse
 import json
+import os
 import pathlib
 import shutil
 import subprocess
@@ -65,6 +71,12 @@ REVIEW_SUFFIX = "-审查报告.md"
 
 # 起手自己落的那几样不挪进待归档；点开头的（.git、.codex 之类）也不动。
 KEEP_AT_ROOT = {GRAPH_FILENAME, VIEW_MD, VIEW_JSON, ARCHIVE_INDEX, AGENTS_FILENAME, CLAUDE_FILENAME}
+
+# 桌面卡片的个人设置。「家」那一层与个人预设图同一个：环境变量换的是家，不是这个文件名。
+PERSONAL_HOME_ENV = "LOO0NG_HOME"
+PERSONAL_HOME_DIRNAME = ".loo0ng"
+CARD_SETTINGS_FILENAME = "卡片设置.json"
+CARD_ROOTS_KEY = "根目录"
 
 
 class Rejected(Exception):
@@ -225,6 +237,56 @@ def write_pointer_block(ws: pathlib.Path, preset_label: str) -> List[str]:
             put_beside(ws / CLAUDE_FILENAME, CLAUDE_MD_TEXT, CLAUDE_MD_TEXT.strip(), at_end=False)]
 
 
+# ------------------------------------------------------- 桌面卡片的根目录设置
+
+def personal_home() -> pathlib.Path:
+    """个人文件的家：默认 ~/.loo0ng/。环境变量 LOO0NG_HOME 换的是「家」那一层。"""
+    given = os.environ.get(PERSONAL_HOME_ENV)
+    return pathlib.Path(given).expanduser() if given else pathlib.Path.home() / PERSONAL_HOME_DIRNAME
+
+
+def same_dir(given: str, target: pathlib.Path) -> bool:
+    """设置里的一条根目录指的是不是 target。只做路径归一，不碰盘上的东西。"""
+    try:
+        left = pathlib.Path(given).expanduser().absolute()
+    except (OSError, ValueError):
+        return False
+    here = os.path.normcase(os.path.normpath(str(left)))
+    there = os.path.normcase(os.path.normpath(str(target)))
+    return here == there
+
+
+def maintain_card_roots(ws: pathlib.Path) -> List[str]:
+    """把工作区的上级目录加进桌面卡片的根目录列表。加，不删不改；出什么事都不挡起手。"""
+    settings = personal_home() / CARD_SETTINGS_FILENAME
+    if not settings.is_file():
+        return []                      # 这台机器没有卡片：不创建、不回显
+    parent = ws.parent
+    hand_edit = "要让这一案出现在卡片上，自己把 %s 加进它的 %s。" % (parent, CARD_ROOTS_KEY)
+    try:
+        data = json.loads(settings.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return ["桌面卡片的设置读不出或不是有效的 UTF-8 JSON，没动它：%s。%s" % (settings, hand_edit)]
+    roots = data.get(CARD_ROOTS_KEY) if isinstance(data, dict) else None
+    if not isinstance(roots, list) or any(not isinstance(root, str) for root in roots):
+        return ['桌面卡片的设置里没有可用的 %s 列表，没动它：%s。把它写成 {"%s": ["%s"]}。'
+                % (CARD_ROOTS_KEY, settings, CARD_ROOTS_KEY, parent.as_posix())]
+    if any(same_dir(root, parent) for root in roots):
+        return ["桌面卡片已经在看 %s，设置没动" % parent]
+    data[CARD_ROOTS_KEY] = roots + [parent.as_posix()]
+    tmp = settings.with_name(settings.name + ".tmp")
+    try:
+        tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        os.replace(str(tmp), str(settings))
+    except OSError:
+        try:
+            tmp.unlink()
+        except OSError:
+            pass
+        return ["桌面卡片的设置写不进，没动它：%s。%s" % (settings, hand_edit)]
+    return ["桌面卡片的根目录已加上 %s：下一轮扫描就能看见这一案" % parent]
+
+
 def cmd_init(args) -> int:
     ws = pathlib.Path(args.workspace).resolve()
     graph_path = ws / GRAPH_FILENAME
@@ -260,6 +322,8 @@ def cmd_init(args) -> int:
     label = EMPTY_LABEL if preset_dir is None else "%s（%s）" % (args.preset, args.owner)
     notes += write_pointer_block(ws, label)
     notes.append("两份视图已随图落下：%s、%s" % (VIEW_MD, VIEW_JSON))
+    if not args.no_card:
+        notes += maintain_card_roots(ws)
     for line in notes:
         print(line)
     return 0
@@ -359,6 +423,8 @@ def build_parser() -> argparse.ArgumentParser:
                    help="预设图的名；不给就是空图起手。与 --owner 同给同不给")
     p.add_argument("--owner", default=None, choices=OWNERS,
                    help="预设图的归属：出厂（包内）或 个人（本机）")
+    p.add_argument("--no-card", dest="no_card", action="store_true",
+                   help="不维护桌面卡片的根目录设置（默认：那份设置在就把上级目录加进去）")
     p.add_argument("--preset-cli", dest="preset_cli", default=None,
                    help="skill \"domain\" 的 preset.py 路径，默认取兄弟目录里的")
 

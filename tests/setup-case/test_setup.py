@@ -420,5 +420,74 @@ class 既有成品登记(Base):
         self.assertIn("先起手", r.err)
 
 
+# ---------------------------------------------------------------- 桌面卡片的根目录
+
+class 卡片根目录(Base):
+    """起手收尾维护 ~/.loo0ng/卡片设置.json 的 根目录 列表。家由 LOO0NG_HOME 换到临时目录。"""
+
+    def 设置(self):
+        return self.home / "卡片设置.json"
+
+    def 写设置(self, 文本):
+        self.home.mkdir(parents=True, exist_ok=True)
+        self.设置().write_text(文本, encoding="utf-8")
+
+    def 读设置(self):
+        return json.loads(self.设置().read_text(encoding="utf-8"))
+
+    def test_设置不在就不创建也不回显(self):
+        r = self.起手()
+        self.assertFalse(self.设置().exists(), "没装卡片的机器不该被起手长出一份设置")
+        self.assertNotIn("桌面卡片", r.out)
+
+    def test_上级目录不在列表就追加既有的一条不动(self):
+        self.写设置('{"根目录": ["D:/别处"], "别的键": 1}')
+        r = self.起手()
+        data = self.读设置()
+        self.assertEqual(data["根目录"], ["D:/别处", self.tmp.as_posix()])
+        self.assertEqual(data["别的键"], 1, "别的键要原样留着")
+        self.assertIn("桌面卡片的根目录已加上", r.out)
+
+    def test_已在列表就一个字不动(self):
+        原文 = '{"根目录": ["%s"]}' % str(self.tmp).replace("\\", "\\\\")
+        self.写设置(原文)
+        r = self.起手()
+        self.assertEqual(self.设置().read_text(encoding="utf-8"), 原文, "已经在看就不该重写这份文件")
+        self.assertIn("已经在看", r.out)
+
+    def test_写法不同也算同一个目录(self):
+        self.写设置('{"根目录": ["%s/"]}' % self.tmp.as_posix())
+        r = self.起手()
+        self.assertEqual(len(self.读设置()["根目录"]), 1, "斜杠写法不同不该重复追加")
+        self.assertIn("已经在看", r.out)
+
+    def test_坏设置不挡起手也不改文件(self):
+        self.写设置("{不是 JSON")
+        r = self.起手()
+        self.assertEqual(r.code, 0, r)
+        self.assertEqual(self.设置().read_text(encoding="utf-8"), "{不是 JSON")
+        self.assertIn("读不出", r.out)
+        self.assertTrue((self.ws / "图.json").is_file(), "起手该照样完成")
+
+    def test_缺根目录键不挡起手并给出形状(self):
+        self.写设置('{"别的": []}')
+        r = self.起手()
+        self.assertEqual(r.code, 0, r)
+        self.assertEqual(self.读设置(), {"别的": []})
+        self.assertIn("根目录", r.out)
+
+    def test_no_card_整步不做(self):
+        self.写设置('{"根目录": []}')
+        r = self.起手("--no-card")
+        self.assertEqual(self.读设置()["根目录"], [])
+        self.assertNotIn("桌面卡片", r.out)
+
+    def test_不留临时文件(self):
+        self.写设置('{"根目录": []}')
+        self.起手()
+        剩下 = sorted(x.name for x in self.home.iterdir() if x.name.startswith("卡片设置"))
+        self.assertEqual(剩下, ["卡片设置.json"])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -68,6 +68,18 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/link-skills.ps1
 
 </details>
 
+## 桌面卡片（可选）
+
+<!-- install-block: desktop-card；源：.agents/install-block.md -->
+桌面卡片是另一个仓库的东西：一张常驻桌面的卡片，同时看住在办的多个案件，每案显示当前模块、进度、下一个要办的节点。它只读每个案件工作区的 `图视图.json`，一个字节都不写；装不装都不影响这里的七件 skill。
+
+安装命令、它要的宿主、设置文件怎么写，都在它自己的 README：[loo0ng-widget](https://github.com/f4de01/loo0ng-widget)。
+
+装过之后不用第二次配置：起手一个新案件时，`setup-case` 把这个案件的上级目录加进卡片的根目录列表（`~/.loo0ng/卡片设置.json`），卡片下一轮扫描就看得见它；已经在列表里就一个字不动，那份设置不在就整步不做。不想要这一步，起手时给 CLI 加 `--no-card`。
+
+卡片只认当前的图格式。更早的版本起手、至今没被引擎重写过的工作区，它会列在「读不出」里：那种图没有升级路径，从预设图重新起手即可。
+<!-- /install-block: desktop-card -->
+
 ## Skill 清单
 
 七件，按桶列出，每件另有一页面向人的说明 `docs/<bucket>/<name>.md`。
