@@ -12,7 +12,7 @@
 #     也不指向本 skill 目录之外的仓库文件（装到用户机上的 skill 读不到那些东西）
 #   - 操作句只指向 model-invoked：没有哪件 skill 的根目录 *.md 或 scripts/ 里
 #     写着去调 user-invoked 的那几件（CLI 的拒绝回显也进模型上下文）
-# 用法示例：bash assets/check-skill.sh ~/my-skills
+# 用法示例：bash scripts/check-skill.sh ~/my-skills
 set -u
 ROOT="${1:-.}"
 ROOT="${ROOT%/}"
@@ -32,6 +32,28 @@ if [ ! -d "$ROOT/skills" ]; then
   echo "找不到 $ROOT/skills 目录。skill 仓库的根下应有 skills/<bucket>/<name>/SKILL.md"
   exit 1
 fi
+
+# 名单口径：工作树里的、未被忽略的。跑一次测试就会在 scripts/ 下落一个 __pycache__/，它提交
+# 不上去，也不是布局违规，可它长得和真正要拦的「不允许的 skill 子目录」一模一样，报过几次
+# 「哦这个不算」，真要拦的那次也就不灵了。口径问 git 要，不各自手写一份 exclude 名单。
+# 仓库外的退路：这个脚本能扫任意一个 skill 仓库，那个目录不一定是 git 仓库，探不到 git 就不
+# 过滤、照旧全扫（宁可多报，不可少报）。
+# 全程 -z：这个仓库的路径大量是中文，按行喂 git 会读到被引号转义过的名字。
+# check-ignore 的退出码 1 是「一个都没忽略」，不是出错（128 才是），所以不看它的退出码。
+# 名单装在一个换行分隔的字符串里，不用关联数组：bash 3.2（macOS 自带那个）没有关联数组，
+# 而它对 `declare -A` 只是抱怨一句、接着把每个字符串下标都当 0 用，于是第一个被忽略的路径
+# 一进来，往后问什么都答「忽略」，整套检查静悄悄全放过。换行只用在这一层名单里，路径名里
+# 带换行的目录不认（这种名字 git 自己也拿它没办法）。
+NL=$'\n'
+IGNORED="$NL"
+strip_root() { while IFS= read -r -d '' _p; do printf '%s\0' "${_p#"$ROOT"/}"; done; }
+if git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+  while IFS= read -r -d '' rel; do
+    IGNORED="$IGNORED$ROOT/$rel$NL"
+  done < <(find "$ROOT/skills" -mindepth 1 -print0 | strip_root \
+             | git -C "$ROOT" check-ignore -z --stdin)
+fi
+ignored() { case "$IGNORED" in *"$NL$1$NL"*) return 0 ;; esac; return 1; }
 
 # 正文随包自足要拦下的东西：ADR 号、`#` 加数字形的 issue 号、版本号、包外仓库文件与只在仓库里成立的约定名。
 SELF_CONTAINED_BAN='ADR-?[0-9]|(^|[^A-Za-z0-9])#[0-9]|[0-9]+\.[0-9]+\.[0-9]+|CONTEXT\.md|CHANGELOG|\.changeset|(^|[^A-Za-z0-9_./-])(docs|tests|skills)/|结构不变量|硬边界'
@@ -74,10 +96,12 @@ while IFS= read -r -d '' skill_md; do
 
   layout_ok=1
   while IFS= read -r -d '' child; do
+    ignored "$child" && continue
     case "$(basename "$child")" in
       assets) ;;
       agents|scripts)
         while IFS= read -r -d '' nested; do
+          ignored "$nested" && continue
           bad "只有 assets 可嵌套目录：${nested#"$ROOT"/}"; layout_ok=0
         done < <(find "$child" -mindepth 1 -type d -print0)
         ;;
@@ -152,6 +176,7 @@ while IFS= read -r -d '' skill_md; do
   self_hits=""
   for doc in "$dir"/*.md "$dir"/scripts/*; do
     [ -f "$doc" ] || continue
+    ignored "$doc" && continue
     h="$(sed -E \
            -e 's/p[0-9]+#[0-9]+//g' \
            -e 's#\]\((\./)?[A-Za-z0-9_-]+\.[A-Za-z0-9]+\)#]#g' \
@@ -174,6 +199,7 @@ while IFS= read -r -d '' skill_md; do
   call_hits=""
   for doc in "$dir"/*.md "$dir"/scripts/*; do
     [ -f "$doc" ] || continue
+    ignored "$doc" && continue
     for ui in $USER_INVOKED; do
       nums="$(operative_hits "$doc" "$ui")"
       [ -n "$nums" ] && call_hits="$call_hits ${doc#"$dir"/}:$ui:$nums"

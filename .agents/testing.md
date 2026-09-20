@@ -30,6 +30,8 @@ bash scripts/check-release.sh .            # 发版前：changesets 配置、同
 
 `check-text.sh` 三条的名单都是「已跟踪 + 未被忽略的未跟踪」（`git ls-files -z` 接上 `git ls-files -z --others --exclude-standard`），二进制由 `grep -I` 自己跳过；`privacy-check.py --all` 的名单同理。名单曾经只有已跟踪那一半，于是新文件在 `git add` 之前对它是隐形的，一个带破折号的 ADR 正文提交前三次校验全绿、提交之后才报错（#93）。现在仓库工作树里一个临时草稿也会被检查，这是对的：它本来就在工作树里，提交上去就晚了，真不想被扫的东西该进 `.gitignore`。
 
+扫磁盘的那两个脚本口径相同，只是方向反过来：`check-skill.sh` 的布局检查与 `check-stale.sh` 的全仓 grep 原先看得见连 git 都不打算收的东西：跑一次测试落下的 `scripts/__pycache__/` 被报成「不允许的 skill 子目录」，人只能靠「哦这个不算」的记忆放过去，而真要拦的那条长得一模一样（#95）。现在两边都问一次 git：`check-skill.sh` 用 `git check-ignore -z --stdin` 滤掉被忽略的路径，`check-stale.sh` 改用同一份 `git ls-files` 名单，那份手写的 `--exclude-dir` 名单一并删掉。`check-skill.sh` 还能扫任意一个 skill 仓库，那个目录不一定是 git 仓库，探不到 git 就不过滤、照旧全扫（宁可多报，不可少报）；`check-stale.sh` 只在仓库里有意义，不是仓库就退 2。
+
 这三条原先只以命令的形态写在这里，没有任何脚本查它们，全靠人记得跑，于是破折号一路漂到 14 个文件 68 处才被发现；收进脚本并进 `AGENTS.md` 不变量 6 之后，每个开发会话都会跑到它。**正则里真要认破折号时写成 `\u2014` 转义**（Python `re` 认得），别在源码里放字面字符。
 
 ## 测试命令
@@ -40,7 +42,7 @@ bash scripts/check-release.sh .            # 发版前：changesets 配置、同
 for d in tests/*/; do python -m unittest discover -s "$d" -p 'test_*.py' || exit 1; done
 ```
 
-`tests/共用/` 不是测试目录，是几个测试目录 import 的夹具（`sys.path.insert(0, str(REPO / "tests" / "共用"))`）：`工作区.py` 用引擎在临时目录里造一个案件工作区，`临时仓库.py` 造一个只有一次提交的临时 git 仓库（`check-text`、`privacy-check` 这两个扫全仓的脚本共用它）。
+`tests/共用/` 不是测试目录，是几个测试目录 import 的夹具（`sys.path.insert(0, str(REPO / "tests" / "共用"))`）：`工作区.py` 用引擎在临时目录里造一个案件工作区，`临时仓库.py` 造一个只有一次提交的临时 git 仓库（`check-text`、`privacy-check`、`check-skill`、`check-stale` 这几个名单靠 git 的脚本共用它），`bash.py` 定位一个能跑本仓 shell 脚本的 bash（Windows 上 PATH 里的 `bash` 往往是 System32 的 WSL 垫片）。
 
 `tests/evals/test_seeds.py` 是种子那一份：16 个种子各回放一遍，对着各自的 `状态.md` 断工作区状态（目录形状、图与两份视图、条目、高亮清没清、归档索引、家里那份个人预设图），并守两条接口：每个种子都有 `回放.py` 与 `状态.md`、每个用例指的种子都存在。种子一改它立刻红，所以改种子与改它是同一次提交的事。约半分钟（每个种子都真跑一遍起手 CLI）。
 

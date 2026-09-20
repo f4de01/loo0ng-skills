@@ -10,7 +10,6 @@
 """
 import os
 import pathlib
-import shutil
 import subprocess
 import sys
 import unittest
@@ -20,31 +19,10 @@ SCRIPT = REPO / "scripts" / "check-text.sh"
 
 sys.path.insert(0, str(REPO / "tests" / "共用"))
 from 临时仓库 import GitRepoMixin  # noqa: E402
+from bash import find_bash  # noqa: E402
 
 EM_DASH = chr(0x2014)
 BOM = chr(0xFEFF)
-
-
-def find_bash():
-    """返回 (bash 路径, 要前置进 PATH 的目录列表)。
-
-    Windows 上不能直接信 `shutil.which("bash")`：PATH 上往往是 System32 的 WSL 垫片，
-    没装发行版时它只回一段 UTF-16 的抱怨。从 git 所在目录往上找 Git for Windows 的
-    bash，并把 usr/bin 前置进 PATH（od、head、xargs、sed 都在那儿）。
-    """
-    git = shutil.which("git")
-    if git:
-        here = pathlib.Path(git).resolve()
-        for root in here.parents:
-            for rel in ("bin/bash.exe", "usr/bin/bash.exe", "bin/bash"):
-                cand = root / rel
-                if cand.exists():
-                    extra = [str(root / "usr" / "bin")] if (root / "usr" / "bin").is_dir() else []
-                    return str(cand), extra
-    found = shutil.which("bash")
-    if found and "system32" not in found.lower():
-        return found, []
-    return None, []
 
 
 BASH, BASH_PATH_DIRS = find_bash()
