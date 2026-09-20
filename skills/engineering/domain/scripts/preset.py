@@ -196,10 +196,12 @@ def cmd_save(args) -> int:
         raise Rejected("%s 已经存在，另存不覆盖：换个名字，或先把旧的那份移走。" % target.as_posix())
     engine = resolve_engine(args.engine)
 
-    target.parent.mkdir(parents=True, exist_ok=True)
+    # 建个人预设图的家也要在 try 里：它在包外，另存常跑在一个只许写工作目录的沙箱里，
+    # 这一步就是第一个撞墙的地方。漏在外面，律师拿到的是一串 traceback 而不是一句话。
     staging = target.parent / ("%s%s-%d" % (name, STAGING_SUFFIX, os.getpid()))
-    shutil.rmtree(str(staging), ignore_errors=True)
     try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.rmtree(str(staging), ignore_errors=True)
         r = subprocess.run([sys.executable, str(engine), "--graph", str(graph_path), "export-preset",
                             "--out", str(staging)], capture_output=True, text=True,
                            encoding="utf-8", errors="replace")
