@@ -9,7 +9,8 @@
                       在 main 上暂存触及 knowledge/ 或出厂预设图文件的改动即拒绝。
   --commit-msg FILE   commit-msg 用。扫提交说明（跳过注释行与 scissors 之后的部分）。
   --stdin             发 issue 前过正文：从标准输入读文本，命中则非零退出并列出类别。
-  --all               全仓扫描：所有已跟踪文件的全文与文件名，装钩子那天跑一次做基线。
+  --all               全仓扫描：工作树里所有已跟踪、以及未被忽略的未跟踪文件，
+                      扫全文与文件名，装钩子那天跑一次做基线。
 
 五类正则：法院案号（含「破」字号）、案件根之下的路径段（根本身放行）、
 11 位手机号、18 位身份证、统一社会信用代码。不拦座机。
@@ -296,8 +297,14 @@ def run_staged() -> Report:
 
 
 def run_all() -> Report:
+    """说了全仓就要真是全仓：已跟踪 + 未被忽略的未跟踪。
+
+    只看已跟踪的话，一个从没被 git add 过的文件里有案件内容，扫不到却报「未命中」。
+    --exclude-standard 不能省，否则 node_modules/、__pycache__/、.scratch/ 全被扫进来。
+    两个名单互斥，不必去重。
+    """
     report = Report()
-    out = git("ls-files", "-z")
+    out = git("ls-files", "-z") + git("ls-files", "-z", "--others", "--exclude-standard")
     for raw in out.split(b"\0"):
         if not raw:
             continue

@@ -6,16 +6,17 @@
 源码里不能出现任何能被五类正则命中的字面量（ADR-0015：不给钩子豁免）。
 """
 import importlib.util
-import os
 import pathlib
 import subprocess
 import sys
-import tempfile
 import unittest
 import zipfile
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 SCRIPT = REPO / "scripts" / "privacy-check.py"
+
+sys.path.insert(0, str(REPO / "tests" / "共用"))
+from 临时仓库 import GitRepoMixin  # noqa: E402
 
 
 def load_module():
@@ -138,37 +139,8 @@ class PatternTests(unittest.TestCase):
             self.assertEqual(self.pc.find_hits(text), [], str(p))
 
 
-class GitRepoMixin:
-    def setUp(self):
-        self._tmp = tempfile.TemporaryDirectory()
-        self.root = pathlib.Path(self._tmp.name) / "repo"
-        self.root.mkdir()
-        self.env = dict(os.environ)
-        self.env["HOME"] = self._tmp.name
-        self.env["GIT_CONFIG_NOSYSTEM"] = "1"
-        self.env["GIT_CONFIG_GLOBAL"] = os.path.join(self._tmp.name, "no-global-gitconfig")
-        self.git("init", "-q", "-b", "main")
-        self.git("config", "user.name", "t")
-        self.git("config", "user.email", "t@example.invalid")
-        self.git("config", "core.autocrlf", "false")
-        self.write("README.md", "起点\n")
-        self.git("add", "README.md")
-        self.git("commit", "-q", "-m", "init")
-
-    def tearDown(self):
-        self._tmp.cleanup()
-
-    def git(self, *args):
-        return subprocess.run(
-            ["git", "-c", "core.quotepath=false", *args],
-            cwd=self.root, env=self.env, check=True, capture_output=True,
-        )
-
-    def write(self, rel, text):
-        p = self.root / rel
-        p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(text, encoding="utf-8", newline="\n")
-        return p
+class RepoCase(GitRepoMixin):
+    """临时仓库来自 tests/共用/临时仓库.py，这里只加本脚本的两件事。"""
 
     def check(self, *args, stdin_text=None):
         return run_check(args, cwd=self.root, stdin_text=stdin_text)
@@ -179,7 +151,7 @@ class GitRepoMixin:
         self.assertNotIn("绕过", out)
 
 
-class StagedTests(GitRepoMixin, unittest.TestCase):
+class StagedTests(RepoCase, unittest.TestCase):
     def test_no_staged_changes_passes(self):
         code, out = self.check("--staged")
         self.assertEqual(code, 0, out)
@@ -273,7 +245,7 @@ class StagedTests(GitRepoMixin, unittest.TestCase):
         self.assertEqual(code, 0, out)
 
 
-class MainGuardTests(GitRepoMixin, unittest.TestCase):
+class MainGuardTests(RepoCase, unittest.TestCase):
     def test_knowledge_on_main_is_rejected(self):
         self.write("knowledge/规范/新.md", "干净\n")
         self.git("add", "knowledge")
@@ -314,7 +286,7 @@ class MainGuardTests(GitRepoMixin, unittest.TestCase):
         self.assertIn("knowledge/旧.md", out)
 
 
-class CommitMsgTests(GitRepoMixin, unittest.TestCase):
+class CommitMsgTests(RepoCase, unittest.TestCase):
     def test_message_with_hit_is_rejected(self):
         p = self.write("MSG", "修正材料路径\n\n路径 " + CASE_PATH_HIT + "\n")
         code, out = self.check("--commit-msg", str(p))
@@ -348,7 +320,7 @@ class StdinTests(unittest.TestCase):
         self.assertEqual(code, 0, out)
 
 
-class AllTests(GitRepoMixin, unittest.TestCase):
+class AllTests(RepoCase, unittest.TestCase):
     def test_all_scans_tracked_files_and_names(self):
         self.write("docs/a.md", "干净\n")
         self.write("docs/b.md", "一\n二 " + ID_HIT + "\n")
@@ -363,16 +335,30 @@ class AllTests(GitRepoMixin, unittest.TestCase):
         code, out = self.check("--all")
         self.assertEqual(code, 0, out)
 
-    def test_all_ignores_untracked_and_reports_binary(self):
+    def test_all_reports_binary(self):
         p = self.root / "img.bin"
         p.write_bytes(b"\x00\xff" * 100)
         self.git("add", "img.bin")
         self.git("commit", "-q", "-m", "bin")
-        self.write("untracked.md", MOBILE_HIT + "\n")
         code, out = self.check("--all")
         self.assertEqual(code, 0, out)
         self.assertIn("披露", out)
         self.assertIn("img.bin", out)
+
+    def test_all_sees_untracked_files(self):
+        """说了全仓就要真是全仓：没被 git add 过的文件也扫。"""
+        self.write("未跟踪.md", "一\n二 " + MOBILE_HIT + "\n")
+        code, out = self.check("--all")
+        self.assertRejected(code, out)
+        self.assertIn("未跟踪.md:2", out)
+        self.assertIn("手机号", out)
+
+    def test_all_skips_ignored_files(self):
+        self.write(".gitignore", "忽略/\n")
+        self.write("忽略/脏.md", MOBILE_HIT + "\n")
+        code, out = self.check("--all")
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("忽略", out)
 
 
 class UsageTests(unittest.TestCase):

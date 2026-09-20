@@ -28,7 +28,9 @@ bash scripts/check-stale.sh . <旧名>       # 改名或删除之后：旧名字
 bash scripts/check-release.sh .            # 发版前：changesets 配置、同步脚本、workflow、版本一致
 ```
 
-`check-text.sh` 三条的名单都取自 `git ls-files`，所以只扫进了版本库的文件，二进制由 `grep -I` 自己跳过。这三条原先只以命令的形态写在这里，没有任何脚本查它们，全靠人记得跑，于是破折号一路漂到 14 个文件 68 处才被发现；收进脚本并进 `AGENTS.md` 不变量 6 之后，每个开发会话都会跑到它。**正则里真要认破折号时写成 `\u2014` 转义**（Python `re` 认得），别在源码里放字面字符。
+`check-text.sh` 三条的名单都是「已跟踪 + 未被忽略的未跟踪」（`git ls-files -z` 接上 `git ls-files -z --others --exclude-standard`），二进制由 `grep -I` 自己跳过；`privacy-check.py --all` 的名单同理。名单曾经只有已跟踪那一半，于是新文件在 `git add` 之前对它是隐形的，一个带破折号的 ADR 正文提交前三次校验全绿、提交之后才报错（#93）。现在仓库工作树里一个临时草稿也会被检查，这是对的：它本来就在工作树里，提交上去就晚了，真不想被扫的东西该进 `.gitignore`。
+
+这三条原先只以命令的形态写在这里，没有任何脚本查它们，全靠人记得跑，于是破折号一路漂到 14 个文件 68 处才被发现；收进脚本并进 `AGENTS.md` 不变量 6 之后，每个开发会话都会跑到它。**正则里真要认破折号时写成 `\u2014` 转义**（Python `re` 认得），别在源码里放字面字符。
 
 ## 测试命令
 
@@ -37,6 +39,8 @@ bash scripts/check-release.sh .            # 发版前：changesets 配置、同
 ```bash
 for d in tests/*/; do python -m unittest discover -s "$d" -p 'test_*.py' || exit 1; done
 ```
+
+`tests/共用/` 不是测试目录，是几个测试目录 import 的夹具（`sys.path.insert(0, str(REPO / "tests" / "共用"))`）：`工作区.py` 用引擎在临时目录里造一个案件工作区，`临时仓库.py` 造一个只有一次提交的临时 git 仓库（`check-text`、`privacy-check` 这两个扫全仓的脚本共用它）。
 
 `tests/evals/test_seeds.py` 是种子那一份：16 个种子各回放一遍，对着各自的 `状态.md` 断工作区状态（目录形状、图与两份视图、条目、高亮清没清、归档索引、家里那份个人预设图），并守两条接口：每个种子都有 `回放.py` 与 `状态.md`、每个用例指的种子都存在。种子一改它立刻红，所以改种子与改它是同一次提交的事。约半分钟（每个种子都真跑一遍起手 CLI）。
 
