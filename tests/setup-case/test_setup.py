@@ -423,7 +423,11 @@ class 既有成品登记(Base):
 # ---------------------------------------------------------------- 桌面卡片的根目录
 
 class 卡片根目录(Base):
-    """起手收尾维护 ~/.loo0ng/卡片设置.json 的 根目录 列表。家由 LOO0NG_HOME 换到临时目录。"""
+    """起手收尾**只读** ~/.loo0ng/卡片设置.json 的 根目录 列表，从不写它。
+
+    那份文件住在包外，而起手常跑在一个只许写工作目录的沙箱里：写必然失败。所以这一步降为
+    比对加一句话。家由 LOO0NG_HOME 换到临时目录，碰不到律师真的那一份。
+    """
 
     def 设置(self):
         return self.home / "卡片设置.json"
@@ -432,61 +436,173 @@ class 卡片根目录(Base):
         self.home.mkdir(parents=True, exist_ok=True)
         self.设置().write_text(文本, encoding="utf-8")
 
-    def 读设置(self):
-        return json.loads(self.设置().read_text(encoding="utf-8"))
+    def 原文(self):
+        return self.设置().read_text(encoding="utf-8")
 
     def test_设置不在就不创建也不回显(self):
         r = self.起手()
         self.assertFalse(self.设置().exists(), "没装卡片的机器不该被起手长出一份设置")
         self.assertNotIn("桌面卡片", r.out)
 
-    def test_上级目录不在列表就追加既有的一条不动(self):
-        self.写设置('{"根目录": ["D:/别处"], "别的键": 1}')
-        r = self.起手()
-        data = self.读设置()
-        self.assertEqual(data["根目录"], ["D:/别处", self.tmp.as_posix()])
-        self.assertEqual(data["别的键"], 1, "别的键要原样留着")
-        self.assertIn("桌面卡片的根目录已加上", r.out)
-
-    def test_已在列表就一个字不动(self):
-        原文 = '{"根目录": ["%s"]}' % str(self.tmp).replace("\\", "\\\\")
+    def test_上级目录在列表就说看得见(self):
+        原文 = '{"根目录": ["%s"]}' % self.tmp.as_posix()
         self.写设置(原文)
         r = self.起手()
-        self.assertEqual(self.设置().read_text(encoding="utf-8"), 原文, "已经在看就不该重写这份文件")
-        self.assertIn("已经在看", r.out)
+        self.assertIn("桌面卡片在看", r.out)
+        self.assertEqual(self.原文(), 原文, "只读：一个字都不该动")
+
+    def test_上级目录不在列表只提醒不追加(self):
+        原文 = '{"根目录": ["D:/别处"], "别的键": 1}'
+        self.写设置(原文)
+        r = self.起手()
+        self.assertIn("桌面卡片没在看", r.out)
+        self.assertIn("根目录", r.out, "要说清该往哪个键里加")
+        self.assertEqual(self.原文(), 原文, "只读：不再往列表里追加")
 
     def test_写法不同也算同一个目录(self):
         self.写设置('{"根目录": ["%s/"]}' % self.tmp.as_posix())
         r = self.起手()
-        self.assertEqual(len(self.读设置()["根目录"]), 1, "斜杠写法不同不该重复追加")
-        self.assertIn("已经在看", r.out)
+        self.assertIn("桌面卡片在看", r.out)
 
-    def test_坏设置不挡起手也不改文件(self):
+    def test_坏设置整步跳过且不挡起手(self):
         self.写设置("{不是 JSON")
         r = self.起手()
-        self.assertEqual(r.code, 0, r)
-        self.assertEqual(self.设置().read_text(encoding="utf-8"), "{不是 JSON")
-        self.assertIn("读不出", r.out)
+        self.assertEqual(self.原文(), "{不是 JSON")
+        self.assertNotIn("桌面卡片", r.out, "读不出就当这台机器没有卡片：不猜、不提")
         self.assertTrue((self.ws / "图.json").is_file(), "起手该照样完成")
 
-    def test_缺根目录键不挡起手并给出形状(self):
+    def test_缺根目录键整步跳过(self):
         self.写设置('{"别的": []}')
         r = self.起手()
-        self.assertEqual(r.code, 0, r)
-        self.assertEqual(self.读设置(), {"别的": []})
-        self.assertIn("根目录", r.out)
+        self.assertEqual(self.原文(), '{"别的": []}')
+        self.assertNotIn("桌面卡片", r.out)
 
     def test_no_card_整步不做(self):
         self.写设置('{"根目录": []}')
         r = self.起手("--no-card")
-        self.assertEqual(self.读设置()["根目录"], [])
         self.assertNotIn("桌面卡片", r.out)
 
-    def test_不留临时文件(self):
+    def test_从不写这份文件也不留临时文件(self):
         self.写设置('{"根目录": []}')
         self.起手()
         剩下 = sorted(x.name for x in self.home.iterdir() if x.name.startswith("卡片设置"))
-        self.assertEqual(剩下, ["卡片设置.json"])
+        self.assertEqual(剩下, ["卡片设置.json"], "不写就不该有 .tmp")
+        self.assertEqual(self.原文(), '{"根目录": []}')
+
+
+# ---------------------------------------------------------------- 起手位置的两道闸
+
+class 位置闸(Base):
+    """绝不许起手的目录：家目录与它下面的系统格子、卡片的根目录本身。--force 也不放行。"""
+
+    @staticmethod
+    def 还原(key, old):
+        if old is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = old
+
+    def 假家(self):
+        """把 HOME / USERPROFILE 指到临时目录：pathlib.Path.home() 读的就是这两个。"""
+        家 = self.tmp / "假家"
+        家.mkdir(exist_ok=True)
+        for key in ("HOME", "USERPROFILE"):
+            self.addCleanup(self.还原, key, os.environ.get(key))
+            os.environ[key] = str(家)
+        return 家
+
+    def 写卡片设置(self, *根):
+        self.home.mkdir(parents=True, exist_ok=True)
+        (self.home / "卡片设置.json").write_text(
+            json.dumps({"根目录": [p.as_posix() for p in 根]}, ensure_ascii=False),
+            encoding="utf-8")
+
+    def test_家目录本身拒绝(self):
+        家 = self.假家()
+        r = self.cli("init", workspace=家)
+        self.assertEqual(r.code, 1, r)
+        self.assertIn("系统目录", r.err)
+        self.assertFalse((家 / "图.json").exists(), "拒了就一个字不写")
+
+    def test_桌面拒绝(self):
+        桌面 = self.假家() / "Desktop"
+        桌面.mkdir()
+        r = self.cli("init", workspace=桌面)
+        self.assertEqual(r.code, 1, r)
+        self.assertIn("系统目录", r.err)
+
+    def test_force也不放行(self):
+        家 = self.假家()
+        r = self.cli("init", "--force", workspace=家)
+        self.assertEqual(r.code, 1, "位置闸不受 --force 影响：%r" % (r,))
+
+    def test_干跑也拒绝(self):
+        家 = self.假家()
+        r = self.cli("init", "--dry-run", workspace=家)
+        self.assertEqual(r.code, 1, "干跑不该把拒绝说成一份计划：%r" % (r,))
+
+    def test_卡片根目录本身拒绝(self):
+        self.写卡片设置(self.tmp)
+        r = self.cli("init", workspace=self.tmp)
+        self.assertEqual(r.code, 1, r)
+        self.assertIn("下面一层", r.err)
+        self.assertFalse((self.tmp / "图.json").exists())
+
+    def test_根目录下面一层照常起手(self):
+        self.写卡片设置(self.tmp)
+        r = self.起手()
+        self.assertEqual(r.code, 0, r)
+
+
+class 件数闸与干跑(Base):
+    """目录里东西太多就拒（--force 放行）；干跑只打印计划，一个字不写。"""
+
+    def 丢多件(self, n):
+        for i in range(n):
+            (self.ws / ("件%02d.txt" % i)).write_text("x", encoding="utf-8")
+
+    def test_上限之内照常起手(self):
+        self.丢多件(setup.SWEEP_LIMIT)
+        self.起手()
+        self.assertEqual(len(list((self.ws / "待归档").iterdir())), setup.SWEEP_LIMIT)
+
+    def test_超过上限拒绝且一格不建(self):
+        self.丢多件(setup.SWEEP_LIMIT + 1)
+        self.造个人预设图()
+        r = self.cli("init", "--preset", "菜园", "--owner", "个人")
+        self.assertEqual(r.code, 1, r)
+        self.assertIn("待归档", r.err)
+        self.assertFalse((self.ws / "图.json").exists())
+        self.assertFalse((self.ws / "待归档").exists(), "拒了就不该建出任何格")
+
+    def test_force放行(self):
+        self.丢多件(setup.SWEEP_LIMIT + 1)
+        self.起手("--force")
+        self.assertEqual(len(list((self.ws / "待归档").iterdir())), setup.SWEEP_LIMIT + 1)
+
+    def test_点开头的不计入件数(self):
+        self.丢多件(setup.SWEEP_LIMIT)
+        for i in range(5):
+            (self.ws / (".隐%02d" % i)).write_text("x", encoding="utf-8")
+        self.起手()
+
+    def test_拦的件数与搬的件数是同一套规则(self):
+        self.丢多件(3)
+        self.assertEqual(setup.sweepable(self.ws), ["件00.txt", "件01.txt", "件02.txt"])
+        self.起手()
+        self.assertEqual(sorted(p.name for p in (self.ws / "待归档").iterdir()),
+                         ["件00.txt", "件01.txt", "件02.txt"])
+
+    def test_干跑一个字不写(self):
+        self.丢多件(3)
+        self.造个人预设图()
+        r = self.cli("init", "--preset", "菜园", "--owner", "个人", "--dry-run")
+        self.assertEqual(r.code, 0, r)
+        self.assertIn("干跑", r.out)
+        self.assertIn("件00.txt", r.out, "该把会挪走的东西逐件列出来")
+        self.assertFalse((self.ws / "图.json").exists())
+        self.assertFalse((self.ws / "待归档").exists())
+        self.assertEqual(len(list(self.ws.iterdir())), 3, "干跑不该动目录里的东西")
 
 
 if __name__ == "__main__":

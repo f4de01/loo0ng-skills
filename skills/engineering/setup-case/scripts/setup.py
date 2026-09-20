@@ -6,27 +6,34 @@
 子进程取，两处两归属仍归它管。本脚本不含任何领域语义。
 
 用法：
-  python setup.py init [--preset <名> --owner 出厂|个人] [--no-card]
+  python setup.py init [--preset <名> --owner 出厂|个人] [--no-card] [--force] [--dry-run]
                        [--workspace <目录>] [--engine <graph.py>] [--preset-cli <preset.py>]
   python setup.py register --node <节点标题或 id> --file <工作区内相对路径>
                        [--workspace <目录>] [--engine <graph.py>]
 
-init 的前置只有一条：工作区里没有 图.json（起手一案一次）。**目录非空不拒**：目录里
-原有的文件与目录一律挪进 待归档/，等归档（调 skill "filing"）判去向。两条起手路二选一：不给
---preset 就是空图；给 --preset <名> 加 --owner 出厂|个人 就整份拷入那份预设图，它的 模板/ 一并
-拷进 参考/模板/。顺序是先解析预设图、再落图、再建格：解析不到或引擎拒了，都是一格不建、一个字不写。
-归档、起手清单不在这里，它们是别的 skill 与模型的事。
+init 的前置有三条。一，工作区里没有 图.json（起手一案一次）。二，**位置闸**：家目录、桌面、
+文稿这类系统目录，以及桌面卡片的根目录本身，一律拒绝，--force 也不放行：在系统目录上起手
+会把律师放在那儿的一切挪进 待归档/，在卡片的根目录上起手建出来的案件卡片永远扫不到。三，
+**件数闸**：工作区根上要挪走的东西超过上限就拒绝，--force 放行。三条都过了才动盘。
 
-init 收尾还维护一份包外的个人文件：桌面卡片按 ~/.loo0ng/卡片设置.json 里的 根目录 列表扫
-下面一层发现案件，本脚本把新工作区的上级目录加进那个列表。**文件不在就一个字不写**：那台机器
-没有卡片，起手不替它长配置，也不在回显里提。加，不删不改，既有的一条不动、顺序不重排；
-读不出、形状不对、写不进都只回一句，起手照样算完成。--no-card 整步不做。
+**目录非空不拒**（件数闸之内）：目录里原有的文件与目录一律挪进 待归档/，等归档
+（调 skill "filing"）判去向。两条起手路二选一：不给 --preset 就是空图；给 --preset <名> 加
+--owner 出厂|个人 就整份拷入那份预设图，它的 模板/ 一并拷进 参考/模板/。顺序是先解析预设图、
+再落图、再建格：解析不到或引擎拒了，都是一格不建、一个字不写。--dry-run 只打印这份计划，
+一个字不写。归档、起手清单不在这里，它们是别的 skill 与模型的事。
+
+init 收尾**只读**一份包外的个人文件：桌面卡片按 ~/.loo0ng/卡片设置.json 里的 根目录 列表扫
+下面一层发现案件，本脚本比对新工作区的上级目录在不在那个列表里，在就说一句、不在就说一句
+该怎么加。**本脚本从不写这份文件**：它住在包外，而起手常跑在一个只许写工作目录的沙箱里，
+写必然失败，失败又被吞成一句提示，连「问一句就能过」的机会都一起吞掉。文件不在、读不出、
+形状不对，一律整步跳过、回显里不提（那台机器没有卡片）。--no-card 整步不做。
 
 register 是起手清单里「既有成品登记为已生成、来源律师」那一条的机械落地：把那份成品挪进它
 节点的文书目录、按固定一行写审查报告（每一版文书必有一份，格式归 skill "to-docx"），
 再经引擎追加一条来源为律师的生成条目。它只登记不确认：确认永不自动。
 
-退出码：0 完成；1 拒绝（图已存在、解析不到预设图、引擎拒写、找不到文件、路径越界、目标已被占）；2 用法错误。
+退出码：0 完成（含 --dry-run）；1 拒绝（图已存在、位置闸、件数闸、解析不到预设图、
+引擎拒写、找不到文件、路径越界、目标已被占）；2 用法错误。
 """
 import argparse
 import json
@@ -72,6 +79,14 @@ REVIEW_SUFFIX = "-审查报告.md"
 # 起手自己落的那几样不挪进待归档；点开头的（.git、.codex 之类）也不动。
 KEEP_AT_ROOT = {GRAPH_FILENAME, VIEW_MD, VIEW_JSON, ARCHIVE_INDEX, AGENTS_FILENAME, CLAUDE_FILENAME}
 
+# 起手会把工作区根上原有的东西一律挪进 待归档/。件数超过这个数就拒绝：那多半不是一个新建
+# 的案件目录，而是律师堆东西的地方，照搬会把他的一堆文件挪走。--force 放行。
+SWEEP_LIMIT = 20
+
+# 家目录下这几个是系统自己的格子，不是谁的案件目录。在它们上面起手必然是走错了地方。
+SYSTEM_SUBDIRS = ("Desktop", "Documents", "Downloads", "Library",
+                  "Movies", "Music", "Pictures", "Public")
+
 # 桌面卡片的个人设置。「家」那一层与个人预设图同一个：环境变量换的是家，不是这个文件名。
 PERSONAL_HOME_ENV = "LOO0NG_HOME"
 PERSONAL_HOME_DIRNAME = ".loo0ng"
@@ -80,7 +95,7 @@ CARD_ROOTS_KEY = "根目录"
 
 
 class Rejected(Exception):
-    """拒绝：图已存在、解析不到预设图、引擎拒写、找不到文件、路径越界、目标已被占。"""
+    """拒绝：图已存在、位置闸、件数闸、解析不到预设图、引擎拒写、找不到文件、路径越界、目标已被占。"""
 
 
 def resolve_tool(given: Optional[str], relative: pathlib.Path, what: str, flag: str) -> pathlib.Path:
@@ -144,6 +159,18 @@ def make_cells(ws: pathlib.Path) -> None:
         (ws / cell).mkdir(parents=True, exist_ok=True)
 
 
+def sweepable(ws: pathlib.Path) -> List[str]:
+    """起手会挪进待归档的那些名字，按名排序。
+
+    件数闸与实际搬运共用这一套规则：两处各写一遍迟早走样，拦的件数与搬的件数就对不上了。
+    """
+    if not ws.is_dir():
+        return []
+    return sorted(p.name for p in ws.iterdir()
+                  if p.name not in KEEP_AT_ROOT and p.name != PENDING
+                  and not p.name.startswith("."))
+
+
 def sweep_to_pending(ws: pathlib.Path) -> List[str]:
     """目录里原有的一律挪进 待归档/：起手不判它们是什么，判去向是归档的事（调 skill "filing"）。
 
@@ -155,19 +182,14 @@ def sweep_to_pending(ws: pathlib.Path) -> List[str]:
     """
     pending = ws / PENDING
     pending.mkdir(parents=True, exist_ok=True)
-    moved, dotted, clashed = [], [], []
-    for entry in sorted(ws.iterdir(), key=lambda p: p.name):
-        name = entry.name
-        if name in KEEP_AT_ROOT or name == PENDING:
-            continue
-        if name.startswith("."):
-            dotted.append(name)
-            continue
+    dotted = sorted(p.name for p in ws.iterdir() if p.name.startswith("."))
+    moved, clashed = [], []
+    for name in sweepable(ws):      # 先整份算好再搬：边搬边列目录会漏
         target = pending / name
         if target.exists():
             clashed.append(name)
             continue
-        shutil.move(str(entry), str(target))
+        shutil.move(str(ws / name), str(target))
         moved.append(name)
     notes = ["工作区根上原有的 %d 件已挪进 %s/：%s" % (len(moved), PENDING, "、".join(moved))
              if moved else "工作区根上没有要挪进 %s/ 的东西" % PENDING]
@@ -245,46 +267,98 @@ def personal_home() -> pathlib.Path:
     return pathlib.Path(given).expanduser() if given else pathlib.Path.home() / PERSONAL_HOME_DIRNAME
 
 
+def norm(p) -> str:
+    """路径归一到可比的字符串。只做字符串层面的事，不碰盘上的东西。"""
+    return os.path.normcase(os.path.normpath(str(p)))
+
+
 def same_dir(given: str, target: pathlib.Path) -> bool:
     """设置里的一条根目录指的是不是 target。只做路径归一，不碰盘上的东西。"""
     try:
         left = pathlib.Path(given).expanduser().absolute()
     except (OSError, ValueError):
         return False
-    here = os.path.normcase(os.path.normpath(str(left)))
-    there = os.path.normcase(os.path.normpath(str(target)))
-    return here == there
+    return norm(left) == norm(target)
 
 
-def maintain_card_roots(ws: pathlib.Path) -> List[str]:
-    """把工作区的上级目录加进桌面卡片的根目录列表。加，不删不改；出什么事都不挡起手。"""
+def card_roots() -> Optional[List[str]]:
+    """桌面卡片的根目录列表，**只读**。
+
+    这台机器没装卡片、设置读不出、形状不对，一律回 None：调用方据此整步跳过。本脚本从不写
+    这份文件。它住在包外的个人目录里，而起手常常跑在一个只许写工作目录的沙箱里，写必然失败；
+    失败又被吞成一句提示，反而把「问一句就能过」的机会一起吞掉。改成只读之后没有这个面。
+    """
     settings = personal_home() / CARD_SETTINGS_FILENAME
     if not settings.is_file():
-        return []                      # 这台机器没有卡片：不创建、不回显
-    parent = ws.parent
-    hand_edit = "要让这一案出现在卡片上，自己把 %s 加进它的 %s。" % (parent, CARD_ROOTS_KEY)
+        return None
     try:
         data = json.loads(settings.read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        return ["桌面卡片的设置读不出或不是有效的 UTF-8 JSON，没动它：%s。%s" % (settings, hand_edit)]
+        return None
     roots = data.get(CARD_ROOTS_KEY) if isinstance(data, dict) else None
     if not isinstance(roots, list) or any(not isinstance(root, str) for root in roots):
-        return ['桌面卡片的设置里没有可用的 %s 列表，没动它：%s。把它写成 {"%s": ["%s"]}。'
-                % (CARD_ROOTS_KEY, settings, CARD_ROOTS_KEY, parent.as_posix())]
+        return None
+    return roots
+
+
+def forbidden_dirs(ws: pathlib.Path) -> List[pathlib.Path]:
+    """绝不许起手的目录：家目录与它下面那几个系统格子、文件系统根、用户容器。
+
+    盘符照 ws 自己的取，免得在 Windows 上拿无盘符的 \\Users 去比一个有盘符的路径。
+    """
+    home = pathlib.Path.home()
+    anchor = pathlib.Path(ws.anchor) if ws.anchor else pathlib.Path(os.sep)
+    out = [home] + [home / name for name in SYSTEM_SUBDIRS]
+    out += [anchor, anchor / "Users", anchor / "home", anchor / "Applications"]
+    return out
+
+
+def guard_location(ws: pathlib.Path) -> None:
+    """位置闸：几个绝不许起手的目录。这一闸 --force 也不放行。
+
+    起手会把工作区根上原有的一切挪进 待归档/。落在家目录或桌面这类地方，挪走的就是律师放在
+    那儿的全部东西；落在卡片的根目录上，建出来的案件卡片永远扫不到（它扫的是根的下一层），
+    而起手仍然报成功，没有任何地方会提示哪里不对。两种都只能拒。
+    """
+    guide = "案件要起在一个自己的目录里：在客户端里新建一个项目，到那个项目目录里再起手。"
+    here = norm(ws)
+    for bad in forbidden_dirs(ws):
+        if here == norm(bad):
+            raise Rejected("不在 %s 起手：这是系统目录，起手会把它下面原有的东西全挪进 %s/。%s"
+                           % (ws, PENDING, guide))
+    for root in card_roots() or []:
+        if same_dir(root, ws):
+            raise Rejected("不在 %s 起手：这是桌面卡片的根目录，案件要建在它下面一层。"
+                           "卡片扫的是根目录的下一层，起在根上它永远扫不到，而起手会报成功。%s"
+                           % (ws, guide))
+
+
+def guard_sweep(ws: pathlib.Path, force: bool) -> None:
+    """件数闸：目录里东西太多就拒。--force 放行。
+
+    位置闸拦得住叫得出名字的那几个，拦不住律师随手堆东西的某个目录。件数是本地就拿得到的
+    旁证：一个新建的案件目录该是空的或者只有客户端放的那两份说明。
+    """
+    names = sweepable(ws)
+    if force or len(names) <= SWEEP_LIMIT:
+        return
+    head = "、".join(names[:5])
+    raise Rejected("%s 里有 %d 件东西，起手会把它们全挪进 %s/（头几件：%s）。"
+                   "这看起来不是一个新建的案件目录。换一个空目录起手；"
+                   "确认这些东西本来就该进本案的待归档，再加 --force。"
+                   % (ws, len(names), PENDING, head))
+
+
+def check_card_roots(ws: pathlib.Path) -> List[str]:
+    """只读校验：这一案落在卡片看得见的地方没有。一个字都不写。"""
+    roots = card_roots()
+    if roots is None:
+        return []                      # 这台机器没有卡片，或那份设置这会儿读不出：不提
+    parent = ws.parent
     if any(same_dir(root, parent) for root in roots):
-        return ["桌面卡片已经在看 %s，设置没动" % parent]
-    data[CARD_ROOTS_KEY] = roots + [parent.as_posix()]
-    tmp = settings.with_name(settings.name + ".tmp")
-    try:
-        tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        os.replace(str(tmp), str(settings))
-    except OSError:
-        try:
-            tmp.unlink()
-        except OSError:
-            pass
-        return ["桌面卡片的设置写不进，没动它：%s。%s" % (settings, hand_edit)]
-    return ["桌面卡片的根目录已加上 %s：下一轮扫描就能看见这一案" % parent]
+        return ["桌面卡片在看 %s，下一轮扫描就能看见这一案" % parent]
+    return ["桌面卡片没在看 %s，这一案不会出现在卡片上。要它出现，把这个目录加进 %s 的 %s。"
+            % (parent, personal_home() / CARD_SETTINGS_FILENAME, CARD_ROOTS_KEY)]
 
 
 def cmd_init(args) -> int:
@@ -293,6 +367,8 @@ def cmd_init(args) -> int:
     if graph_path.exists():
         raise Rejected("%s 已经有 %s 了：起手一案一次。这个目录已经是案件工作区，"
                        "要改图的构成在对话里说一句就行，要另起一案换一个目录。" % (ws, GRAPH_FILENAME))
+    guard_location(ws)
+    guard_sweep(ws, args.force)
     if bool(args.preset) != bool(args.owner):
         raise Rejected("--preset 与 --owner 同给同不给：不给就是空图起手，给就要两个都给"
                        "（--preset <名> --owner 出厂|个人）。名与归属打 skill \"domain\" 的 "
@@ -303,6 +379,21 @@ def cmd_init(args) -> int:
         preset_cli = resolve_tool(args.preset_cli, PRESET_CLI_RELATIVE,
                                   "skill \"domain\" 的 preset.py", "--preset-cli")
         preset_dir, preset_notes = resolve_preset(preset_cli, args.preset, args.owner)
+
+    label = EMPTY_LABEL if preset_dir is None else "%s（%s）" % (args.preset, args.owner)
+    if args.dry_run:
+        names = sweepable(ws)
+        plan = ["干跑：一个字没写，下面是真跑会做的事。",
+                "工作区：%s" % ws,
+                "起手图：%s" % label,
+                "会建的格：%s" % "、".join(CELLS),
+                "会挪进 %s/ 的 %d 件：%s" % (PENDING, len(names), "、".join(names)) if names
+                else "工作区根上没有要挪进 %s/ 的东西" % PENDING]
+        if not args.no_card:
+            plan += check_card_roots(ws)
+        for line in plan:
+            print(line)
+        return 0
 
     ws.mkdir(parents=True, exist_ok=True)
     init_args = ["init", "--empty"] if preset_dir is None else ["init", "--preset", str(preset_dir)]
@@ -319,11 +410,10 @@ def cmd_init(args) -> int:
     else:
         notes.append("空图起手，不拷模板：%s/ 先空着，律师自己的空白模板经归档放进来"
                      % WORKSPACE_TEMPLATES.as_posix())
-    label = EMPTY_LABEL if preset_dir is None else "%s（%s）" % (args.preset, args.owner)
     notes += write_pointer_block(ws, label)
     notes.append("两份视图已随图落下：%s、%s" % (VIEW_MD, VIEW_JSON))
     if not args.no_card:
-        notes += maintain_card_roots(ws)
+        notes += check_card_roots(ws)
     for line in notes:
         print(line)
     return 0
@@ -424,7 +514,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--owner", default=None, choices=OWNERS,
                    help="预设图的归属：出厂（包内）或 个人（本机）")
     p.add_argument("--no-card", dest="no_card", action="store_true",
-                   help="不维护桌面卡片的根目录设置（默认：那份设置在就把上级目录加进去）")
+                   help="不查桌面卡片的根目录设置（默认：那份设置在就只读比对一次，从不写它）")
+    p.add_argument("--force", action="store_true",
+                   help="放行件数闸：目录里东西超过 %d 件也照起手。位置闸不受它影响" % SWEEP_LIMIT)
+    p.add_argument("--dry-run", dest="dry_run", action="store_true",
+                   help="干跑：只打印会建什么、会挪走哪几件，一个字不写")
     p.add_argument("--preset-cli", dest="preset_cli", default=None,
                    help="skill \"domain\" 的 preset.py 路径，默认取兄弟目录里的")
 
