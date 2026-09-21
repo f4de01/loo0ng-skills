@@ -63,7 +63,7 @@ npx skills@latest add f4de01/loo0ng-skills -a codex
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/link-skills.ps1
 ```
 
-维护者的开发脚本，照上游 `link-skills.sh`，不是安装路线：把 `skills/<bucket>/<name>/` 逐条以 junction 挂到 `~/.claude/skills/` 与 `~/.agents/skills/`，顺手设 `core.hooksPath` 启用隐私钩子。开发机照上游「一个 harness 只装一条路」：Claude Code 侧装了本插件就不挂 `~/.claude/skills/`（脚本自己判断），那一侧用 `claude plugin update loo0ng-skills@loo0ng-marketplace` 更新，skill 名带 `loo0ng-skills:` 命名空间；Codex 侧要用就走上面的 skills.sh，装了它就别再挂 junction。只在改名、增删 skill 后重跑。
+维护者的开发脚本，照上游 `link-skills.sh`，不是安装路线：把 `skills/<bucket>/<name>/` 逐条以 junction 挂到 `~/.claude/skills/` 与 `~/.codex/skills/`（Codex 0.154 起的根；旧根 `~/.agents/skills/` 还在只提醒一句，不再往里挂），顺手设 `core.hooksPath` 启用隐私钩子。开发机照上游「一个 harness 只装一条路」：Claude Code 侧装了本插件就不挂 `~/.claude/skills/`（脚本自己判断），那一侧用 `claude plugin update loo0ng-skills@loo0ng-marketplace` 更新，skill 名带 `loo0ng-skills:` 命名空间；Codex 侧要用就走上面的 skills.sh，装了它就别再挂 junction。只在改名、增删 skill 后重跑。
 <!-- /install-block: local-junction -->
 
 </details>

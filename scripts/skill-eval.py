@@ -61,12 +61,33 @@ DEFAULT_CODEX_SANDBOX = "workspace-write"
 CASE_REQUIRED = ("种子", "回复正则")
 SEED_META_FILES = ("回放.py", "状态.md", "__pycache__")  # 不拷进工作区：前两个是种子的元文件，第三个不该在仓库里
 CODEX_TOOL_ITEMS = {"command_execution", "file_change", "mcp_tool_call", "web_search"}
-CODEX_STAND_IN = "读 ~/.agents/skills/{skill}/SKILL.md 并照做：{prompt}"
+# Codex 的用户级 skill 目录换过根：0.154 起是 ~/.codex/skills，0.153 及更早是 ~/.agents/skills
+# （两侧都是实机回显，见 docs/实测/mac-20260920/结论.md 段 1 与 docs/research/mac-实测-20260907.md）。
+# 两个根都可能在，谁下面有这件 skill 就读谁；都没有就按新根写，让那一回合自己说"读不到"。
+CODEX_SKILL_ROOTS = (pathlib.Path.home() / ".codex" / "skills",
+                     pathlib.Path.home() / ".agents" / "skills")
+CODEX_STAND_IN = "读 {path} 并照做：{prompt}"
 # Claude Code 侧照上游「一个 harness 只装一条路」：装了插件（~/.claude/plugins/installed_plugins.json 里有
 # loo0ng-skills@）skill 名就带插件命名空间，没装（改造期走 junction，ADR-0022）就是裸名；与 scripts/link-skills.ps1
 # 认的是同一个文件。--claude-plugin 显式给了以它为准，给空串就是裸名。
 DEFAULT_CLAUDE_PLUGIN = "loo0ng-skills"
 INSTALLED_PLUGINS = pathlib.Path.home() / ".claude" / "plugins" / "installed_plugins.json"
+
+
+def tilde(path: pathlib.Path) -> str:
+    """写成 ~ 开头，提示词里给模型看的是人读得懂的那一份。"""
+    try:
+        return "~/" + path.relative_to(pathlib.Path.home()).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def codex_skill_file(skill: str) -> str:
+    """替身提示词里那条 SKILL.md 路径：认得出的根优先。"""
+    for root in CODEX_SKILL_ROOTS:
+        if (root / skill / "SKILL.md").is_file():
+            return tilde(root / skill / "SKILL.md")
+    return tilde(CODEX_SKILL_ROOTS[0] / skill / "SKILL.md")
 
 
 def default_claude_plugin() -> str:
@@ -331,7 +352,7 @@ def build_prompt(harness: str, case: Case, claude_plugin: str = DEFAULT_CLAUDE_P
     if not case.skill:
         return case.prompt
     if harness == "codex":
-        return CODEX_STAND_IN.format(skill=case.skill, prompt=case.prompt)
+        return CODEX_STAND_IN.format(path=codex_skill_file(case.skill), prompt=case.prompt)
     name = "%s:%s" % (claude_plugin, case.skill) if claude_plugin else case.skill
     return "/%s %s" % (name, case.prompt)
 

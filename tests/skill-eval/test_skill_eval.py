@@ -185,12 +185,28 @@ class PromptAndCommandTest(unittest.TestCase):
         self.assertEqual(skill_eval.build_prompt("codex", case), "写一个文件")
 
     def test_codex_uses_stand_in_prompt_for_skill(self):
+        """Codex 侧的替身提示词照新根写（0.154 起 ~/.codex/skills），两个根都没有这件时也是它。"""
         case = skill_eval.load_case(make_case(self.root, "a", prompt="帮我起手", skill="setup-case", 说明="替身"))
+        原 = skill_eval.CODEX_SKILL_ROOTS
+        skill_eval.CODEX_SKILL_ROOTS = (self.root / "无-codex", self.root / "无-agents")
+        self.addCleanup(setattr, skill_eval, "CODEX_SKILL_ROOTS", 原)
         p = skill_eval.build_prompt("codex", case)
-        self.assertIn("~/.agents/skills/setup-case/SKILL.md", p)
+        self.assertIn("无-codex/setup-case/SKILL.md", p.replace("\\", "/"))
         self.assertTrue(p.endswith("帮我起手"))
         self.assertEqual(skill_eval.build_prompt("claude", case), "/loo0ng-skills:setup-case 帮我起手")
         self.assertEqual(skill_eval.build_prompt("claude", case, ""), "/setup-case 帮我起手")
+
+    def test_codex_stand_in_falls_back_to_the_old_root_when_that_is_where_the_skill_is(self):
+        """0.153 及更早的机器上 skill 在 ~/.agents/skills 下，替身提示词得跟着指过去。"""
+        case = skill_eval.load_case(make_case(self.root, "b", prompt="帮我起手", skill="setup-case", 说明="替身"))
+        旧根 = self.root / "旧根"
+        (旧根 / "setup-case").mkdir(parents=True)
+        (旧根 / "setup-case" / "SKILL.md").write_text("x", encoding="utf-8")
+        原 = skill_eval.CODEX_SKILL_ROOTS
+        skill_eval.CODEX_SKILL_ROOTS = (self.root / "无-codex", 旧根)
+        self.addCleanup(setattr, skill_eval, "CODEX_SKILL_ROOTS", 原)
+        p = skill_eval.build_prompt("codex", case)
+        self.assertIn("旧根/setup-case/SKILL.md", p.replace("\\", "/"))
 
     def test_claude_plugin_follows_whether_the_plugin_is_installed(self):
         """照上游一个 harness 只装一条路：装了插件带命名空间，改造期走 junction 就是裸名（ADR-0022）；

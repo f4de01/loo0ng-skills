@@ -3,7 +3,7 @@
 #
 # 开发者本机用：把仓库 skills/<bucket>/<name>/ 逐条以 junction 挂到两个 harness 的用户级 skill 目录（Matt 分桶，链接名只取 <name>）。
 #   ~/.claude/skills/<name>  Claude Code
-#   ~/.agents/skills/<name>  Codex 及其他 Agent Skills 兼容 harness
+#   ~/.codex/skills/<name>   Codex（0.154 起的根；0.153 及更早是 ~/.agents/skills，那个根还在就只提醒，不再往里挂）
 # junction 不需要管理员权限或开发者模式。junction 指向目录，改 skill 内容即时生效（Claude Code 热加载）；
 # 只在改名、增删 skill 后重跑。幂等：重跑结果一致；skills/ 里已不存在的 skill，其指向本仓库的 junction 随之删除。
 # 照上游 link-skills.sh：deprecated/ 与 misc/ 两个桶不挂（退役的与不推广的都不该进日常目录），in-progress/ 照挂：它是刻意公开征求反馈的，本地安装正是反馈回路。
@@ -23,9 +23,13 @@ if ($Dests.Count -eq 0) {
   $hasPlugin = (Test-Path $installed) -and ((Get-Content $installed -Raw) -match 'loo0ng-skills@')
   if ($hasPlugin) {
     Write-Output 'Claude Code 侧装的是插件，跳过 ~/.claude/skills（更新走 claude plugin update loo0ng-skills@loo0ng-marketplace）'
-    $Dests = @((Join-Path $HOME '.agents\skills'))
+    $Dests = @((Join-Path $HOME '.codex\skills'))
   } else {
-    $Dests = @((Join-Path $HOME '.claude\skills'), (Join-Path $HOME '.agents\skills'))
+    $Dests = @((Join-Path $HOME '.claude\skills'), (Join-Path $HOME '.codex\skills'))
+  }
+  $旧根 = Join-Path $HOME '.agents\skills'
+  if (Test-Path $旧根) {
+    Write-Output "$旧根 还在：那是 Codex 0.153 及更早的根，本脚本不再往里挂；里面指向本仓库的旧 junction 自己清。"
   }
 }
 $Repo = (Resolve-Path $Repo).Path

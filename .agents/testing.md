@@ -95,7 +95,7 @@ ADR-0015「目录名保持 ASCII」只指 `tests/`、`evals/` 两个顶层；其
 | 键 | 含义 |
 | --- | --- |
 | `种子` | `evals/种子/` 下的场景名，本票允许为空 |
-| `skill` | 编排 skill 名，可空。Claude Code 侧拼成 `/loo0ng-skills:<skill> <提示词>`（照上游一个 harness 只装一条路：跑器看 `~/.claude/plugins/installed_plugins.json` 里有没有装本插件，装了带命名空间，没装（开发机挂 junction 跑待验分支时就是这样）就是裸名 `/<skill>`；`--claude-plugin` 显式给了以它为准）；Codex 侧用替身提示词「读 `~/.agents/skills/<skill>/SKILL.md` 并照做：<提示词>」，测的是正文不是触发，触发另由人工实测与完成定义那一次覆盖。带 skill 的用例必须有 `说明` |
+| `skill` | 编排 skill 名，可空。Claude Code 侧拼成 `/loo0ng-skills:<skill> <提示词>`（照上游一个 harness 只装一条路：跑器看 `~/.claude/plugins/installed_plugins.json` 里有没有装本插件，装了带命名空间，没装（开发机挂 junction 跑待验分支时就是这样）就是裸名 `/<skill>`；`--claude-plugin` 显式给了以它为准）；Codex 侧用替身提示词「读 `<Codex 的 skill 根>/<skill>/SKILL.md` 并照做：<提示词>」（根由跑器自己认：`~/.codex/skills` 与 `~/.agents/skills` 里谁下面有这件就读谁，都没有按前者写），测的是正文不是触发，触发另由人工实测与完成定义那一次覆盖。带 skill 的用例必须有 `说明` |
 | `回复正则` | 对最后一条回复做 `re.search`，可空；报红时断言名是「回复正则」 |
 | `回合上限` | Claude Code 侧交给 `--max-turns`；Codex 侧数 JSONL 流里工具类 item（命令、改文件、MCP、搜索），超了杀进程树。默认 30 |
 | `超时秒` | 单次调用的墙钟上限，超了杀进程树。默认 300 |
@@ -146,6 +146,6 @@ MSYS_NO_PATHCONV=1 CLAUDECODE= CLAUDE_CODE_ENTRYPOINT= \
 
 **第 2 步那行与跑器给 Claude Code 侧拼的命令是同一条**（`build_command`），差别不在命令而在别处：打的是你自己想打的那句话（不是用例里的提示词）、看的是回复本身（不跑断言）、判的是人。所以 Claude Code 侧这一次相对合入门槛那次 eval 的增量本来就小，两道门在这一侧几乎重合；增量大的是 Codex 侧，那边 eval 用的是替身提示词、根本没测触发（ADR-0015）。这条局限照实记着，别把它当成两次独立的证据。
 
-**Codex 侧 `$名` 是解析的**：2026-09-16 在 codex-cli 0.154 上实测，`codex exec` 的提示词里写 `$doit`，`SKILL.md` 全文进上下文（让它抄第一行标题，抄出来的就是 `# 办节点`）；`doit` 带 `disable-model-invocation: true`、被滤出了隐式 skill 清单，那段正文只可能来自 `$名` 展开。所以关票触发在这一侧也能无人值守跑，不是非人工不可。本文件原先记的「AFK 下不解析」对 0.154 不成立，连它给的复核办法一并作废：`codex debug prompt-input` 只渲染提示词、自己不做展开，`$doit`、`$graph`、`$implement` 在它下面一律原样留在用户消息里，拿它推断不出 `exec` 行不行。客户端里 `/` 与 `$` 两种写法都调得到，靠补全 tab 选中（#44）；显示带不带 `loo0ng-skills:` 前缀看装的是哪条路线，拷贝进 `~/.agents/skills/` 的是裸名。
+**Codex 侧 `$名` 是解析的**：2026-09-16 在 codex-cli 0.154 上实测，`codex exec` 的提示词里写 `$doit`，`SKILL.md` 全文进上下文（让它抄第一行标题，抄出来的就是 `# 办节点`）；`doit` 带 `disable-model-invocation: true`、被滤出了隐式 skill 清单，那段正文只可能来自 `$名` 展开。所以关票触发在这一侧也能无人值守跑，不是非人工不可。本文件原先记的「AFK 下不解析」对 0.154 不成立，连它给的复核办法一并作废：`codex debug prompt-input` 只渲染提示词、自己不做展开，`$doit`、`$graph`、`$implement` 在它下面一律原样留在用户消息里，拿它推断不出 `exec` 行不行。客户端里 `/` 与 `$` 两种写法都调得到，靠补全 tab 选中（#44）；显示带不带 `loo0ng-skills:` 前缀看装的是哪条路线，拷贝进 Codex 的 skill 根（0.154 起是 `~/.codex/skills/`，0.153 及更早是 `~/.agents/skills/`）的是裸名。
 
 关票评论按 ADR-0009 只记日期、平台、打的名、结果类别，并写明材料是合成的。验到的与验不到的要分清：验到的是**这条安装路线下**按名字触发、流程走通（Claude Code 侧是插件路线的 `/loo0ng-skills:<名>`，Codex 侧是 `$<名>`，客户端与 `codex exec` 都算）；验不到的是真实案件材料下的判断，也验不到插件路线的 `/loo0ng-skills:<名>`（那条另由「两平台注册、补全与拉取实测」与 #44 覆盖）。工作区路径不写进 issue（硬边界 1）。
